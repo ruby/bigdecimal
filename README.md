@@ -1,5 +1,7 @@
 # BigDecimal
 
+[![Build Status](https://travis-ci.org/ruby/bigdecimal.svg?branch=master)](https://travis-ci.org/ruby/bigdecimal)
+
 BigDecimal provides an arbitrary-precision decimal floating-point number class.
 
 ## Installation
