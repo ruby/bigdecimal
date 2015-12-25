@@ -90,6 +90,33 @@ llabs(LONG_LONG const x)
 }
 #endif
 
+#ifndef HAVE_FIX_CONST_VALUE_PTR
+# if defined(__fcc__) || defined(__fcc_version) || \
+    defined(__FCC__) || defined(__FCC_VERSION)
+/* workaround for old version of Fujitsu C Compiler (fcc) */
+#  define FIX_CONST_VALUE_PTR(x) ((const VALUE *)(x))
+# else
+#  define FIX_CONST_VALUE_PTR(x) (x)
+# endif
+#endif
+
+#ifndef HAVE_RB_ARRAY_CONST_PTR
+static inline const VALUE *
+rb_array_const_ptr(VALUE a)
+{
+    return FIX_CONST_VALUE_PTR((RBASIC(a)->flags & RARRAY_EMBED_FLAG) ?
+	RARRAY(a)->as.ary : RARRAY(a)->as.heap.ptr);
+}
+#endif
+
+#ifndef HAVE_RARRAY_CONST_PTR
+# define RARRAY_CONST_PTR(a) rb_array_const_ptr(a)
+#endif
+
+#ifndef HAVE_RARRAY_AREF
+# define RARRAY_AREF(a, i) (RARRAY_CONST_PTR(a)[i])
+#endif
+
 #ifdef vabs
 # undef vabs
 #endif
