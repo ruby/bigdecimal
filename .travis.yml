@@ -7,7 +7,7 @@ rvm:
 - 2.0.0
 - 1.9.3
 matrix:
-  allow_failure:
+  allow_failures:
   - 1.9.3
 before_install:
 - gem install bundler -v 1.11.2
