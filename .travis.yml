@@ -1,0 +1,18 @@
+---
+language: ruby
+rvm:
+- ruby-head
+- 2.2.4
+- 2.1.8
+- 2.0.0
+- 1.9.3
+matrix:
+  allow_failure:
+  - 1.9.3
+before_install:
+- gem install bundler -v 1.11.2
+script:
+- rake travis
+notification:
+  email:
+  - mrkn@ruby-lang.org
