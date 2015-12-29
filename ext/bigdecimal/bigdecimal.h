@@ -90,7 +90,7 @@ llabs(LONG_LONG const x)
 }
 #endif
 
-#ifndef HAVE_FIX_CONST_VALUE_PTR
+#ifndef FIX_CONST_VALUE_PTR
 # if defined(__fcc__) || defined(__fcc_version) || \
     defined(__FCC__) || defined(__FCC_VERSION)
 /* workaround for old version of Fujitsu C Compiler (fcc) */
@@ -109,11 +109,11 @@ rb_array_const_ptr(VALUE a)
 }
 #endif
 
-#ifndef HAVE_RARRAY_CONST_PTR
+#ifndef RARRAY_CONST_PTR
 # define RARRAY_CONST_PTR(a) rb_array_const_ptr(a)
 #endif
 
-#ifndef HAVE_RARRAY_AREF
+#ifndef RARRAY_AREF
 # define RARRAY_AREF(a, i) (RARRAY_CONST_PTR(a)[i])
 #endif
 
