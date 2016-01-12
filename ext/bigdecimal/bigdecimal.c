@@ -2527,7 +2527,7 @@ BigDecimal_initialize(int argc, VALUE *argv, VALUE self)
 
 /* :nodoc:
  *
- * private method to dup and clone the provided BigDecimal +other+
+ * private method for dup and clone the provided BigDecimal +other+
  */
 static VALUE
 BigDecimal_initialize_copy(VALUE self, VALUE other)
@@ -2763,7 +2763,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
 	rb_raise(rb_eArgError, "Zero or negative precision for exp");
     }
 
-    /* TODO: the following switch statement is almostly the same as one in the
+    /* TODO: the following switch statement is almost same as one in the
      *       BigDecimalCmp function. */
     switch (TYPE(x)) {
       case T_DATA:
@@ -2901,7 +2901,7 @@ BigMath_s_log(VALUE klass, VALUE x, VALUE vprec)
 	rb_raise(rb_eArgError, "Zero or negative precision for exp");
     }
 
-    /* TODO: the following switch statement is almostly the same as one in the
+    /* TODO: the following switch statement is almost same as one in the
      *       BigDecimalCmp function. */
     switch (TYPE(x)) {
       case T_DATA:
@@ -4226,7 +4226,7 @@ end_if:
 }
 
 /*
- * Addition of two variable precisional variables
+ * Addition of two values with variable precision
  * a and b assuming abs(a)>abs(b).
  *   c = abs(a) + abs(b) ; where |a|>=|b|
  */
@@ -4985,7 +4985,7 @@ VpComp(Real *a, Real *b)
 	goto Exit;
     }
 
-    /* a and b have same exponent, then compare significand. */
+    /* a and b have same exponent, then compare their significand. */
     mx = (a->Prec < b->Prec) ? a->Prec : b->Prec;
     ind = 0;
     while (ind < mx) {
