@@ -3129,9 +3129,8 @@ get_vp_value:
  *
  * Copyright (C) 2002 by Shigeo Kobayashi <shigeo@tinyforest.gr.jp>.
  *
- * You may distribute under the terms of either the GNU General Public
- * License or the Artistic License, as specified in the README file
- * of the BigDecimal distribution.
+ * BigDecimal is released under the Ruby and 2-clause BSD licenses.
+ * See LICENSE.txt for details.
  *
  * Maintained by mrkn <mrkn@mrkn.jp> and ruby-core members.
  *
