@@ -209,11 +209,11 @@ extern VALUE rb_cBigDecimal;
 typedef struct {
     VALUE  obj;     /* Back pointer(VALUE) for Ruby object.     */
     size_t MaxPrec; /* Maximum precision size                   */
-                    /* This is the actual size of pfrac[]       */
+                    /* This is the actual size of frac[]        */
                     /*(frac[0] to frac[MaxPrec] are available). */
     size_t Prec;    /* Current precision size.                  */
-                    /* This indicates how much the.             */
-                    /* the array frac[] is actually used.       */
+                    /* This indicates how much the              */
+                    /* array frac[] is actually used.           */
     SIGNED_VALUE exponent; /* Exponent part.                    */
     short  sign;    /* Attributes of the value.                 */
                     /*
