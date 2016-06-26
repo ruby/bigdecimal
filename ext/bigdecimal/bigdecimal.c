@@ -4092,7 +4092,7 @@ VpAsgn(Real *c, Real *a, int isw)
 
 /*
  *   c = a + b  when operation =  1 or 2
- *  = a - b  when operation = -1 or -2.
+ *   c = a - b  when operation = -1 or -2.
  *   Returns number of significant digits of c
  */
 VP_EXPORT size_t
