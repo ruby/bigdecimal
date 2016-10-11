@@ -3908,28 +3908,28 @@ VpAlloc(size_t mx, const char *szVal)
     if (mx == 0) ++mx;
 
     if (szVal) {
-	while (ISSPACE(*szVal)) szVal++;
-	if (*szVal != '#') {
-	    if (mf) {
-		mf = (mf + BASE_FIG - 1) / BASE_FIG + 2; /* Needs 1 more for div */
-		if (mx > mf) {
-		    mx = mf;
-		}
-	    }
-	}
-	else {
-	    ++szVal;
-	}
+        while (ISSPACE(*szVal)) szVal++;
+        if (*szVal != '#') {
+            if (mf) {
+                mf = (mf + BASE_FIG - 1) / BASE_FIG + 2; /* Needs 1 more for div */
+                if (mx > mf) {
+                    mx = mf;
+                }
+            }
+        }
+        else {
+            ++szVal;
+        }
     }
     else {
-	/* necessary to be able to store */
-	/* at least mx digits. */
-	/* szVal==NULL ==> allocate zero value. */
-	vp = VpAllocReal(mx);
-	/* xmalloc() alway returns(or throw interruption) */
-	vp->MaxPrec = mx;    /* set max precision */
-	VpSetZero(vp, 1);    /* initialize vp to zero. */
-	return vp;
+        /* necessary to be able to store */
+        /* at least mx digits. */
+        /* szVal==NULL ==> allocate zero value. */
+        vp = VpAllocReal(mx);
+        /* xmalloc() alway returns(or throw interruption) */
+        vp->MaxPrec = mx;    /* set max precision */
+        VpSetZero(vp, 1);    /* initialize vp to zero. */
+        return vp;
     }
 
     /* Skip all '_' after digit: 2006-6-30 */
@@ -3939,43 +3939,43 @@ VpAlloc(size_t mx, const char *szVal)
     i   = 0;
     ipn = 0;
     while ((psz[i] = szVal[ipn]) != 0) {
-	if (ISDIGIT(psz[i])) ++ni;
-	if (psz[i] == '_') {
-	    if (ni > 0) {
-		ipn++;
-		continue;
-	    }
-	    psz[i] = 0;
-	    break;
-	}
-	++i;
-	++ipn;
+        if (ISDIGIT(psz[i])) ++ni;
+        if (psz[i] == '_') {
+            if (ni > 0) {
+                ipn++;
+                continue;
+            }
+            psz[i] = 0;
+            break;
+        }
+        ++i;
+        ++ipn;
     }
     /* Skip trailing spaces */
     while (--i > 0) {
-	if (ISSPACE(psz[i])) psz[i] = 0;
-	else break;
+        if (ISSPACE(psz[i])) psz[i] = 0;
+        else break;
     }
     szVal = psz;
 
     /* Check on Inf & NaN */
     if (StrCmp(szVal, SZ_PINF) == 0 || StrCmp(szVal, SZ_INF) == 0 ) {
-	vp = VpAllocReal(1);
-	vp->MaxPrec = 1;    /* set max precision */
-	VpSetPosInf(vp);
-	return vp;
+        vp = VpAllocReal(1);
+        vp->MaxPrec = 1;    /* set max precision */
+        VpSetPosInf(vp);
+        return vp;
     }
     if (StrCmp(szVal, SZ_NINF) == 0) {
-	vp = VpAllocReal(1);
-	vp->MaxPrec = 1;    /* set max precision */
-	VpSetNegInf(vp);
-	return vp;
+        vp = VpAllocReal(1);
+        vp->MaxPrec = 1;    /* set max precision */
+        VpSetNegInf(vp);
+        return vp;
     }
     if (StrCmp(szVal, SZ_NaN) == 0) {
-	vp = VpAllocReal(1);
-	vp->MaxPrec = 1;    /* set max precision */
-	VpSetNaN(vp);
-	return vp;
+        vp = VpAllocReal(1);
+        vp->MaxPrec = 1;    /* set max precision */
+        VpSetNaN(vp);
+        return vp;
     }
 
     /* check on number szVal[] */
@@ -3985,45 +3985,45 @@ VpAlloc(size_t mx, const char *szVal)
     /* Skip digits */
     ni = 0;            /* digits in mantissa */
     while ((v = szVal[i]) != 0) {
-	if (!ISDIGIT(v)) break;
-	++i;
-	++ni;
+        if (!ISDIGIT(v)) break;
+        ++i;
+        ++ni;
     }
     nf  = 0;
     ipf = 0;
     ipe = 0;
     ne  = 0;
     if (v) {
-	/* other than digit nor \0 */
-	if (szVal[i] == '.') {    /* xxx. */
-	    ++i;
-	    ipf = i;
-	    while ((v = szVal[i]) != 0) {    /* get fraction part. */
-		if (!ISDIGIT(v)) break;
-		++i;
-		++nf;
-	    }
-	}
-	ipe = 0;        /* Exponent */
+        /* other than digit nor \0 */
+        if (szVal[i] == '.') {    /* xxx. */
+            ++i;
+            ipf = i;
+            while ((v = szVal[i]) != 0) {    /* get fraction part. */
+                if (!ISDIGIT(v)) break;
+                ++i;
+                ++nf;
+            }
+        }
+        ipe = 0;        /* Exponent */
 
-	switch (szVal[i]) {
-	  case '\0':
-	    break;
-	  case 'e': case 'E':
-	  case 'd': case 'D':
-	    ++i;
-	    ipe = i;
-	    v = szVal[i];
-	    if ((v == '-') || (v == '+')) ++i;
-	    while ((v=szVal[i]) != 0) {
-		if (!ISDIGIT(v)) break;
-		++i;
-		++ne;
-	    }
-	    break;
-	  default:
-	    break;
-	}
+        switch (szVal[i]) {
+            case '\0':
+                break;
+            case 'e': case 'E':
+            case 'd': case 'D':
+                ++i;
+                ipe = i;
+                v = szVal[i];
+                if ((v == '-') || (v == '+')) ++i;
+                while ((v=szVal[i]) != 0) {
+                    if (!ISDIGIT(v)) break;
+                    ++i;
+                    ++ne;
+                }
+                break;
+            default:
+                break;
+        }
     }
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
     /* units for szVal[]  */
