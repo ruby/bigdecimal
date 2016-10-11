@@ -90,6 +90,21 @@ llabs(LONG_LONG const x)
 }
 #endif
 
+#ifndef HAVE_FINITE
+static int
+finite(double)
+{
+    return !isnan(n) && !isinf(n);
+}
+#endif
+
+#ifndef isfinite
+# ifndef HAVE_ISFINITE
+#  define HAVE_ISFINITE 1
+#  define isfinite(x) finite(x)
+# endif
+#endif
+
 #ifndef FIX_CONST_VALUE_PTR
 # if defined(__fcc__) || defined(__fcc_version) || \
     defined(__FCC__) || defined(__FCC_VERSION)
