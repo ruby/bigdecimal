@@ -239,6 +239,12 @@ again:
 	if (prec < 0) goto unable_to_coerce_without_prec;
 	if (prec > DBL_DIG+1) goto SomeOneMayDoIt;
 	d = RFLOAT_VALUE(v);
+	if (!isfinite(d)) {
+	    pv = VpCreateRbObject(prec, NULL);
+	    pv->sign = isnan(d) ? VP_SIGN_NaN :
+		d > 0 ? VP_SIGN_POSITIVE_INFINITE : VP_SIGN_NEGATIVE_FINITE;
+	    return pv;
+	}
 	if (d != 0.0) {
 	    v = rb_funcall(v, id_to_r, 0);
 	    goto again;
@@ -462,8 +468,7 @@ check_rounding_mode(VALUE const v)
 	break;
     }
 
-    Check_Type(v, T_FIXNUM);
-    sw = (unsigned short)FIX2UINT(v);
+    sw = NUM2USHORT(v);
     if (!VpIsRoundMode(sw)) {
 	rb_raise(rb_eArgError, "invalid rounding mode");
     }
@@ -516,8 +521,7 @@ BigDecimal_mode(int argc, VALUE *argv, VALUE self)
     unsigned long f,fo;
 
     rb_scan_args(argc, argv, "11", &which, &val);
-    Check_Type(which, T_FIXNUM);
-    f = (unsigned long)FIX2INT(which);
+    f = (unsigned long)NUM2INT(which);
 
     if (f & VP_EXCEPTION_ALL) {
 	/* Exception mode setting */
@@ -587,8 +591,7 @@ static SIGNED_VALUE
 GetPositiveInt(VALUE v)
 {
     SIGNED_VALUE n;
-    Check_Type(v, T_FIXNUM);
-    n = FIX2INT(v);
+    n = NUM2INT(v);
     if (n < 0) {
 	rb_raise(rb_eArgError, "argument must be positive");
     }
@@ -1103,7 +1106,7 @@ BigDecimal_comp(VALUE self, VALUE r)
  *
  * Values may be coerced to perform the comparison:
  *
- *   BigDecimal.new('1.0') == 1.0  -> true
+ *   BigDecimal.new('1.0') == 1.0  #=> true
  */
 static VALUE
 BigDecimal_eq(VALUE self, VALUE r)
@@ -1530,7 +1533,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
         size_t mx = ix + VpBaseFig()*2;
         size_t pl = VpSetPrecLimit(0);
 
-        GUARD_OBJ(cv, VpCreateRbObject(mx, "0"));
+        GUARD_OBJ(cv, VpCreateRbObject(mx + VpBaseFig(), "0"));
         GUARD_OBJ(av, GetVpValue(self, 1));
         GUARD_OBJ(bv, GetVpValue(b, 1));
         mx = av->Prec + bv->Prec + 2;
@@ -1717,12 +1720,10 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 	iLoc = 0;
 	break;
       case 1:
-	Check_Type(vLoc, T_FIXNUM);
-	iLoc = FIX2INT(vLoc);
+	iLoc = NUM2INT(vLoc);
 	break;
       case 2:
-	Check_Type(vLoc, T_FIXNUM);
-	iLoc = FIX2INT(vLoc);
+	iLoc = NUM2INT(vLoc);
 	sw = check_rounding_mode(vRound);
 	break;
       default:
@@ -1773,8 +1774,7 @@ BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 	iLoc = 0;
     }
     else {
-	Check_Type(vLoc, T_FIXNUM);
-	iLoc = FIX2INT(vLoc);
+	iLoc = NUM2INT(vLoc);
     }
 
     GUARD_OBJ(a, GetVpValue(self, 1));
@@ -1834,8 +1834,7 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 	iLoc = 0;
     }
     else {
-	Check_Type(vLoc, T_FIXNUM);
-	iLoc = FIX2INT(vLoc);
+	iLoc = NUM2INT(vLoc);
     }
 
     GUARD_OBJ(a, GetVpValue(self, 1));
@@ -1881,8 +1880,7 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
     if (rb_scan_args(argc, argv, "01", &vLoc) == 0) {
 	iLoc = 0;
     } else {
-	Check_Type(vLoc, T_FIXNUM);
-	iLoc = FIX2INT(vLoc);
+	iLoc = NUM2INT(vLoc);
     }
 
     GUARD_OBJ(a, GetVpValue(self, 1));
@@ -2625,8 +2623,7 @@ BigDecimal_limit(int argc, VALUE *argv, VALUE self)
     if (rb_scan_args(argc, argv, "01", &nFig) == 1) {
 	int nf;
 	if (NIL_P(nFig)) return nCur;
-	Check_Type(nFig, T_FIXNUM);
-	nf = FIX2INT(nFig);
+	nf = NUM2INT(nFig);
 	if (nf < 0) {
 	    rb_raise(rb_eArgError, "argument must be positive");
 	}
@@ -3425,12 +3422,12 @@ VpFree(Real *pv)
 #ifdef BIGDECIMAL_DEBUG
 	gnAlloc--; /* Decrement allocation count */
 	if (gnAlloc == 0) {
-	    printf(" *************** All memories allocated freed ****************");
-	    getchar();
+	    printf(" *************** All memories allocated freed ****************\n");
+	    /*getchar();*/
 	}
 	if (gnAlloc <  0) {
 	    printf(" ??????????? Too many memory free calls(%d) ?????????????\n", gnAlloc);
-	    getchar();
+	    /*getchar();*/
 	}
 #endif /* BIGDECIMAL_DEBUG */
     }
@@ -3460,7 +3457,7 @@ VpGetException (void)
 	return RMPD_EXCEPTION_MODE_DEFAULT;
     }
 
-    return (unsigned short)FIX2UINT(vmode);
+    return NUM2USHORT(vmode);
 }
 
 static void
@@ -3530,7 +3527,7 @@ VpGetRoundMode(void)
 	return RMPD_ROUNDING_MODE_DEFAULT;
     }
 
-    return (unsigned short)FIX2INT(vmode);
+    return NUM2USHORT(vmode);
 }
 
 VP_EXPORT int
@@ -3826,11 +3823,11 @@ VpInit(BDIGIT BaseVal)
 #ifdef BIGDECIMAL_DEBUG
     if (gfDebug) {
 	printf("VpInit: BaseVal   = %"PRIuBDIGIT"\n", BaseVal);
-	printf("  BASE   = %"PRIuBDIGIT"\n", BASE);
-	printf("  HALF_BASE = %"PRIuBDIGIT"\n", HALF_BASE);
-	printf("  BASE1  = %"PRIuBDIGIT"\n", BASE1);
-	printf("  BASE_FIG  = %u\n", BASE_FIG);
-	printf("  DBLE_FIG  = %d\n", DBLE_FIG);
+	printf("\tBASE      = %"PRIuBDIGIT"\n", BASE);
+	printf("\tHALF_BASE = %"PRIuBDIGIT"\n", HALF_BASE);
+	printf("\tBASE1     = %"PRIuBDIGIT"\n", BASE1);
+	printf("\tBASE_FIG  = %u\n", BASE_FIG);
+	printf("\tDBLE_FIG  = %d\n", DBLE_FIG);
     }
 #endif /* BIGDECIMAL_DEBUG */
 
@@ -5025,7 +5022,7 @@ Exit:
  *      %  ... VP variable. To print '%', use '%%'.
  *      \n ... new line
  *      \b ... backspace
- *           ... tab
+ *      \t ... tab
  *     Note: % must not appear more than once
  *    a  ... VP variable to be printed
  */
@@ -5036,24 +5033,6 @@ VPrint(FILE *fp, const char *cntl_chr, Real *a)
     size_t i, j, nc, nd, ZeroSup, sep = 10;
     BDIGIT m, e, nn;
 
-    /* Check if NaN & Inf. */
-    if (VpIsNaN(a)) {
-	fprintf(fp, SZ_NaN);
-	return 8;
-    }
-    if (VpIsPosInf(a)) {
-	fprintf(fp, SZ_INF);
-	return 8;
-    }
-    if (VpIsNegInf(a)) {
-	fprintf(fp, SZ_NINF);
-	return 9;
-    }
-    if (VpIsZero(a)) {
-	fprintf(fp, "0.0");
-	return 3;
-    }
-
     j = 0;
     nd = nc = 0;        /*  nd : number of digits in fraction part(every 10 digits, */
     /*    nd<=10). */
@@ -5062,7 +5041,19 @@ VPrint(FILE *fp, const char *cntl_chr, Real *a)
     while (*(cntl_chr + j)) {
 	if (*(cntl_chr + j) == '%' && *(cntl_chr + j + 1) != '%') {
 	    nc = 0;
-	    if (!VpIsZero(a)) {
+	    if (VpIsNaN(a)) {
+		fprintf(fp, SZ_NaN);
+		nc += 8;
+	    }
+	    else if (VpIsPosInf(a)) {
+		fprintf(fp, SZ_INF);
+		nc += 8;
+	    }
+	    else if (VpIsNegInf(a)) {
+		fprintf(fp, SZ_NINF);
+		nc += 9;
+	    }
+	    else if (!VpIsZero(a)) {
 		if (VpGetSign(a) < 0) {
 		    fprintf(fp, "-");
 		    ++nc;
