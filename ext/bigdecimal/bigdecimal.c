@@ -3936,6 +3936,10 @@ VpAlloc(size_t mx, const char *szVal)
     i   = 0;
     ipn = 0;
     while ((psz[i] = szVal[ipn]) != 0) {
+        if (ISSPACE(psz[i])) {
+            psz[i] = 0;
+            break;
+        }
         if (ISDIGIT(psz[i])) ++ni;
         if (psz[i] == '_') {
             if (ni > 0) {
@@ -3947,11 +3951,6 @@ VpAlloc(size_t mx, const char *szVal)
         }
         ++i;
         ++ipn;
-    }
-    /* Skip trailing spaces */
-    while (--i > 0) {
-        if (ISSPACE(psz[i])) psz[i] = 0;
-        else break;
     }
     szVal = psz;
 
