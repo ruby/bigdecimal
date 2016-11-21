@@ -1,6 +1,7 @@
 # BigDecimal
 
 [![Build Status](https://travis-ci.org/ruby/bigdecimal.svg?branch=master)](https://travis-ci.org/ruby/bigdecimal)
+[![Build status](https://ci.appveyor.com/api/projects/status/4j596bhldmmtcjpf/branch/master?svg=true)](https://ci.appveyor.com/project/ruby/bigdecimal/branch/master)
 
 BigDecimal provides an arbitrary-precision decimal floating-point number class.
 
@@ -45,4 +46,3 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/ruby/b
 
 BigDecimal is released under the Ruby and 2-clause BSD licenses.
 See LICENSE.txt for details.
-
