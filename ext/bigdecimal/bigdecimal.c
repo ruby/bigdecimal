@@ -5741,7 +5741,6 @@ VpSqrt(Real *y, Real *x)
 	}
 	VpSetNaN(y);
 	return VpException(VP_EXCEPTION_OP, "(VpSqrt) SQRT(NaN or negative value)", 0);
-	goto Exit;
     }
 
     /* Negative ? */
