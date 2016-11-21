@@ -929,6 +929,69 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_round_half_even
+    assert_equal(BigDecimal('12.0'), BigDecimal('12.5').round(half: :even))
+    assert_equal(BigDecimal('14.0'), BigDecimal('13.5').round(half: :even))
+
+    assert_equal(BigDecimal('2.2'), BigDecimal('2.15').round(1, half: :even))
+    assert_equal(BigDecimal('2.2'), BigDecimal('2.25').round(1, half: :even))
+    assert_equal(BigDecimal('2.4'), BigDecimal('2.35').round(1, half: :even))
+
+    assert_equal(BigDecimal('-2.2'), BigDecimal('-2.15').round(1, half: :even))
+    assert_equal(BigDecimal('-2.2'), BigDecimal('-2.25').round(1, half: :even))
+    assert_equal(BigDecimal('-2.4'), BigDecimal('-2.35').round(1, half: :even))
+
+    assert_equal(BigDecimal('7.1364'), BigDecimal('7.13645').round(4, half: :even))
+    assert_equal(BigDecimal('7.1365'), BigDecimal('7.1364501').round(4, half: :even))
+    assert_equal(BigDecimal('7.1364'), BigDecimal('7.1364499').round(4, half: :even))
+
+    assert_equal(BigDecimal('-7.1364'), BigDecimal('-7.13645').round(4, half: :even))
+    assert_equal(BigDecimal('-7.1365'), BigDecimal('-7.1364501').round(4, half: :even))
+    assert_equal(BigDecimal('-7.1364'), BigDecimal('-7.1364499').round(4, half: :even))
+  end
+
+  def test_round_half_up
+    assert_equal(BigDecimal('13.0'), BigDecimal('12.5').round(half: :up))
+    assert_equal(BigDecimal('14.0'), BigDecimal('13.5').round(half: :up))
+
+    assert_equal(BigDecimal('2.2'), BigDecimal('2.15').round(1, half: :up))
+    assert_equal(BigDecimal('2.3'), BigDecimal('2.25').round(1, half: :up))
+    assert_equal(BigDecimal('2.4'), BigDecimal('2.35').round(1, half: :up))
+
+    assert_equal(BigDecimal('-2.2'), BigDecimal('-2.15').round(1, half: :up))
+    assert_equal(BigDecimal('-2.3'), BigDecimal('-2.25').round(1, half: :up))
+    assert_equal(BigDecimal('-2.4'), BigDecimal('-2.35').round(1, half: :up))
+
+    assert_equal(BigDecimal('7.1365'), BigDecimal('7.13645').round(4, half: :up))
+    assert_equal(BigDecimal('7.1365'), BigDecimal('7.1364501').round(4, half: :up))
+    assert_equal(BigDecimal('7.1364'), BigDecimal('7.1364499').round(4, half: :up))
+
+    assert_equal(BigDecimal('-7.1365'), BigDecimal('-7.13645').round(4, half: :up))
+    assert_equal(BigDecimal('-7.1365'), BigDecimal('-7.1364501').round(4, half: :up))
+    assert_equal(BigDecimal('-7.1364'), BigDecimal('-7.1364499').round(4, half: :up))
+  end
+
+  def test_round_half_down
+    assert_equal(BigDecimal('12.0'), BigDecimal('12.5').round(half: :down))
+    assert_equal(BigDecimal('13.0'), BigDecimal('13.5').round(half: :down))
+
+    assert_equal(BigDecimal('2.1'), BigDecimal('2.15').round(1, half: :down))
+    assert_equal(BigDecimal('2.2'), BigDecimal('2.25').round(1, half: :down))
+    assert_equal(BigDecimal('2.3'), BigDecimal('2.35').round(1, half: :down))
+
+    assert_equal(BigDecimal('-2.1'), BigDecimal('-2.15').round(1, half: :down))
+    assert_equal(BigDecimal('-2.2'), BigDecimal('-2.25').round(1, half: :down))
+    assert_equal(BigDecimal('-2.3'), BigDecimal('-2.35').round(1, half: :down))
+
+    assert_equal(BigDecimal('7.1364'), BigDecimal('7.13645').round(4, half: :down))
+    assert_equal(BigDecimal('7.1365'), BigDecimal('7.1364501').round(4, half: :down))
+    assert_equal(BigDecimal('7.1364'), BigDecimal('7.1364499').round(4, half: :down))
+
+    assert_equal(BigDecimal('-7.1364'), BigDecimal('-7.13645').round(4, half: :down))
+    assert_equal(BigDecimal('-7.1365'), BigDecimal('-7.1364501').round(4, half: :down))
+    assert_equal(BigDecimal('-7.1364'), BigDecimal('-7.1364499').round(4, half: :down))
+  end
+
   def test_truncate
     assert_equal(3, BigDecimal.new("3.14159").truncate)
     assert_equal(8, BigDecimal.new("8.7").truncate)

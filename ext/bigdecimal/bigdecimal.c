@@ -62,6 +62,7 @@ static ID id_ceil;
 static ID id_floor;
 static ID id_to_r;
 static ID id_eq;
+static ID id_half;
 
 /* MACRO's to guard objects from GC by keeping them in stack */
 #define ENTER(n) volatile VALUE RB_UNUSED_VAR(vStack[n]);int iStack=0
@@ -437,6 +438,51 @@ BigDecimal_load(VALUE self, VALUE str)
 	pv->MaxPrec = m+1;
     }
     return ToValue(pv);
+}
+
+static unsigned short
+check_rounding_mode_option(VALUE const opts)
+{
+    VALUE mode;
+    char const *s;
+    long l;
+
+    assert(RB_TYPE_P(opts, T_HASH));
+
+    if (NIL_P(opts))
+        goto noopt;
+
+    mode = rb_hash_lookup2(opts, ID2SYM(id_half), Qundef);
+    if (mode == Qundef)
+        goto noopt;
+
+    if (SYMBOL_P(mode))
+        mode = rb_sym2str(mode);
+    else if (!RB_TYPE_P(mode, T_STRING)) {
+	VALUE str_mode = rb_check_string_type(mode);
+	if (NIL_P(str_mode)) goto invalid;
+	mode = str_mode;
+    }
+    s = RSTRING_PTR(mode);
+    l = RSTRING_LEN(mode);
+    switch (l) {
+      case 2:
+        if (strncasecmp(s, "up", 2) == 0)
+            return VP_ROUND_HALF_UP;
+        break;
+      case 4:
+        if (strncasecmp(s, "even", 4) == 0)
+            return VP_ROUND_HALF_EVEN;
+        else if (strncasecmp(s, "down", 4) == 0)
+            return VP_ROUND_HALF_DOWN;
+      default:
+        break;
+    }
+  invalid:
+    rb_raise(rb_eArgError, "invalid rounding mode: %"PRIsVALUE, mode);
+
+  noopt:
+    return VpGetRoundMode();
 }
 
 static unsigned short
@@ -1719,11 +1765,21 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 	iLoc = 0;
 	break;
       case 1:
-	iLoc = NUM2INT(vLoc);
+        if (RB_TYPE_P(vLoc, T_HASH)) {
+	    sw = check_rounding_mode_option(vLoc);
+	}
+	else {
+	    iLoc = NUM2INT(vLoc);
+	}
 	break;
       case 2:
 	iLoc = NUM2INT(vLoc);
-	sw = check_rounding_mode(vRound);
+	if (RB_TYPE_P(vRound, T_HASH)) {
+	    sw = check_rounding_mode_option(vRound);
+	}
+	else {
+	    sw = check_rounding_mode(vRound);
+	}
 	break;
       default:
 	break;
@@ -3356,6 +3412,7 @@ Init_bigdecimal(void)
     id_floor = rb_intern_const("floor");
     id_to_r = rb_intern_const("to_r");
     id_eq = rb_intern_const("==");
+    id_half = rb_intern_const("half");
 }
 
 /*
