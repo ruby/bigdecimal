@@ -3404,7 +3404,7 @@ VpMemAlloc(size_t mb)
     return p;
 }
 
-    VP_EXPORT void *
+VP_EXPORT void *
 VpMemRealloc(void *ptr, size_t mb)
 {
     void *p = xrealloc(ptr, mb);
