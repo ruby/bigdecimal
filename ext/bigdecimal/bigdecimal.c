@@ -562,7 +562,7 @@ BigDecimal_mode(int argc, VALUE *argv, VALUE self)
 	fo = VpSetRoundMode(sw);
 	return INT2FIX(fo);
     }
-    rb_raise(rb_eTypeError, "first argument for BigDecimal#mode invalid");
+    rb_raise(rb_eTypeError, "first argument for BigDecimal.mode invalid");
     return Qnil;
 }
 
