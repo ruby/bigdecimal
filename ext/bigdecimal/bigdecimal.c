@@ -3208,7 +3208,7 @@ Init_bigdecimal(void)
     rb_define_const(rb_cBigDecimal, "EXCEPTION_OVERFLOW", INT2FIX(VP_EXCEPTION_OVERFLOW));
 
     /*
-     * 0x01: Determines what happens when a division by zero is performed.
+     * 0x10: Determines what happens when a division by zero is performed.
      * See BigDecimal.mode.
      */
     rb_define_const(rb_cBigDecimal, "EXCEPTION_ZERODIVIDE", INT2FIX(VP_EXCEPTION_ZERODIVIDE));
