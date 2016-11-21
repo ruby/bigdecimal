@@ -89,6 +89,11 @@ class TestBigDecimal < Test::Unit::TestCase
 
     bug9214 = '[ruby-core:58858]'
     assert_equal(BigDecimal(-0.0, Float::DIG).sign, -1, bug9214)
+
+    bug10109 = '[ruby-core:64190]'
+    assert(BigDecimal(Float::INFINITY).infinity?)
+    assert(BigDecimal(-Float::INFINITY).infinity?)
+    assert(BigDecimal(Float::NAN).nan?)
   end
 
   def test_global_new_with_big_decimal
