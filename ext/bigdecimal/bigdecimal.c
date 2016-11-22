@@ -240,7 +240,7 @@ again:
 	if (prec > DBL_DIG+1) goto SomeOneMayDoIt;
 	d = RFLOAT_VALUE(v);
 	if (!isfinite(d)) {
-	    pv = VpCreateRbObject(prec, NULL);
+	    pv = VpCreateRbObject(1, NULL);
 	    VpDtoV(pv, d);
 	    return pv;
 	}
