@@ -481,6 +481,11 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_operator(n2, :>, o1)
     assert_operator(n2, :>=, o1)
     assert_operator(n1, :>=, 1)
+
+    bug10109 = '[ruby-core:64190]'
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    assert_operator(BigDecimal(0), :<, Float::INFINITY, bug10109)
+    assert_operator(Float::INFINITY, :>, BigDecimal(0), bug10109)
   end
 
   def test_cmp_bignum
