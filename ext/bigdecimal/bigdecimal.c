@@ -2544,6 +2544,7 @@ BigDecimal_new(int argc, VALUE *argv)
     size_t mf;
     VALUE  nFig;
     VALUE  iniValue;
+    double d;
 
     if (rb_scan_args(argc, argv, "11", &iniValue, &nFig) == 1) {
         mf = 0;
@@ -2565,6 +2566,12 @@ BigDecimal_new(int argc, VALUE *argv)
 	return GetVpValue(iniValue, 1);
 
       case T_FLOAT:
+        d = RFLOAT_VALUE(iniValue);
+        if (!isfinite(d)) {
+            Real *pv = VpCreateRbObject(1, NULL);
+            VpDtoV(pv, d);
+            return pv;
+        }
 	if (mf > DBL_DIG+1) {
 	    rb_raise(rb_eArgError, "precision too large.");
 	}
