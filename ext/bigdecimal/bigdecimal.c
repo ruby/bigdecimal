@@ -241,8 +241,7 @@ again:
 	d = RFLOAT_VALUE(v);
 	if (!isfinite(d)) {
 	    pv = VpCreateRbObject(prec, NULL);
-	    pv->sign = isnan(d) ? VP_SIGN_NaN :
-		d > 0 ? VP_SIGN_POSITIVE_INFINITE : VP_SIGN_NEGATIVE_FINITE;
+	    VpDtoV(pv, d);
 	    return pv;
 	}
 	if (d != 0.0) {
