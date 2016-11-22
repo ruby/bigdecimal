@@ -410,6 +410,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_nonzero_p
     assert_equal(nil, BigDecimal.new("0").nonzero?)
+    assert_equal(nil, BigDecimal.new("-0").nonzero?)
     assert_equal(BigDecimal.new("1"), BigDecimal.new("1").nonzero?)
   end
 
