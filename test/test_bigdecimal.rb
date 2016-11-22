@@ -804,6 +804,15 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1267650600228229401496703205376, x.abs)
     x = BigDecimal.new("0")
     assert_equal(0, x.abs)
+    x = BigDecimal.new("-0")
+    assert_equal(0, x.abs)
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    x = BigDecimal.new("Infinity")
+    assert_equal(BigDecimal.new("Infinity"), x.abs)
+    x = BigDecimal.new("-Infinity")
+    assert_equal(BigDecimal.new("Infinity"), x.abs)
+
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     x = BigDecimal.new("NaN")
     assert_equal(true, x.abs.nan?)
