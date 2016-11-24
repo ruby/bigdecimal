@@ -1321,7 +1321,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert(BigDecimal::NAN.nan?, "BigDecimal::NAN is not NaN")
   end
 
-  def test_exp_with_zerp_precision
+  def test_exp_with_zero_precision
     assert_raise(ArgumentError) do
       BigMath.exp(1, 0)
     end
