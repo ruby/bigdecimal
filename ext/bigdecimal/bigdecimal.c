@@ -3699,11 +3699,9 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
 		    VpSetNaN(c);
 		    goto NaN;
 		}
-		break;
 	      case 3: /* * */
 		VpSetInf(c, VpGetSign(a)*VpGetSign(b));
 		goto Inf;
-		break;
 	      case 4: /* / */
 		VpSetNaN(c);
 		goto NaN;
