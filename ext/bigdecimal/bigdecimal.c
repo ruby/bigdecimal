@@ -681,7 +681,7 @@ static VALUE BigDecimal_split(VALUE self);
 
 /* Returns the value as an Integer.
  *
- * If the BigNumber is infinity or NaN, raises FloatDomainError.
+ * If the BigDecimal is infinity or NaN, raises FloatDomainError.
  */
 static VALUE
 BigDecimal_to_i(VALUE self)
