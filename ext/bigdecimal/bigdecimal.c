@@ -4706,7 +4706,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     }
     if (VpIsZero(b)) {
 	VpSetInf(c, VpGetSign(a) * VpGetSign(b));
-	return VpException(VP_EXCEPTION_ZERODIVIDE, "(VpDivd) Divide by zero", 0);
+	return VpException(VP_EXCEPTION_ZERODIVIDE, "Divide by zero", 0);
     }
     if (VpIsZero(a)) {
 	/* numerator a is zero  */
