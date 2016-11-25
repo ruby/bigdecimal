@@ -4702,7 +4702,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     if (!VpIsDefOP(c, a, b, 4)) goto Exit;
     if (VpIsZero(a) && VpIsZero(b)) {
 	VpSetNaN(c);
-	return VpException(VP_EXCEPTION_NaN, "(VpDivd) 0/0 not defined(NaN)", 0);
+	return VpException(VP_EXCEPTION_NaN, "Computation results to 'NaN'", 0);
     }
     if (VpIsZero(b)) {
 	VpSetInf(c, VpGetSign(a) * VpGetSign(b));
