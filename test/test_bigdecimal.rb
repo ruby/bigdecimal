@@ -685,6 +685,14 @@ class TestBigDecimal < Test::Unit::TestCase
 
     x = BigDecimal.new((2**100).to_s)
     assert_equal(BigDecimal.new((2**100+1).to_s), x + 1)
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    inf    = BigDecimal("Infinity")
+    neginf = BigDecimal("-Infinity")
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+    assert_raise_with_message(FloatDomainError, "Computation results to 'Infinity'") { inf + inf }
+    assert_raise_with_message(FloatDomainError, "Computation results to '-Infinity'") { neginf + neginf }
   end
 
   def test_sub
@@ -699,6 +707,14 @@ class TestBigDecimal < Test::Unit::TestCase
 
     x = BigDecimal.new((2**100).to_s)
     assert_equal(BigDecimal.new((2**100-1).to_s), x - 1)
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    inf    = BigDecimal("Infinity")
+    neginf = BigDecimal("-Infinity")
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+    assert_raise_with_message(FloatDomainError, "Computation results to 'Infinity'") { inf - neginf }
+    assert_raise_with_message(FloatDomainError, "Computation results to '-Infinity'") { neginf - inf }
   end
 
   def test_sub_with_float
@@ -715,6 +731,14 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(x, (x * 1).to_i)
     assert_equal(x, (BigDecimal("1") * x).to_i)
     assert_equal(BigDecimal.new((2**200).to_s), (x * x).to_i)
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    inf    = BigDecimal("Infinity")
+    neginf = BigDecimal("-Infinity")
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+    assert_raise_with_message(FloatDomainError, "Computation results to 'Infinity'") { inf * inf }
+    assert_raise_with_message(FloatDomainError, "Computation results to '-Infinity'") { neginf * inf }
   end
 
   def test_mult_with_float
@@ -748,6 +772,11 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_negative_zero(BigDecimal.new("-1.0") / BigDecimal.new("Infinity"))
     assert_negative_zero(BigDecimal.new("1.0")  / BigDecimal.new("-Infinity"))
     assert_positive_zero(BigDecimal.new("-1.0") / BigDecimal.new("-Infinity"))
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+    BigDecimal.mode(BigDecimal::EXCEPTION_ZERODIVIDE, false)
+    assert_raise_with_message(FloatDomainError, "Computation results to 'Infinity'") { BigDecimal.new("1") / 0 }
+    assert_raise_with_message(FloatDomainError, "Computation results to '-Infinity'") { BigDecimal.new("-1") / 0 }
   end
 
   def test_div_with_float

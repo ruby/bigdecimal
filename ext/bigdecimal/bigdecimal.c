@@ -3808,7 +3808,13 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
     return 1; /* Results OK */
 
 Inf:
-    return VpException(VP_EXCEPTION_INFINITY, "Computation results to 'Infinity'", 0);
+    if (VpIsPosInf(c)) {
+	return VpException(VP_EXCEPTION_INFINITY, "Computation results to 'Infinity'", 0);
+    }
+    else {
+	return VpException(VP_EXCEPTION_INFINITY, "Computation results to '-Infinity'", 0);
+    }
+
 NaN:
     return VpException(VP_EXCEPTION_NaN, "Computation results to 'NaN'", 0);
 }
