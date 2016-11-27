@@ -4681,7 +4681,7 @@ Exit:
 /*
  *   c = a / b,  remainder = r
  */
-    VP_EXPORT size_t
+VP_EXPORT size_t
 VpDivd(Real *c, Real *r, Real *a, Real *b)
 {
     size_t word_a, word_b, word_c, word_r;
