@@ -637,6 +637,22 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(-0.0, BigDecimal('-10e-325').to_f)
   end
 
+  def test_to_r
+    BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+    BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+
+    x = BigDecimal.new("0")
+    assert_kind_of(Rational, x.to_r)
+    assert_equal(0, x.to_r)
+    assert_raise(FloatDomainError) {( 1 / x).to_r}
+    assert_raise(FloatDomainError) {(-1 / x).to_r}
+    assert_raise(FloatDomainError) {( 0 / x).to_r}
+
+    assert_equal(1, BigDecimal.new("1").to_r)
+    assert_equal(Rational(3, 2), BigDecimal.new("1.5").to_r)
+    assert_equal((2**100).to_r, BigDecimal.new((2**100).to_s).to_r)
+  end
+
   def test_coerce
     a, b = BigDecimal.new("1").coerce(1.0)
     assert_instance_of(BigDecimal, a)
