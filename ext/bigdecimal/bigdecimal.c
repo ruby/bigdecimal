@@ -335,15 +335,18 @@ BigDecimal_double_fig(VALUE self)
     return INT2FIX(VpDblFig());
 }
 
-/* call-seq:
- * precs
+/*  call-seq:
+ *     big_decimal.precs  ->  array
  *
- * Returns an Array of two Integer values.
+ *  Returns an Array of two Integer values.
  *
- * The first value is the current number of significant digits in the
- * BigDecimal. The second value is the maximum number of significant digits
- * for the BigDecimal.
+ *  The first value is the current number of significant digits in the
+ *  BigDecimal. The second value is the maximum number of significant digits
+ *  for the BigDecimal.
+ *
+ *     BigDecimal('5').precs #=> [9, 18]
  */
+
 static VALUE
 BigDecimal_prec(VALUE self)
 {
