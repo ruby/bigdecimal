@@ -659,6 +659,18 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(x, x.send(:+@))
   end
 
+  def test_neg
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+
+    assert_equal(BigDecimal.new("-1"), BigDecimal.new("1").send(:-@))
+    assert_equal(BigDecimal.new("-0"), BigDecimal.new("0").send(:-@))
+    assert_equal(BigDecimal.new("0"), BigDecimal.new("-0").send(:-@))
+    assert_equal(BigDecimal.new("-Infinity"), BigDecimal.new("Infinity").send(:-@))
+    assert_equal(BigDecimal.new("Infinity"), BigDecimal.new("-Infinity").send(:-@))
+    assert_equal(true, BigDecimal.new("NaN").send(:-@).nan?)
+  end
+
   def test_add
     x = BigDecimal.new("1")
     assert_equal(BigDecimal.new("2"), x + x)
