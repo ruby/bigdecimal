@@ -3440,7 +3440,14 @@ static Real *VpPt5;        /* constant 0.5 */
 #define MemCmp(x,y,z) memcmp(x,y,z)
 #define StrCmp(x,y)   strcmp(x,y)
 
-static int VpIsDefOP(Real *c,Real *a,Real *b,int sw);
+enum op_sw {
+    OP_SW_ADD = 1,  /* + */
+    OP_SW_SUB,      /* - */
+    OP_SW_MULT,     /* * */
+    OP_SW_DIV       /* / */
+};
+
+static int VpIsDefOP(Real *c, Real *a, Real *b, enum op_sw sw);
 static int AddExponent(Real *a, SIGNED_VALUE n);
 static BDIGIT VpAddAbs(Real *a,Real *b,Real *c);
 static BDIGIT VpSubAbs(Real *a,Real *b,Real *c);
@@ -3727,7 +3734,7 @@ VpException(unsigned short f, const char *str,int always)
 /* Throw exception or returns 0,when resulting c is Inf or NaN */
 /*  sw=1:+ 2:- 3:* 4:/ */
 static int
-VpIsDefOP(Real *c,Real *a,Real *b,int sw)
+VpIsDefOP(Real *c, Real *a, Real *b, enum op_sw sw)
 {
     if (VpIsNaN(a) || VpIsNaN(b)) {
 	/* at least a or b is NaN */
@@ -3738,7 +3745,7 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
     if (VpIsInf(a)) {
 	if (VpIsInf(b)) {
 	    switch(sw) {
-	      case 1: /* + */
+	      case OP_SW_ADD: /* + */
 		if (VpGetSign(a) == VpGetSign(b)) {
 		    VpSetInf(c, VpGetSign(a));
 		    goto Inf;
@@ -3747,7 +3754,7 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
 		    VpSetNaN(c);
 		    goto NaN;
 		}
-	      case 2: /* - */
+	      case OP_SW_SUB: /* - */
 		if (VpGetSign(a) != VpGetSign(b)) {
 		    VpSetInf(c, VpGetSign(a));
 		    goto Inf;
@@ -3756,10 +3763,10 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
 		    VpSetNaN(c);
 		    goto NaN;
 		}
-	      case 3: /* * */
+	      case OP_SW_MULT: /* * */
 		VpSetInf(c, VpGetSign(a)*VpGetSign(b));
 		goto Inf;
-	      case 4: /* / */
+	      case OP_SW_DIV: /* / */
 		VpSetNaN(c);
 		goto NaN;
 	    }
@@ -3768,18 +3775,18 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
 	}
 	/* Inf op Finite */
 	switch(sw) {
-	  case 1: /* + */
-	  case 2: /* - */
+	  case OP_SW_ADD: /* + */
+	  case OP_SW_SUB: /* - */
 	    VpSetInf(c, VpGetSign(a));
 	    break;
-	  case 3: /* * */
+	  case OP_SW_MULT: /* * */
 	    if (VpIsZero(b)) {
 		VpSetNaN(c);
 		goto NaN;
 	    }
 	    VpSetInf(c, VpGetSign(a)*VpGetSign(b));
 	    break;
-	  case 4: /* / */
+	  case OP_SW_DIV: /* / */
 	    VpSetInf(c, VpGetSign(a)*VpGetSign(b));
 	}
 	goto Inf;
@@ -3787,20 +3794,20 @@ VpIsDefOP(Real *c,Real *a,Real *b,int sw)
 
     if (VpIsInf(b)) {
 	switch(sw) {
-	  case 1: /* + */
+	  case OP_SW_ADD: /* + */
 	    VpSetInf(c, VpGetSign(b));
 	    break;
-	  case 2: /* - */
+	  case OP_SW_SUB: /* - */
 	    VpSetInf(c, -VpGetSign(b));
 	    break;
-	  case 3: /* * */
+	  case OP_SW_MULT: /* * */
 	    if (VpIsZero(a)) {
 		VpSetNaN(c);
 		goto NaN;
 	    }
 	    VpSetInf(c, VpGetSign(a)*VpGetSign(b));
 	    break;
-	  case 4: /* / */
+	  case OP_SW_DIV: /* / */
 	    VpSetZero(c, VpGetSign(a)*VpGetSign(b));
 	}
 	goto Inf;
@@ -4168,7 +4175,7 @@ VpAddSub(Real *c, Real *a, Real *b, int operation)
     }
 #endif /* BIGDECIMAL_DEBUG */
 
-    if (!VpIsDefOP(c, a, b, (operation > 0) ? 1 : 2)) return 0; /* No significant digits */
+    if (!VpIsDefOP(c, a, b, (operation > 0) ? OP_SW_ADD : OP_SW_SUB)) return 0; /* No significant digits */
 
     /* check if a or b is zero  */
     if (VpIsZero(a)) {
@@ -4624,7 +4631,7 @@ VpMult(Real *c, Real *a, Real *b)
     }
 #endif /* BIGDECIMAL_DEBUG */
 
-    if (!VpIsDefOP(c, a, b, 3)) return 0; /* No significant digit */
+    if (!VpIsDefOP(c, a, b, OP_SW_MULT)) return 0; /* No significant digit */
 
     if (VpIsZero(a) || VpIsZero(b)) {
 	/* at least a or b is zero */
@@ -4754,7 +4761,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 #endif /*BIGDECIMAL_DEBUG */
 
     VpSetNaN(r);
-    if (!VpIsDefOP(c, a, b, 4)) goto Exit;
+    if (!VpIsDefOP(c, a, b, OP_SW_DIV)) goto Exit;
     if (VpIsZero(a) && VpIsZero(b)) {
 	VpSetNaN(c);
 	return VpException(VP_EXCEPTION_NaN, "Computation results to 'NaN'", 0);
