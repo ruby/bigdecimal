@@ -96,8 +96,8 @@ class TestBigDecimal < Test::Unit::TestCase
     end
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
-      assert(BigDecimal(Float::INFINITY).infinite?)
-      assert(BigDecimal(-Float::INFINITY).infinite?)
+      assert_positive_infinite(BigDecimal(Float::INFINITY))
+      assert_negative_infinite(BigDecimal(-Float::INFINITY))
     end
   end
 
@@ -131,10 +131,10 @@ class TestBigDecimal < Test::Unit::TestCase
 
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-    assert_equal( 1, BigDecimal.new("Infinity").infinite?)
-    assert_equal(-1, BigDecimal.new("-Infinity").infinite?)
+    assert_positive_infinite(BigDecimal.new("Infinity"))
+    assert_negative_infinite(BigDecimal.new("-Infinity"))
     assert_equal(true, BigDecimal.new("NaN").nan?)
-    assert_equal( 1, BigDecimal.new("1E1111111111111111111").infinite?)
+    assert_positive_infinite(BigDecimal.new("1E1111111111111111111"))
   end
 
   def test_new_with_integer
@@ -1398,7 +1398,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_INFINITY
-    assert(BigDecimal::INFINITY.infinite?, "BigDecimal::INFINITY is not a infinity")
+    assert_positive_infinite(BigDecimal::INFINITY)
   end
 
   def test_NAN
@@ -1434,7 +1434,7 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
       assert(BigMath.exp(BigDecimal::INFINITY, 20) > 0)
-      assert(BigMath.exp(BigDecimal::INFINITY, 20).infinite?)
+      assert_positive_infinite(BigMath.exp(BigDecimal::INFINITY, 20))
     end
   end
 
@@ -1562,7 +1562,7 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
       assert(BigMath.log(BigDecimal::INFINITY, 20) > 0)
-      assert(BigMath.log(BigDecimal::INFINITY, 20).infinite?)
+      assert_positive_infinite(BigMath.log(BigDecimal::INFINITY, 20))
     end
   end
 
