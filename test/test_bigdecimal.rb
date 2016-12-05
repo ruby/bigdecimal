@@ -469,6 +469,8 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_equal(nil, BigDecimal.new("NaN") <=> n1)
     assert_equal(false, BigDecimal.new("NaN") > n1)
+    assert_equal(nil, BigDecimal.new("NaN") <=> BigDecimal.new("NaN"))
+    assert_equal(false, BigDecimal.new("NaN") == BigDecimal.new("NaN"))
   end
 
   def test_cmp_failing_coercion
