@@ -882,6 +882,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_fix
     x = BigDecimal.new("1.1")
     assert_equal(1, x.fix)
+    assert_kind_of(BigDecimal, x.fix)
   end
 
   def test_frac
