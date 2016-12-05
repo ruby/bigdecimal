@@ -730,6 +730,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal('1486.868686869'), BigDecimal('1472.0') / BigDecimal('0.99'), '[ruby-core:59365] [#9316]')
 
     assert_equal(4.124045235, BigDecimal('0.9932') / (700 * BigDecimal('0.344045') / BigDecimal('1000.0')), '[#9305]')
+
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    assert_positive_zero(BigDecimal.new("1.0")  / BigDecimal.new("Infinity"))
+    assert_negative_zero(BigDecimal.new("-1.0") / BigDecimal.new("Infinity"))
+    assert_negative_zero(BigDecimal.new("1.0")  / BigDecimal.new("-Infinity"))
+    assert_positive_zero(BigDecimal.new("-1.0") / BigDecimal.new("-Infinity"))
   end
 
   def test_div_with_float
