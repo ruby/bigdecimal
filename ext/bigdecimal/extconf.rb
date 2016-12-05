@@ -12,6 +12,7 @@ have_type("struct RRational", "ruby.h")
 have_func("rb_rational_num", "ruby.h")
 have_func("rb_rational_den", "ruby.h")
 have_func("rb_array_const_ptr", "ruby.h")
+have_func("rb_sym2str", "ruby.h")
 
 have_macro("FIX_CONST_VALUE_PTR", "ruby.h")
 have_macro("RARRAY_CONST_PTR", "ruby.h")

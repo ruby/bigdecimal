@@ -132,6 +132,14 @@ rb_array_const_ptr(VALUE a)
 # define RARRAY_AREF(a, i) (RARRAY_CONST_PTR(a)[i])
 #endif
 
+#ifndef HAVE_RB_SYM2STR
+static inline VALUE
+rb_sym2str(VALUE sym)
+{
+    return rb_id2str(SYM2ID(sym));
+}
+#endif
+
 #ifdef vabs
 # undef vabs
 #endif
