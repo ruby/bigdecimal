@@ -402,10 +402,16 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_zero_p
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+
     assert_equal(true, BigDecimal.new("0").zero?)
     assert_equal(true, BigDecimal.new("-0").zero?)
     assert_equal(false, BigDecimal.new("1").zero?)
     assert_equal(true, BigDecimal.new("0E200000000000000").zero?)
+    assert_equal(false, BigDecimal.new("Infinity").zero?)
+    assert_equal(false, BigDecimal.new("-Infinity").zero?)
+    assert_equal(false, BigDecimal.new("NaN").zero?)
   end
 
   def test_nonzero_p
