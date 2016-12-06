@@ -1061,6 +1061,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_round_half_invalid_option
     assert_raise_with_message(ArgumentError, "invalid rounding mode: invalid") { BigDecimal('12.5').round(half: :invalid) }
     assert_raise_with_message(ArgumentError, "invalid rounding mode: invalid") { BigDecimal('2.15').round(1, half: :invalid) }
+    assert_raise_with_message(ArgumentError, "invalid rounding mode: nil") { BigDecimal('12.5').round(half: nil) }
   end
 
   def test_truncate
