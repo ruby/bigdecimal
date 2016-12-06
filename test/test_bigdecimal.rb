@@ -409,9 +409,15 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_nonzero_p
+    BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+    BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+
     assert_equal(nil, BigDecimal.new("0").nonzero?)
     assert_equal(nil, BigDecimal.new("-0").nonzero?)
     assert_equal(BigDecimal.new("1"), BigDecimal.new("1").nonzero?)
+    assert_positive_infinite(BigDecimal.new("Infinity").nonzero?)
+    assert_negative_infinite(BigDecimal.new("-Infinity").nonzero?)
+    assert_nan(BigDecimal.new("NaN").nonzero?)
   end
 
   def test_double_fig
