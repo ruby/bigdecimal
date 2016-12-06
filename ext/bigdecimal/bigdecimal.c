@@ -479,7 +479,10 @@ check_rounding_mode_option(VALUE const opts)
         break;
     }
   invalid:
-    rb_raise(rb_eArgError, "invalid rounding mode: %"PRIsVALUE, mode);
+    if (NIL_P(mode))
+	rb_raise(rb_eArgError, "invalid rounding mode: nil");
+    else
+	rb_raise(rb_eArgError, "invalid rounding mode: %"PRIsVALUE, mode);
 
   noopt:
     return VpGetRoundMode();
