@@ -917,9 +917,12 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_raise(FloatDomainError) { BigDecimal.new("NaN").sqrt(1) }
+    assert_raise(FloatDomainError) { BigDecimal.new("-Infinity").sqrt(1) }
 
     assert_equal(0, BigDecimal.new("0").sqrt(1))
+    assert_equal(0, BigDecimal.new("-0").sqrt(1))
     assert_equal(1, BigDecimal.new("1").sqrt(1))
+    assert_positive_infinite(BigDecimal.new("Infinity").sqrt(1))
   end
 
   def test_sqrt_5266
