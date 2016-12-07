@@ -910,14 +910,14 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(true, (x.sqrt(200) - y).abs < BigDecimal("1E#{e-200}"))
     assert_equal(true, (x.sqrt(300) - y).abs < BigDecimal("1E#{e-300}"))
     x = BigDecimal.new("-" + (2**100).to_s)
-    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(negative value)") { x.sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { x.sqrt(1) }
     x = BigDecimal.new((2**200).to_s)
     assert_equal(2**100, x.sqrt(1))
 
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(NaN)") { BigDecimal.new("NaN").sqrt(1) }
-    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(negative value)") { BigDecimal.new("-Infinity").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of 'NaN'(Not a Number)") { BigDecimal.new("NaN").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { BigDecimal.new("-Infinity").sqrt(1) }
 
     assert_equal(0, BigDecimal.new("0").sqrt(1))
     assert_equal(0, BigDecimal.new("-0").sqrt(1))
