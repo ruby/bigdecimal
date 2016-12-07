@@ -53,8 +53,8 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1, BigDecimal("1"))
     assert_equal(1, BigDecimal("1", 1))
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
-    assert_raise_with_message(ArgumentError, /Float/) { BigDecimal(4.2) }
-    assert_raise_with_message(ArgumentError, /Rational/) { BigDecimal(42.quo(7)) }
+    assert_raise_with_message(ArgumentError, "can't omit precision for a Float.") { BigDecimal(4.2) }
+    assert_raise_with_message(ArgumentError, "can't omit precision for a Rational.") { BigDecimal(42.quo(7)) }
   end
 
   def test_global_new_with_integer
