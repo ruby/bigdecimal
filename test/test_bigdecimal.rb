@@ -916,8 +916,8 @@ class TestBigDecimal < Test::Unit::TestCase
 
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(NaN or negative value)") { BigDecimal.new("NaN").sqrt(1) }
-    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(NaN or negative value)") { BigDecimal.new("-Infinity").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(NaN)") { BigDecimal.new("NaN").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "(VpSqrt) SQRT(negative value)") { BigDecimal.new("-Infinity").sqrt(1) }
 
     assert_equal(0, BigDecimal.new("0").sqrt(1))
     assert_equal(0, BigDecimal.new("-0").sqrt(1))

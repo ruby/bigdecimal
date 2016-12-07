@@ -5807,20 +5807,22 @@ VpSqrt(Real *y, Real *x)
     ssize_t nr;
     double val;
 
-    /* Zero, NaN or Infinity ? */
-    if (!VpHasVal(x)) {
-	if (VpIsZero(x) || VpGetSign(x) > 0) {
-	    VpAsgn(y,x,1);
-	    goto Exit;
-	}
-	VpSetNaN(y);
-	return VpException(VP_EXCEPTION_OP, "(VpSqrt) SQRT(NaN or negative value)", 0);
+    /* Zero or +Infinity ? */
+    if (VpIsZero(x) || VpIsPosInf(x)) {
+	VpAsgn(y,x,1);
+	goto Exit;
     }
 
     /* Negative ? */
-    if (VpGetSign(x) < 0) {
+    if (x->sign < 0) {
 	VpSetNaN(y);
 	return VpException(VP_EXCEPTION_OP, "(VpSqrt) SQRT(negative value)", 0);
+    }
+
+    /* NaN ? */
+    if (VpIsNaN(x)) {
+	VpSetNaN(y);
+	return VpException(VP_EXCEPTION_OP, "(VpSqrt) SQRT(NaN)", 0);
     }
 
     /* One ? */
