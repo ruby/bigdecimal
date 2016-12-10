@@ -912,16 +912,19 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(true, (x.sqrt(200) - y).abs < BigDecimal("1E#{e-200}"))
     assert_equal(true, (x.sqrt(300) - y).abs < BigDecimal("1E#{e-300}"))
     x = BigDecimal.new("-" + (2**100).to_s)
-    assert_raise(FloatDomainError) { x.sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { x.sqrt(1) }
     x = BigDecimal.new((2**200).to_s)
     assert_equal(2**100, x.sqrt(1))
 
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-    assert_raise(FloatDomainError) { BigDecimal.new("NaN").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of 'NaN'(Not a Number)") { BigDecimal.new("NaN").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { BigDecimal.new("-Infinity").sqrt(1) }
 
     assert_equal(0, BigDecimal.new("0").sqrt(1))
+    assert_equal(0, BigDecimal.new("-0").sqrt(1))
     assert_equal(1, BigDecimal.new("1").sqrt(1))
+    assert_positive_infinite(BigDecimal.new("Infinity").sqrt(1))
   end
 
   def test_sqrt_5266
