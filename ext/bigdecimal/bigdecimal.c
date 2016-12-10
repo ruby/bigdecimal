@@ -2138,23 +2138,16 @@ BigDecimal_inspect(VALUE self)
 {
     ENTER(5);
     Real *vp;
-    volatile VALUE obj;
+    volatile VALUE str;
     size_t nc;
-    char *psz, *tmp;
 
     GUARD_OBJ(vp, GetVpValue(self, 1));
     nc = VpNumOfChars(vp, "E");
-    nc += (nc + 9) / 10;
 
-    obj = rb_str_new(0, nc+256);
-    psz = RSTRING_PTR(obj);
-    sprintf(psz, "#<BigDecimal:%"PRIxVALUE",'", self);
-    tmp = psz + strlen(psz);
-    VpToString(vp, tmp, 10, 0);
-    tmp += strlen(tmp);
-    sprintf(tmp, "',%"PRIuSIZE"(%"PRIuSIZE")>", VpPrec(vp)*VpBaseFig(), VpMaxPrec(vp)*VpBaseFig());
-    rb_str_resize(obj, strlen(psz));
-    return obj;
+    str = rb_str_new(0, nc);
+    VpToString(vp, RSTRING_PTR(str), 0, 0);
+    rb_str_resize(str, strlen(RSTRING_PTR(str)));
+    return str;
 }
 
 static VALUE BigMath_s_exp(VALUE, VALUE, VALUE);
@@ -5222,7 +5215,7 @@ VpFormatSt(char *psz, size_t fFmt)
 	if (!ch) break;
 	if (ISSPACE(ch) || ch=='-' || ch=='+') continue;
 	if (ch == '.') { nf = 0; continue; }
-	if (ch == 'E') break;
+	if (ch == 'E' || ch == 'e') break;
 
 	if (++nf > fFmt) {
 	    memmove(psz + i + 1, psz + i, ie - i + 1);
@@ -5376,7 +5369,7 @@ VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
     while (psz[-1] == '0') {
 	*(--psz) = 0;
     }
-    sprintf(psz, "E%"PRIdSIZE, ex);
+    sprintf(psz, "e%"PRIdSIZE, ex);
     if (fFmt) VpFormatSt(pszSav, fFmt);
 }
 
