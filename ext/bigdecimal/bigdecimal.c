@@ -127,6 +127,9 @@ rb_rational_den(VALUE rat)
 }
 #endif
 
+#define BIGDECIMAL_POSITIVE_P(bd) ((bd)->sign > 0)
+#define BIGDECIMAL_NEGATIVE_P(bd) ((bd)->sign < 0)
+
 /*
  * ================== Ruby Interface part ==========================
  */
@@ -755,7 +758,7 @@ BigDecimal_to_i(VALUE self)
 	VALUE ret;
 	ssize_t dpower = e - (ssize_t)RSTRING_LEN(digits);
 
-	if (VpGetSign(p) < 0) {
+	if (BIGDECIMAL_NEGATIVE_P(p)) {
 	    numerator = rb_funcall(numerator, '*', 1, INT2FIX(-1));
 	}
 	if (dpower < 0) {
@@ -810,17 +813,17 @@ BigDecimal_to_f(VALUE self)
 
 overflow:
     VpException(VP_EXCEPTION_OVERFLOW, "BigDecimal to Float conversion", 0);
-    if (p->sign >= 0)
-	return rb_float_new(VpGetDoublePosInf());
-    else
+    if (BIGDECIMAL_NEGATIVE_P(p))
 	return rb_float_new(VpGetDoubleNegInf());
+    else
+	return rb_float_new(VpGetDoublePosInf());
 
 underflow:
     VpException(VP_EXCEPTION_UNDERFLOW, "BigDecimal to Float conversion", 0);
-    if (p->sign >= 0)
-	return rb_float_new(0.0);
-    else
+    if (BIGDECIMAL_NEGATIVE_P(p))
 	return rb_float_new(-0.0);
+    else
+	return rb_float_new(0.0);
 }
 
 
@@ -2361,7 +2364,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	if (is_negative(vexp)) {
 	    y = VpCreateRbObject(n, "#0");
 	    RB_GC_GUARD(y->obj);
-	    if (VpGetSign(x) < 0) {
+	    if (BIGDECIMAL_NEGATIVE_P(x)) {
 		if (is_integer(vexp)) {
 		    if (is_even(vexp)) {
 			/* (-0) ** (-even_integer)  -> Infinity */
@@ -2400,7 +2403,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 
     if (VpIsInf(x)) {
 	if (is_negative(vexp)) {
-	    if (VpGetSign(x) < 0) {
+	    if (BIGDECIMAL_NEGATIVE_P(x)) {
 		if (is_integer(vexp)) {
 		    if (is_even(vexp)) {
 			/* (-Infinity) ** (-even_integer) -> +0 */
@@ -2422,7 +2425,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	}
 	else {
 	    y = VpCreateRbObject(n, "0#");
-	    if (VpGetSign(x) < 0) {
+	    if (BIGDECIMAL_NEGATIVE_P(x)) {
 		if (is_integer(vexp)) {
 		    if (is_even(vexp)) {
 			VpSetPosInf(y);
@@ -2463,7 +2466,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 		}
 		return ToValue(y);
 	    }
-	    else if (VpGetSign(x) < 0 && is_even(vexp)) {
+	    else if (BIGDECIMAL_NEGATIVE_P(x) && is_even(vexp)) {
 		return ToValue(VpCreateRbObject(n, "-0"));
 	    }
 	    else {
@@ -2481,7 +2484,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 		}
 		return ToValue(y);
 	    }
-	    else if (VpGetSign(x) < 0 && is_even(vexp)) {
+	    else if (BIGDECIMAL_NEGATIVE_P(x) && is_even(vexp)) {
 		return ToValue(VpCreateRbObject(n, "-0"));
 	    }
 	    else {
@@ -2831,7 +2834,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
       case T_DATA:
 	if (!is_kind_of_BigDecimal(x)) break;
 	vx = DATA_PTR(x);
-	negative = VpGetSign(vx) < 0;
+	negative = BIGDECIMAL_NEGATIVE_P(vx);
 	infinite = VpIsPosInf(vx) || VpIsNegInf(vx);
 	nan = VpIsNaN(vx);
 	break;
@@ -2884,7 +2887,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
     x = vx->obj;
 
     n = prec + rmpd_double_figures();
-    negative = VpGetSign(vx) < 0;
+    negative = BIGDECIMAL_NEGATIVE_P(vx);
     if (negative) {
 	VpSetSign(vx, 1);
     }
@@ -2970,7 +2973,7 @@ BigMath_s_log(VALUE klass, VALUE x, VALUE vprec)
 	  if (!is_kind_of_BigDecimal(x)) break;
 	  vx = DATA_PTR(x);
 	  zero = VpIsZero(vx);
-	  negative = VpGetSign(vx) < 0;
+	  negative = BIGDECIMAL_NEGATIVE_P(vx);
 	  infinite = VpIsPosInf(vx) || VpIsNegInf(vx);
 	  nan = VpIsNaN(vx);
 	  break;
@@ -5130,7 +5133,7 @@ VPrint(FILE *fp, const char *cntl_chr, Real *a)
 		nc += 9;
 	    }
 	    else if (!VpIsZero(a)) {
-		if (VpGetSign(a) < 0) {
+		if (BIGDECIMAL_NEGATIVE_P(a)) {
 		    fprintf(fp, "-");
 		    ++nc;
 		}
@@ -5268,7 +5271,7 @@ VpSzMantissa(Real *a,char *psz)
 
     ZeroSup = 1;        /* Flag not to print the leading zeros as 0.00xxxxEnn */
     if (!VpIsZero(a)) {
-	if (VpGetSign(a) < 0) *psz++ = '-';
+	if (BIGDECIMAL_NEGATIVE_P(a)) *psz++ = '-';
 	n = a->Prec;
 	for (i = 0; i < n; ++i) {
 	    m = BASE1;
@@ -5342,7 +5345,7 @@ VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
 
     ZeroSup = 1;    /* Flag not to print the leading zeros as 0.00xxxxEnn */
 
-    if (VpGetSign(a) < 0) *psz++ = '-';
+    if (BIGDECIMAL_NEGATIVE_P(a)) *psz++ = '-';
     else if (fPlus == 1)  *psz++ = ' ';
     else if (fPlus == 2)  *psz++ = '+';
 
@@ -5388,7 +5391,7 @@ VpToFString(Real *a, char *psz, size_t fFmt, int fPlus)
 
     if (VpToSpecialString(a, psz, fPlus)) return;
 
-    if (VpGetSign(a) < 0) *psz++ = '-';
+    if (BIGDECIMAL_NEGATIVE_P(a)) *psz++ = '-';
     else if (fPlus == 1)  *psz++ = ' ';
     else if (fPlus == 2)  *psz++ = '+';
 
@@ -5817,7 +5820,7 @@ VpSqrt(Real *y, Real *x)
     }
 
     /* Negative ? */
-    if (x->sign < 0) {
+    if (BIGDECIMAL_NEGATIVE_P(x)) {
 	VpSetNaN(y);
 	return VpException(VP_EXCEPTION_OP, "sqrt of negative value", 0);
     }
@@ -6016,10 +6019,10 @@ VpMidRound(Real *y, unsigned short f, ssize_t nf)
 	if (v > 5 || (v == 5 && fracf_1further)) ++div;
 	break;
       case VP_ROUND_CEIL:
-	if (fracf && (VpGetSign(y) > 0)) ++div;
+	if (fracf && BIGDECIMAL_POSITIVE_P(y)) ++div;
 	break;
       case VP_ROUND_FLOOR:
-	if (fracf && (VpGetSign(y) < 0)) ++div;
+	if (fracf && BIGDECIMAL_NEGATIVE_P(y)) ++div;
 	break;
       case VP_ROUND_HALF_EVEN: /* Banker's rounding */
 	if (v > 5) ++div;
@@ -6138,10 +6141,10 @@ VpInternalRound(Real *c, size_t ixDigit, BDIGIT vPrev, BDIGIT v)
 	if (v >= 6) f = 1;
 	break;
       case VP_ROUND_CEIL:
-	if (v && (VpGetSign(c) > 0)) f = 1;
+	if (v && BIGDECIMAL_POSITIVE_P(c)) f = 1;
 	break;
       case VP_ROUND_FLOOR:
-	if (v && (VpGetSign(c) < 0)) f = 1;
+	if (v && BIGDECIMAL_NEGATIVE_P(c)) f = 1;
 	break;
       case VP_ROUND_HALF_EVEN:  /* Banker's rounding */
 	/* as per VP_ROUND_HALF_DOWN, because this is the last digit of precision,
@@ -6278,7 +6281,7 @@ VpPower(Real *y, Real *x, SIGNED_VALUE n)
     if (x->exponent == 1 && x->Prec == 1 && x->frac[0] == 1) {
 	/* abs(x) = 1 */
 	VpSetOne(y);
-	if (VpGetSign(x) > 0) goto Exit;
+	if (BIGDECIMAL_POSITIVE_P(x)) goto Exit;
 	if ((n % 2) == 0) goto Exit;
 	VpSetSign(y, -1);
 	goto Exit;
