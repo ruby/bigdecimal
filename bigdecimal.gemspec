@@ -25,7 +25,6 @@ Gem::Specification.new do |s|
     lib/bigdecimal/math.rb
     lib/bigdecimal/newton.rb
     lib/bigdecimal/util.rb
-    lib/bigdecimal/version.rb
     sample/linear.rb
     sample/nlsolve.rb
     sample/pi.rb
