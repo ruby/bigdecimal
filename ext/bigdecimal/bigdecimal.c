@@ -3967,7 +3967,8 @@ overflow:
 VP_EXPORT Real *
 VpAlloc(size_t mx, const char *szVal)
 {
-    size_t i, ni, ipn, ipf, nf, ipe, ne, nalloc;
+    const char *orig_szVal = szVal;
+    size_t i, ni, ipn, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
     char v, *psz;
     int  sign=1;
     Real *vp = NULL;
@@ -4062,9 +4063,12 @@ VpAlloc(size_t mx, const char *szVal)
     ipf = 0;
     ipe = 0;
     ne  = 0;
+    dot_seen = 0;
+    exp_seen = 0;
     if (v) {
         /* other than digit nor \0 */
         if (szVal[i] == '.') {    /* xxx. */
+            dot_seen = 1;
             ++i;
             ipf = i;
             while ((v = szVal[i]) != 0) {    /* get fraction part. */
@@ -4080,6 +4084,7 @@ VpAlloc(size_t mx, const char *szVal)
                 break;
             case 'e': case 'E':
             case 'd': case 'D':
+                exp_seen = 1;
                 ++i;
                 ipe = i;
                 v = szVal[i];
@@ -4094,6 +4099,11 @@ VpAlloc(size_t mx, const char *szVal)
                 break;
         }
     }
+    if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
+	VALUE str = rb_str_new2(orig_szVal);
+	rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
+    }
+
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
     /* units for szVal[]  */
     if (mx == 0) mx = 1;

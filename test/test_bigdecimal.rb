@@ -55,6 +55,17 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
   end
 
+  def test_global_new_with_invalid_string
+    [
+      '', '.', 'e1', 'd1', '.e', '.d', '1.e', '1.d', '.1e', '.1d',
+      'invlaid value'
+    ].each do |invalid_string|
+      assert_raise_with_message(ArgumentError, %Q[invalid value for BigDecimal(): "#{invalid_string}"]) do
+        BigDecimal(invalid_string)
+      end
+    end
+  end
+
   def test_global_new_with_integer
     assert_equal(BigDecimal("1"), BigDecimal(1))
     assert_equal(BigDecimal("-1"), BigDecimal(-1))
@@ -114,8 +125,9 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1, BigDecimal.new("1", 1))
     assert_equal(1, BigDecimal.new(" 1 "))
     assert_equal(111, BigDecimal.new("1_1_1_"))
-    assert_equal(0, BigDecimal.new("_1_1_1"))
     assert_equal(10**(-1), BigDecimal.new("1E-1"), '#4825')
+
+    assert_raise(ArgumentError, /"_1_1_1"/) { BigDecimal.new("_1_1_1") }
 
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
