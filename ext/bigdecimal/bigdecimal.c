@@ -2138,23 +2138,16 @@ BigDecimal_inspect(VALUE self)
 {
     ENTER(5);
     Real *vp;
-    volatile VALUE obj;
+    volatile VALUE str;
     size_t nc;
-    char *psz, *tmp;
 
     GUARD_OBJ(vp, GetVpValue(self, 1));
     nc = VpNumOfChars(vp, "E");
-    nc += (nc + 9) / 10;
 
-    obj = rb_str_new(0, nc+256);
-    psz = RSTRING_PTR(obj);
-    sprintf(psz, "#<BigDecimal:%"PRIxVALUE",'", self);
-    tmp = psz + strlen(psz);
-    VpToString(vp, tmp, 10, 0);
-    tmp += strlen(tmp);
-    sprintf(tmp, "',%"PRIuSIZE"(%"PRIuSIZE")>", VpPrec(vp)*VpBaseFig(), VpMaxPrec(vp)*VpBaseFig());
-    rb_str_resize(obj, strlen(psz));
-    return obj;
+    str = rb_str_new(0, nc);
+    VpToString(vp, RSTRING_PTR(str), 0, 0);
+    rb_str_resize(str, strlen(RSTRING_PTR(str)));
+    return str;
 }
 
 static VALUE BigMath_s_exp(VALUE, VALUE, VALUE);
