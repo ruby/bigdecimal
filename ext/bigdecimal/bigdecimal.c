@@ -388,9 +388,9 @@ BigDecimal_hash(VALUE self)
  * Method used to provide marshalling support.
  *
  *      inf = BigDecimal.new('Infinity')
- *        #=> #<BigDecimal:1e16fa8,'Infinity',9(9)>
+ *        #=> Infinity
  *      BigDecimal._load(inf._dump)
- *        #=> #<BigDecimal:1df8dc8,'Infinity',9(9)>
+ *        #=> Infinity
  *
  * See the Marshal module.
  */
@@ -2127,7 +2127,7 @@ BigDecimal_exponent(VALUE self)
  * values in angle brackets with a leading #:
  *
  *   BigDecimal.new("1234.5678").inspect
- *     #=> "#<BigDecimal:b7ea1130,'0.12345678E4',8(12)>"
+ *     #=> "0.12345678e4"
  *
  * The first part is the address, the second is the value as a string, and
  * the final part ss(mm) is the current number of significant digits and the
