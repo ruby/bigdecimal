@@ -53,8 +53,6 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1, BigDecimal("1"))
     assert_equal(1, BigDecimal("1", 1))
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
-    assert_raise_with_message(ArgumentError, "can't omit precision for a Float.") { BigDecimal(4.2) }
-    assert_raise_with_message(ArgumentError, "can't omit precision for a Rational.") { BigDecimal(42.quo(7)) }
   end
 
   def test_global_new_with_integer
@@ -67,13 +65,13 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_global_new_with_rational
     assert_equal(BigDecimal("0.333333333333333333333"), BigDecimal(1.quo(3), 21))
     assert_equal(BigDecimal("-0.333333333333333333333"), BigDecimal(-1.quo(3), 21))
-    assert_raise(ArgumentError) { BigDecimal(1.quo(3)) }
+    assert_raise_with_message(ArgumentError, "can't omit precision for a Rational.") { BigDecimal(42.quo(7)) }
   end
 
   def test_global_new_with_float
     assert_equal(BigDecimal("0.1235"), BigDecimal(0.1234567, 4))
     assert_equal(BigDecimal("-0.1235"), BigDecimal(-0.1234567, 4))
-    assert_raise(ArgumentError) { BigDecimal(0.1) }
+    assert_raise_with_message(ArgumentError, "can't omit precision for a Float.") { BigDecimal(4.2) }
     assert_raise(ArgumentError) { BigDecimal(0.1, Float::DIG + 2) }
     assert_nothing_raised { BigDecimal(0.1, Float::DIG + 1) }
 
