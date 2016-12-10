@@ -5215,7 +5215,7 @@ VpFormatSt(char *psz, size_t fFmt)
 	if (!ch) break;
 	if (ISSPACE(ch) || ch=='-' || ch=='+') continue;
 	if (ch == '.') { nf = 0; continue; }
-	if (ch == 'E') break;
+	if (ch == 'E' || ch == 'e') break;
 
 	if (++nf > fFmt) {
 	    memmove(psz + i + 1, psz + i, ie - i + 1);
@@ -5369,7 +5369,7 @@ VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
     while (psz[-1] == '0') {
 	*(--psz) = 0;
     }
-    sprintf(psz, "E%"PRIdSIZE, ex);
+    sprintf(psz, "e%"PRIdSIZE, ex);
     if (fFmt) VpFormatSt(pszSav, fFmt);
 }
 

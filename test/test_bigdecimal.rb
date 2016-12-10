@@ -1094,8 +1094,8 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal('-123.45678 90123 45678 9', BigDecimal.new('-123.45678901234567890').to_s('5F'))
     assert_equal('+123.45678901 23456789', BigDecimal.new('123.45678901234567890').to_s('+8F'))
     assert_equal(' 123.4567890123456789', BigDecimal.new('123.45678901234567890').to_s(' F'))
-    assert_equal('0.1234567890123456789E3', BigDecimal.new('123.45678901234567890').to_s)
-    assert_equal('0.12345 67890 12345 6789E3', BigDecimal.new('123.45678901234567890').to_s(5))
+    assert_equal('0.1234567890123456789e3', BigDecimal.new('123.45678901234567890').to_s)
+    assert_equal('0.12345 67890 12345 6789e3', BigDecimal.new('123.45678901234567890').to_s(5))
   end
 
   def test_split
@@ -1117,9 +1117,9 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_inspect
-    assert_equal("0.123456789012E0", BigDecimal.new("0.123456789012").inspect)
-    assert_equal("0.123456789012E4", BigDecimal.new("1234.56789012").inspect)
-    assert_equal("0.123456789012E-4", BigDecimal.new("0.0000123456789012").inspect)
+    assert_equal("0.123456789012e0", BigDecimal.new("0.123456789012").inspect)
+    assert_equal("0.123456789012e4", BigDecimal.new("1234.56789012").inspect)
+    assert_equal("0.123456789012e-4", BigDecimal.new("0.0000123456789012").inspect)
   end
 
   def test_power
