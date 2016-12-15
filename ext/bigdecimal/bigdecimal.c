@@ -1218,14 +1218,14 @@ BigDecimal_ge(VALUE self, VALUE r)
 }
 
 /*
- * call-seq: -@
+ *  call-seq:
+ *     -big_decimal  ->  big_decimal
  *
- * Return the negation of self.
+ *  Return the negation of self.
  *
- * e.g.
- *   b = -a
- *   b == a * -1
+ *    -BigDecimal('5')  #=> -0.5e1
  */
+
 static VALUE
 BigDecimal_neg(VALUE self)
 {
