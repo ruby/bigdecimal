@@ -901,13 +901,14 @@ BigDecimal_coerce(VALUE self, VALUE other)
 }
 
 /*
- * call-seq: +@
+ * call-seq:
+ *    +big_decimal  ->  big_decimal
  *
  * Return self.
  *
- * e.g.
- *   b = +a  # b == a
+ *     +BigDecimal('5')  #=> 0.5e1
  */
+
 static VALUE
 BigDecimal_uplus(VALUE self)
 {
