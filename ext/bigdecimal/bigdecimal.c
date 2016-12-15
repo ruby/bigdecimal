@@ -1672,11 +1672,16 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
     }
 }
 
-/* Returns the absolute value, as a BigDecimal.
+/*
+ *  call-seq:
+ *     big_decimal.abs  ->  big_decimal
  *
- *   BigDecimal('5').abs #=> 5
- *   BigDecimal('-3').abs #=> 3
+ *  Returns the absolute value, as a BigDecimal.
+ *
+ *     BigDecimal('5').abs  #=> 0.5e1
+ *     BigDecimal('-3').abs #=> 0.3e1
  */
+
 static VALUE
 BigDecimal_abs(VALUE self)
 {
