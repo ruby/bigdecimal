@@ -459,7 +459,7 @@ check_rounding_mode_option(VALUE const opts)
         goto noopt;
 
     mode = rb_hash_lookup2(opts, ID2SYM(id_half), Qundef);
-    if (mode == Qundef)
+    if (mode == Qundef || NIL_P(mode))
         goto noopt;
 
     if (SYMBOL_P(mode))
