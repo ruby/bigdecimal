@@ -481,6 +481,7 @@ check_rounding_mode_option(VALUE const opts)
             return VP_ROUND_HALF_EVEN;
         else if (strncasecmp(s, "down", 4) == 0)
             return VP_ROUND_HALF_DOWN;
+        break;
       default:
         break;
     }
