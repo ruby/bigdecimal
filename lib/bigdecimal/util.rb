@@ -58,7 +58,11 @@ class String
   #     # => 0.5e0
   #
   def to_d
-    BigDecimal(self)
+    begin
+      BigDecimal(self)
+    rescue ArgumentError
+      BigDecimal(0)
+    end
   end
 end
 
