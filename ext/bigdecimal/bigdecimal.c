@@ -1319,8 +1319,8 @@ BigDecimal_divide(Real **c, Real **res, Real **div, VALUE self, VALUE r)
 }
 
 /* call-seq:
- * a / b
- * quo(value)
+ *   a / b       -> bigdecimal
+ *   quo(value)  -> bigdecimal
  *
  * Divide by the specified value.
  *
@@ -1591,23 +1591,36 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     }
 }
 
- /* call-seq:
-  * div(value, digits)
+ /*
+  * Document-method: BigDecimal#div
+  *
+  * call-seq:
+  *   div(value, digits)  -> bigdecimal or integer
   *
   * Divide by the specified value.
-  *
-  * e.g.
-  *   c = a.div(b,n)
   *
   * digits:: If specified and less than the number of significant digits of the
   *          result, the result is rounded to that number of digits, according
   *          to BigDecimal.mode.
   *
-  * If digits is 0, the result is the same as the / operator. If not, the
-  * result is an integer BigDecimal, by analogy with Float#div.
+  *          If digits is 0, the result is the same as for the / operator
+  *          or #quo.
   *
-  * The alias quo is provided since <code>div(value, 0)</code> is the same as
-  * computing the quotient; see BigDecimal#divmod.
+  *          If digits is not specified, the result is an integer,
+  *          by analogy with Float#div; see also BigDecimal#divmod.
+  *
+  * Examples:
+  *
+  *   a = BigDecimal("4")
+  *   b = BigDecimal("3")
+  *
+  *   a.div(b, 3)  # => 0.133e1
+  *
+  *   a.div(b, 0)  # => 0.1333333333333333333e1
+  *   a / b        # => 0.1333333333333333333e1
+  *   a.quo(b)     # => 0.1333333333333333333e1
+  *
+  *   a.div(b)     # => 1
   */
 static VALUE
 BigDecimal_div3(int argc, VALUE *argv, VALUE self)
