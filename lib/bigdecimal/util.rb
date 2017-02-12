@@ -129,7 +129,7 @@ class Rational < Numeric
   #   # => 0.314e1
   def to_d(precision)
     if precision <= 0
-      raise ArgumentError, "negative precision"
+      raise ArgumentError, "argument must be positive"
     end
     num = self.numerator
     BigDecimal(num).div(self.denominator, precision)
