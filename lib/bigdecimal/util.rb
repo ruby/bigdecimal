@@ -126,9 +126,6 @@ class Rational < Numeric
   #   r.to_d(3)
   #   # => 0.314e1
   def to_d(precision)
-    if precision <= 0
-      raise ArgumentError, "negative precision"
-    end
     BigDecimal(self, precision)
   end
 end
