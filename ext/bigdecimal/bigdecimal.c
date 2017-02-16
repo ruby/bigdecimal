@@ -643,7 +643,7 @@ GetAddSubPrec(Real *a, Real *b)
 }
 
 static SIGNED_VALUE
-GetPositiveInt(VALUE v)
+GetPrecisionInt(VALUE v)
 {
     SIGNED_VALUE n;
     n = NUM2INT(v);
@@ -1568,7 +1568,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     }
 
     /* div in BigDecimal sense */
-    ix = GetPositiveInt(n);
+    ix = GetPrecisionInt(n);
     if (ix == 0) {
         return BigDecimal_div(self, b);
     }
@@ -1637,7 +1637,7 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_add(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1667,7 +1667,7 @@ BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_sub(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1685,7 +1685,7 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_mult(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1739,7 +1739,7 @@ BigDecimal_sqrt(VALUE self, VALUE nFig)
     GUARD_OBJ(a, GetVpValue(self, 1));
     mx = a->Prec * (VpBaseFig() + 1);
 
-    n = GetPositiveInt(nFig) + VpDblFig() + BASE_FIG;
+    n = GetPrecisionInt(nFig) + VpDblFig() + BASE_FIG;
     if (mx <= n) mx = n;
     GUARD_OBJ(c, VpCreateRbObject(mx, "0"));
     VpSqrt(c, a);
@@ -2640,7 +2640,7 @@ BigDecimal_new(int argc, VALUE *argv)
         mf = 0;
     }
     else {
-        mf = GetPositiveInt(nFig);
+        mf = GetPrecisionInt(nFig);
     }
 
     switch (TYPE(iniValue)) {
