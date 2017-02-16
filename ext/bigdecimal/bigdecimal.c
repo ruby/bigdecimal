@@ -2022,8 +2022,8 @@ static VALUE
 BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 {
     ENTER(5);
-    int   fmt = 0;   /* 0:E format */
-    int   fPlus = 0; /* =0:default,=1: set ' ' before digits ,set '+' before digits. */
+    int   fmt = 0;   /* 0: E format, 1: F format */
+    int   fPlus = 0; /* 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
     Real  *vp;
     volatile VALUE str;
     char  *psz;
@@ -5350,7 +5350,7 @@ VpSzMantissa(Real *a,char *psz)
 
 VP_EXPORT int
 VpToSpecialString(Real *a,char *psz,int fPlus)
-    /* fPlus =0:default, =1: set ' ' before digits , =2: set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     if (VpIsNaN(a)) {
 	sprintf(psz,SZ_NaN);
@@ -5385,7 +5385,7 @@ VpToSpecialString(Real *a,char *psz,int fPlus)
 
 VP_EXPORT void
 VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
-/* fPlus =0:default, =1: set ' ' before digits , =2:set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     size_t i, n, ZeroSup;
     BDIGIT shift, m, e, nn;
@@ -5433,7 +5433,7 @@ VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
 
 VP_EXPORT void
 VpToFString(Real *a, char *psz, size_t fFmt, int fPlus)
-/* fPlus =0:default,=1: set ' ' before digits ,set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     size_t i, n;
     BDIGIT m, e, nn;
