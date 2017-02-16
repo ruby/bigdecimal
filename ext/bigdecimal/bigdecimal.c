@@ -3193,6 +3193,19 @@ get_vp_value:
  * Note also that in mathematics, there is no particular concept of negative
  * or positive zero; true mathematical zero has no sign.
  *
+ * == bigdecimal/util
+ *
+ * When you require +bigdecimal/util+, the #to_d method will be
+ * available on BigDecimal and the native Integer, Float, Rational,
+ * and String classes:
+ *
+ *	require 'bigdecimal/util'
+ *
+ *      42.to_d         # => 0.42e2
+ *      0.5.to_d        # => 0.5e0
+ *      (2/3r).to_d(3)  # => 0.667e0
+ *      "0.5".to_d      # => 0.5e0
+ *
  * == License
  *
  * Copyright (C) 2002 by Shigeo Kobayashi <shigeo@tinyforest.gr.jp>.
