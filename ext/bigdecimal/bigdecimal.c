@@ -648,7 +648,7 @@ GetPositiveInt(VALUE v)
     SIGNED_VALUE n;
     n = NUM2INT(v);
     if (n < 0) {
-	rb_raise(rb_eArgError, "argument must be positive");
+	rb_raise(rb_eArgError, "negative precision");
     }
     return n;
 }
