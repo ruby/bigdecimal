@@ -2029,6 +2029,7 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
     char  *psz;
     char   ch;
     size_t nc, mc = 0;
+    SIGNED_VALUE m;
     VALUE  f;
 
     GUARD_OBJ(vp, GetVpValue(self, 1));
@@ -2059,7 +2060,11 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 	    }
 	}
 	else {
-	    mc = (size_t)GetPositiveInt(f);
+	    m = NUM2INT(f);
+	    if (m <= 0) {
+		rb_raise(rb_eArgError, "argument must be positive");
+	    }
+	    mc = (size_t)m;
 	}
     }
     if (fmt) {
