@@ -119,19 +119,13 @@ class Rational < Numeric
   # Converts a Rational to a BigDecimal.
   #
   # The required +precision+ parameter is used to determine the amount of
-  # significant digits for the result. See BigDecimal#div for more information,
-  # as it is used along with the #denominator and the +precision+ for
-  # parameters.
+  # significant digits for the result. See BigDecimal::new for more information.
   #
   #   r = (22/7.0).to_r
   #   # => (7077085128725065/2251799813685248)
   #   r.to_d(3)
   #   # => 0.314e1
   def to_d(precision)
-    if precision <= 0
-      raise ArgumentError, "negative precision"
-    end
-    num = self.numerator
-    BigDecimal(num).div(self.denominator, precision)
+    BigDecimal(self, precision)
   end
 end
