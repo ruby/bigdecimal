@@ -1,13 +1,11 @@
 # frozen_string_literal: false
 #
+#--
 # bigdecimal/util extends various native classes to provide the #to_d method,
 # and provides BigDecimal#to_d and BigDecimal#to_digits.
+#++
 
 
-# bigdecimal/util extends the native Integer class to provide the #to_d method.
-#
-# When you require 'bigdecimal/util' in your application, this method will
-# be available on Integer objects.
 class Integer < Numeric
   # call-seq:
   #     int.to_d  -> bigdecimal
@@ -25,10 +23,7 @@ class Integer < Numeric
   end
 end
 
-# bigdecimal/util extends the native Float class to provide the #to_d method.
-#
-# When you require 'bigdecimal/util' in your application, this method will be
-# available on Float objects.
+
 class Float < Numeric
   # call-seq:
   #     flt.to_d  -> bigdecimal
@@ -46,10 +41,7 @@ class Float < Numeric
   end
 end
 
-# bigdecimal/util extends the native String class to provide the #to_d method.
-#
-# When you require 'bigdecimal/util' in your application, this method will be
-# available on String objects.
+
 class String
   # call-seq:
   #     string.to_d  -> bigdecimal
@@ -71,11 +63,7 @@ class String
   end
 end
 
-# bigdecimal/util extends the BigDecimal class to provide the #to_digits and
-# #to_d methods.
-#
-# When you require 'bigdecimal/util' in your application, these methods will be
-# available on BigDecimal objects.
+
 class BigDecimal < Numeric
   # call-seq:
   #     a.to_digits -> string
@@ -108,10 +96,7 @@ class BigDecimal < Numeric
   end
 end
 
-# bigdecimal/util extends the native Rational class to provide the #to_d method.
-#
-# When you require 'bigdecimal/util' in your application, this method will be
-# available on Rational objects.
+
 class Rational < Numeric
   # call-seq:
   #   r.to_d(precision)   -> bigdecimal
