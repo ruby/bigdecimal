@@ -231,6 +231,7 @@ static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
 static Real*
 GetVpValueWithPrec(VALUE v, long prec, int must)
 {
+    ENTER(1);
     Real *pv;
     VALUE num, bg;
     char szD[128];
@@ -295,6 +296,7 @@ again:
 
       case T_BIGNUM:
 	bg = rb_big2str(v, 10);
+	PUSH(bg);
 	return VpCreateRbObject(strlen(RSTRING_PTR(bg)) + VpBaseFig() + 1,
 				RSTRING_PTR(bg));
       default:
