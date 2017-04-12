@@ -1001,6 +1001,15 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(2, x.round(0, BigDecimal::ROUND_FLOOR))
     assert_raise(ArgumentError) { x.round(0, 256) }
 
+    x = BigDecimal.new("-2.5")
+    assert_equal(-3, x.round(0, BigDecimal::ROUND_UP))
+    assert_equal(-2, x.round(0, BigDecimal::ROUND_DOWN))
+    assert_equal(-3, x.round(0, BigDecimal::ROUND_HALF_UP))
+    assert_equal(-2, x.round(0, BigDecimal::ROUND_HALF_DOWN))
+    assert_equal(-2, x.round(0, BigDecimal::ROUND_HALF_EVEN))
+    assert_equal(-2, x.round(0, BigDecimal::ROUND_CEILING))
+    assert_equal(-3, x.round(0, BigDecimal::ROUND_FLOOR))
+
     ROUNDING_MODE_MAP.each do |const, sym|
       assert_equal(x.round(0, const), x.round(0, sym))
     end
