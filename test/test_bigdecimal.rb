@@ -1140,6 +1140,11 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(8, BigDecimal.new("8.7").truncate)
     assert_equal(3.141, BigDecimal.new("3.14159").truncate(3))
     assert_equal(13300.0, BigDecimal.new("13345.234").truncate(-2))
+
+    assert_equal(-3, BigDecimal.new("-3.14159").truncate)
+    assert_equal(-8, BigDecimal.new("-8.7").truncate)
+    assert_equal(-3.141, BigDecimal.new("-3.14159").truncate(3))
+    assert_equal(-13300.0, BigDecimal.new("-13345.234").truncate(-2))
   end
 
   def test_floor
