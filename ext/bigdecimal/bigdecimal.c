@@ -645,12 +645,12 @@ GetAddSubPrec(Real *a, Real *b)
 }
 
 static SIGNED_VALUE
-GetPositiveInt(VALUE v)
+GetPrecisionInt(VALUE v)
 {
     SIGNED_VALUE n;
     n = NUM2INT(v);
     if (n < 0) {
-	rb_raise(rb_eArgError, "argument must be positive");
+	rb_raise(rb_eArgError, "negative precision");
     }
     return n;
 }
@@ -1570,7 +1570,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     }
 
     /* div in BigDecimal sense */
-    ix = GetPositiveInt(n);
+    ix = GetPrecisionInt(n);
     if (ix == 0) {
         return BigDecimal_div(self, b);
     }
@@ -1639,7 +1639,7 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_add(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1669,7 +1669,7 @@ BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_sub(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1687,7 +1687,7 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(2);
     Real *cv;
-    SIGNED_VALUE mx = GetPositiveInt(n);
+    SIGNED_VALUE mx = GetPrecisionInt(n);
     if (mx == 0) return BigDecimal_mult(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
@@ -1741,7 +1741,7 @@ BigDecimal_sqrt(VALUE self, VALUE nFig)
     GUARD_OBJ(a, GetVpValue(self, 1));
     mx = a->Prec * (VpBaseFig() + 1);
 
-    n = GetPositiveInt(nFig) + VpDblFig() + BASE_FIG;
+    n = GetPrecisionInt(nFig) + VpDblFig() + BASE_FIG;
     if (mx <= n) mx = n;
     GUARD_OBJ(c, VpCreateRbObject(mx, "0"));
     VpSqrt(c, a);
@@ -2024,13 +2024,14 @@ static VALUE
 BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 {
     ENTER(5);
-    int   fmt = 0;   /* 0:E format */
-    int   fPlus = 0; /* =0:default,=1: set ' ' before digits ,set '+' before digits. */
+    int   fmt = 0;   /* 0: E format, 1: F format */
+    int   fPlus = 0; /* 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
     Real  *vp;
     volatile VALUE str;
     char  *psz;
     char   ch;
     size_t nc, mc = 0;
+    SIGNED_VALUE m;
     VALUE  f;
 
     GUARD_OBJ(vp, GetVpValue(self, 1));
@@ -2061,7 +2062,11 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 	    }
 	}
 	else {
-	    mc = (size_t)GetPositiveInt(f);
+	    m = NUM2INT(f);
+	    if (m <= 0) {
+		rb_raise(rb_eArgError, "argument must be positive");
+	    }
+	    mc = (size_t)m;
 	}
     }
     if (fmt) {
@@ -2637,7 +2642,7 @@ BigDecimal_new(int argc, VALUE *argv)
         mf = 0;
     }
     else {
-        mf = GetPositiveInt(nFig);
+        mf = GetPrecisionInt(nFig);
     }
 
     switch (TYPE(iniValue)) {
@@ -5347,7 +5352,7 @@ VpSzMantissa(Real *a,char *psz)
 
 VP_EXPORT int
 VpToSpecialString(Real *a,char *psz,int fPlus)
-    /* fPlus =0:default, =1: set ' ' before digits , =2: set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     if (VpIsNaN(a)) {
 	sprintf(psz,SZ_NaN);
@@ -5382,7 +5387,7 @@ VpToSpecialString(Real *a,char *psz,int fPlus)
 
 VP_EXPORT void
 VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
-/* fPlus =0:default, =1: set ' ' before digits , =2:set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     size_t i, n, ZeroSup;
     BDIGIT shift, m, e, nn;
@@ -5430,7 +5435,7 @@ VpToString(Real *a, char *psz, size_t fFmt, int fPlus)
 
 VP_EXPORT void
 VpToFString(Real *a, char *psz, size_t fFmt, int fPlus)
-/* fPlus =0:default,=1: set ' ' before digits ,set '+' before digits. */
+/* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
     size_t i, n;
     BDIGIT m, e, nn;
