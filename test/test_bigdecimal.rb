@@ -1783,7 +1783,7 @@ class TestBigDecimal < Test::Unit::TestCase
     bug6093 = '[ruby-core:42969]'
     code = "exit(BigDecimal.new('10.0') == 10.0.to_d)"
     assert_ruby_status(%w[-rbigdecimal -rbigdecimal/util -rmathn -], code, bug6093)
-  end
+  end if RUBY_VERSION < '2.5' # mathn was removed from Ruby 2.5
 
   def test_bug6406
     assert_in_out_err(%w[-rbigdecimal --disable-gems], <<-EOS, [], [])
