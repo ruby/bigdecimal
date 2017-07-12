@@ -32,6 +32,7 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency "rake", "~> 10.0"
   s.add_development_dependency "rake-compiler", "~> 0.9"
+  s.add_development_dependency "rake-compiler-dock", ">= 0.6.1"
   s.add_development_dependency "minitest", "~> 4.7.5"
   s.add_development_dependency "pry"
 end
