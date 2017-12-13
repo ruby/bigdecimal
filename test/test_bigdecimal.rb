@@ -1764,19 +1764,29 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
+  def test_clone
+    assert_warning(/BigDecimal#clone is deprecated/) do
+      BigDecimal(0).clone
+    end
+  end
+
   def test_dup
-    [1, -1, 2**100, -2**100].each do |i|
-      x = BigDecimal(i)
-      assert_equal(x, x.dup)
+    assert_warning(/BigDecimal#dup is deprecated/) do
+      [1, -1, 2**100, -2**100].each do |i|
+        x = BigDecimal(i)
+        assert_equal(x, x.dup)
+      end
     end
   end
 
   def test_dup_subclass
-    c = Class.new(BigDecimal)
-    x = c.new(1)
-    y = x.dup
-    assert_equal(1, y)
-    assert_kind_of(c, y)
+    assert_warning(/BigDecimal#dup is deprecated/) do
+      c = Class.new(BigDecimal)
+      x = c.new(1)
+      y = x.dup
+      assert_equal(1, y)
+      assert_kind_of(c, y)
+    end
   end
 
   def test_to_d
