@@ -392,7 +392,7 @@ BigDecimal_hash(VALUE self)
  *
  * Method used to provide marshalling support.
  *
- *      inf = BigDecimal.new('Infinity')
+ *      inf = BigDecimal('Infinity')
  *        #=> Infinity
  *      BigDecimal._load(inf._dump)
  *        #=> Infinity
@@ -875,7 +875,7 @@ BigDecimal_to_r(VALUE self)
  * be coerced into a BigDecimal value.
  *
  * e.g.
- *   a = BigDecimal.new("1.0")
+ *   a = BigDecimal("1.0")
  *   b = a / 2.0 #=> 0.5
  *
  * Note that coercing a String to a BigDecimal is not supported by default;
@@ -1164,7 +1164,7 @@ BigDecimal_comp(VALUE self, VALUE r)
  *
  * Values may be coerced to perform the comparison:
  *
- *   BigDecimal.new('1.0') == 1.0  #=> true
+ *   BigDecimal('1.0') == 1.0  #=> true
  */
 static VALUE
 BigDecimal_eq(VALUE self, VALUE r)
@@ -1526,8 +1526,8 @@ BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
  *
  *   require 'bigdecimal'
  *
- *   a = BigDecimal.new("42")
- *   b = BigDecimal.new("9")
+ *   a = BigDecimal("42")
+ *   b = BigDecimal("9")
  *
  *   q, m = a.divmod(b)
  *
@@ -2011,13 +2011,13 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
  *
  * Examples:
  *
- *   BigDecimal.new('-123.45678901234567890').to_s('5F')
+ *   BigDecimal('-123.45678901234567890').to_s('5F')
  *     #=> '-123.45678 90123 45678 9'
  *
- *   BigDecimal.new('123.45678901234567890').to_s('+8F')
+ *   BigDecimal('123.45678901234567890').to_s('+8F')
  *     #=> '+123.45678901 23456789'
  *
- *   BigDecimal.new('123.45678901234567890').to_s(' F')
+ *   BigDecimal('123.45678901234567890').to_s(' F')
  *     #=> ' 123.4567890123456789'
  */
 static VALUE
@@ -2163,7 +2163,7 @@ BigDecimal_exponent(VALUE self)
 /* Returns debugging information about the value as a string of comma-separated
  * values in angle brackets with a leading #:
  *
- *   BigDecimal.new("1234.5678").inspect
+ *   BigDecimal("1234.5678").inspect
  *     #=> "0.12345678e4"
  *
  * The first part is the address, the second is the value as a string, and
@@ -2776,9 +2776,9 @@ BigDecimal_sign(VALUE self)
  *       BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
  *       BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
  *
- *       BigDecimal.new(BigDecimal('Infinity'))
- *       BigDecimal.new(BigDecimal('-Infinity'))
- *       BigDecimal(BigDecimal.new('NaN'))
+ *       BigDecimal(BigDecimal('Infinity'))
+ *       BigDecimal(BigDecimal('-Infinity'))
+ *       BigDecimal(BigDecimal('NaN'))
  *     end
  *
  * For use with the BigDecimal::EXCEPTION_*
@@ -3165,15 +3165,15 @@ get_vp_value:
  *
  *   require 'bigdecimal'
  *
- *   sum = BigDecimal.new("0")
+ *   sum = BigDecimal("0")
  *   10_000.times do
- *     sum = sum + BigDecimal.new("0.0001")
+ *     sum = sum + BigDecimal("0.0001")
  *   end
  *   print sum #=> 0.1E1
  *
  * Similarly:
  *
- *	(BigDecimal.new("1.2") - BigDecimal("1.0")) == BigDecimal("0.2") #=> true
+ *	(BigDecimal("1.2") - BigDecimal("1.0")) == BigDecimal("0.2") #=> true
  *
  *	(1.2 - 1.0) == 0.2 #=> false
  *
@@ -3187,8 +3187,8 @@ get_vp_value:
  * BigDecimal sometimes needs to return infinity, for example if you divide
  * a value by zero.
  *
- *	BigDecimal.new("1.0") / BigDecimal.new("0.0")  #=> Infinity
- *	BigDecimal.new("-1.0") / BigDecimal.new("0.0")  #=> -Infinity
+ *	BigDecimal("1.0") / BigDecimal("0.0")  #=> Infinity
+ *	BigDecimal("-1.0") / BigDecimal("0.0")  #=> -Infinity
  *
  * You can represent infinite numbers to BigDecimal using the strings
  * <code>'Infinity'</code>, <code>'+Infinity'</code> and
@@ -3201,13 +3201,13 @@ get_vp_value:
  *
  * Example:
  *
- *	BigDecimal.new("0.0") / BigDecimal.new("0.0") #=> NaN
+ *	BigDecimal("0.0") / BigDecimal("0.0") #=> NaN
  *
  * You can also create undefined values.
  *
  * NaN is never considered to be the same as any other value, even NaN itself:
  *
- *	n = BigDecimal.new('NaN')
+ *	n = BigDecimal('NaN')
  *	n == 0.0 #=> false
  *	n == n #=> false
  *
@@ -3220,11 +3220,11 @@ get_vp_value:
  * If the value which is too small to be represented is negative, a BigDecimal
  * value of negative zero is returned.
  *
- *	BigDecimal.new("1.0") / BigDecimal.new("-Infinity") #=> -0.0
+ *	BigDecimal("1.0") / BigDecimal("-Infinity") #=> -0.0
  *
  * If the value is positive, a value of positive zero is returned.
  *
- *	BigDecimal.new("1.0") / BigDecimal.new("Infinity") #=> 0.0
+ *	BigDecimal("1.0") / BigDecimal("Infinity") #=> 0.0
  *
  * (See BigDecimal.mode for how to specify limits of precision.)
  *
