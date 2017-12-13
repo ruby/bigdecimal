@@ -146,7 +146,10 @@ BigDecimal_version(VALUE self)
      * 1.0.1: Ruby 1.8.1
      * 1.1.0: Ruby 1.9.3
     */
-    return rb_str_new2("1.1.0");
+#ifndef RUBY_BIGDECIMAL_VERSION
+# error RUBY_BIGDECIMAL_VERSION is not defined
+#endif
+    return rb_str_new2(RUBY_BIGDECIMAL_VERSION);
 }
 
 /*
