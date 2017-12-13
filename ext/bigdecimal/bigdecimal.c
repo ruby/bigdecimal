@@ -2595,6 +2595,13 @@ static Real *BigDecimal_new(int argc, VALUE *argv);
  *                 value is omitted, this exception is raised.
  */
 static VALUE
+BigDecimal_s_new(int argc, VALUE *argv, VALUE self)
+{
+  rb_warning("BigDecimal.new is deprecated");
+  return rb_call_super(argc, argv);
+}
+
+static VALUE
 BigDecimal_initialize(int argc, VALUE *argv, VALUE self)
 {
     ENTER(1);
@@ -3279,6 +3286,7 @@ Init_bigdecimal(void)
     rb_define_global_function("BigDecimal", BigDecimal_global_new, -1);
 
     /* Class methods */
+    rb_define_singleton_method(rb_cBigDecimal, "new", BigDecimal_s_new, -1);
     rb_define_singleton_method(rb_cBigDecimal, "mode", BigDecimal_mode, -1);
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
     rb_define_singleton_method(rb_cBigDecimal, "double_fig", BigDecimal_double_fig, 0);
