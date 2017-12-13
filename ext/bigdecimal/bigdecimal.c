@@ -141,15 +141,16 @@ rb_rational_den(VALUE rat)
 static VALUE
 BigDecimal_version(VALUE self)
 {
-    /*
-     * 1.0.0: Ruby 1.8.0
-     * 1.0.1: Ruby 1.8.1
-     * 1.1.0: Ruby 1.9.3
-    */
+  /*
+   * 1.0.0: Ruby 1.8.0
+   * 1.0.1: Ruby 1.8.1
+   * 1.1.0: Ruby 1.9.3
+   */
 #ifndef RUBY_BIGDECIMAL_VERSION
 # error RUBY_BIGDECIMAL_VERSION is not defined
 #endif
-    return rb_str_new2(RUBY_BIGDECIMAL_VERSION);
+  rb_warning("BigDecimal.ver is deprecated; use BigDecimal::VERSION instead.");
+  return rb_str_new2(RUBY_BIGDECIMAL_VERSION);
 }
 
 /*

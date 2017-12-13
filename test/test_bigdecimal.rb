@@ -129,6 +129,12 @@ class TestBigDecimal < Test::Unit::TestCase
     }.join
   end
 
+  def test_s_ver
+    assert_warning(/BigDecimal\.ver is deprecated; use BigDecimal::VERSION instead/) do
+      BigDecimal.ver
+    end
+  end
+
   def test_s_new
     assert_warning(/BigDecimal.new is deprecated/) do
       BigDecimal.new("1")
