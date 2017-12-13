@@ -2630,6 +2630,20 @@ BigDecimal_initialize_copy(VALUE self, VALUE other)
     return self;
 }
 
+static VALUE
+BigDecimal_clone(VALUE self)
+{
+  rb_warning("BigDecimal#clone is deprecated.");
+  return rb_call_super(0, NULL);
+}
+
+static VALUE
+BigDecimal_dup(VALUE self)
+{
+  rb_warning("BigDecimal#dup is deprecated.");
+  return rb_call_super(0, NULL);
+}
+
 static Real *
 BigDecimal_new(int argc, VALUE *argv)
 {
@@ -3413,7 +3427,8 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "modulo", BigDecimal_mod, 1);
     rb_define_method(rb_cBigDecimal, "remainder", BigDecimal_remainder, 1);
     rb_define_method(rb_cBigDecimal, "divmod", BigDecimal_divmod, 1);
-    /* rb_define_method(rb_cBigDecimal, "dup", BigDecimal_dup, 0); */
+    rb_define_method(rb_cBigDecimal, "clone", BigDecimal_clone, 0);
+    rb_define_method(rb_cBigDecimal, "dup", BigDecimal_dup, 0);
     rb_define_method(rb_cBigDecimal, "to_f", BigDecimal_to_f, 0);
     rb_define_method(rb_cBigDecimal, "abs", BigDecimal_abs, 0);
     rb_define_method(rb_cBigDecimal, "sqrt", BigDecimal_sqrt, 1);
