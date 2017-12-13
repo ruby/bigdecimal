@@ -3302,6 +3302,14 @@ Init_bigdecimal(void)
 
     /* Constants definition */
 
+#ifndef RUBY_BIGDECIMAL_VERSION
+# error RUBY_BIGDECIMAL_VERSION is not defined
+#endif
+    /*
+     * The version of bigdecimal library
+     */
+    rb_define_const(rb_cBigDecimal, "VERSION", rb_str_new2(RUBY_BIGDECIMAL_VERSION));
+
     /*
      * Base value used in internal calculations.  On a 32 bit system, BASE
      * is 10000, indicating that calculation is done in groups of 4 digits.
