@@ -2602,7 +2602,7 @@ static Real *BigDecimal_new(int argc, VALUE *argv);
 static VALUE
 BigDecimal_s_new(int argc, VALUE *argv, VALUE self)
 {
-  rb_warning("BigDecimal.new is deprecated");
+  rb_warning("BigDecimal.new is deprecated; use Kernel.BigDecimal method instead.");
   return rb_call_super(argc, argv);
 }
 
