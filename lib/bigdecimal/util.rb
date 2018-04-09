@@ -132,3 +132,20 @@ class Rational < Numeric
     BigDecimal(self, precision)
   end
 end
+
+
+class NilClass
+  # call-seq:
+  #     nil.to_d -> bigdecimal
+  #
+  # Returns nil represented as a BigDecimal.
+  #
+  #     require 'bigdecimal'
+  #     require 'bigdecimal/util'
+  #
+  #     nil.to_d   # => 0.0
+  #
+  def to_d
+    BigDecimal(0)
+  end
+end
