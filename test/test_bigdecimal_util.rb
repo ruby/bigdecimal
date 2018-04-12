@@ -57,4 +57,8 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert_equal("invalid".to_d, BigDecimal('0.0'))
   end
 
+  def test_Nil_to_d
+    assert_equal(nil.to_d, BigDecimal('0.0'))
+  end
+
 end
