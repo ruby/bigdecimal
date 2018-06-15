@@ -2,6 +2,8 @@
 
 ## master
 
+## 1.3.5
+
 * Add NilClass#to_d
 
   **Jose Ramon Camacho**
