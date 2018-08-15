@@ -2148,15 +2148,10 @@ BigDecimal_exponent(VALUE self)
     return INT2NUM(e);
 }
 
-/* Returns debugging information about the value as a string of comma-separated
- * values in angle brackets with a leading #:
+/* Returns a string representation of self.
  *
  *   BigDecimal("1234.5678").inspect
  *     #=> "0.12345678e4"
- *
- * The first part is the address, the second is the value as a string, and
- * the final part ss(mm) is the current number of significant digits and the
- * maximum number of significant digits, respectively.
  */
 static VALUE
 BigDecimal_inspect(VALUE self)
