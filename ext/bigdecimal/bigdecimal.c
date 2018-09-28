@@ -4046,7 +4046,7 @@ VP_EXPORT Real *
 VpAlloc(size_t mx, const char *szVal)
 {
     const char *orig_szVal = szVal;
-    size_t i, ni, ipn, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
+    size_t i, ni, ipn, ipf, nf, ipe, ne, exp_seen, nalloc;
     char v, *psz;
     int  sign=1;
     Real *vp = NULL;
