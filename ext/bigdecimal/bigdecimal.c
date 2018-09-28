@@ -4141,12 +4141,10 @@ VpAlloc(size_t mx, const char *szVal)
     ipf = 0;
     ipe = 0;
     ne  = 0;
-    dot_seen = 0;
     exp_seen = 0;
     if (v) {
         /* other than digit nor \0 */
         if (szVal[i] == '.') {    /* xxx. */
-            dot_seen = 1;
             ++i;
             ipf = i;
             while ((v = szVal[i]) != 0) {    /* get fraction part. */
@@ -4177,7 +4175,7 @@ VpAlloc(size_t mx, const char *szVal)
                 break;
         }
     }
-    if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
+    if ((ni == 0 && nf == 0) || (exp_seen && ne == 0)) {
 	VALUE str = rb_str_new2(orig_szVal);
 	rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
     }

@@ -65,7 +65,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_global_new_with_invalid_string
     [
       '', '.', 'e1', 'd1', '.e', '.d', '1.e', '1.d', '.1e', '.1d',
-      'invlaid value'
+      'invalid value'
     ].each do |invalid_string|
       assert_raise_with_message(ArgumentError, %Q[invalid value for BigDecimal(): "#{invalid_string}"]) do
         BigDecimal(invalid_string)
@@ -78,6 +78,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal("-1"), BigDecimal(-1))
     assert_equal(BigDecimal((2**100).to_s), BigDecimal(2**100))
     assert_equal(BigDecimal((-2**100).to_s), BigDecimal(-2**100))
+    assert_equal(BigDecimal("123."), BigDecimal(123))
   end
 
   def test_global_new_with_rational
@@ -88,7 +89,9 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_global_new_with_float
     assert_equal(BigDecimal("0.1235"), BigDecimal(0.1234567, 4))
+    assert_equal(BigDecimal(".1235"), BigDecimal(0.1234567, 4))
     assert_equal(BigDecimal("-0.1235"), BigDecimal(-0.1234567, 4))
+    assert_equal(BigDecimal("-.1235"), BigDecimal(-0.1234567, 4))
     assert_raise_with_message(ArgumentError, "can't omit precision for a Float.") { BigDecimal(4.2) }
     assert_raise(ArgumentError) { BigDecimal(0.1, Float::DIG + 2) }
     assert_nothing_raised { BigDecimal(0.1, Float::DIG + 1) }
