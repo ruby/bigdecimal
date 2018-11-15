@@ -3745,25 +3745,19 @@ One(void)
 VP_EXPORT double
 VpGetDoubleNaN(void) /* Returns the value of NaN */
 {
-    static double fNaN = 0.0;
-    if (fNaN == 0.0) fNaN = Zero()/Zero();
-    return fNaN;
+    return nan("");
 }
 
 VP_EXPORT double
 VpGetDoublePosInf(void) /* Returns the value of +Infinity */
 {
-    static double fInf = 0.0;
-    if (fInf == 0.0) fInf = One()/Zero();
-    return fInf;
+    return HUGE_VAL;
 }
 
 VP_EXPORT double
 VpGetDoubleNegInf(void) /* Returns the value of -Infinity */
 {
-    static double fInf = 0.0;
-    if (fInf == 0.0) fInf = -(One()/Zero());
-    return fInf;
+    return -HUGE_VAL;
 }
 
 VP_EXPORT double
