@@ -136,9 +136,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_s_new
-    assert_warning(/BigDecimal.new is deprecated/) do
-      BigDecimal.new("1")
-    end
+    assert_raise(NoMethodError, /undefined method `new`/) { BigDecimal.new("1") }
   end
 
   def test_new
@@ -1801,14 +1799,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_dup_subclass
-    assert_warning(/BigDecimal\.new is deprecated/) do
-      c = Class.new(BigDecimal)
-      x = c.new(1)
-      y = x.dup
-      assert_same(x, y)
-      assert_equal(1, y)
-      assert_kind_of(c, y)
-    end
+    c = Class.new(BigDecimal)
+    assert_raise(NoMethodError, /undefined method `new`/) { c.new(1) }
   end
 
   def test_to_d

@@ -2569,44 +2569,6 @@ BigDecimal_s_allocate(VALUE klass)
 
 static Real *BigDecimal_new(int argc, VALUE *argv);
 
-/* call-seq:
- *   new(initial, digits)
- *
- * Create a new BigDecimal object.
- *
- * initial:: The initial value, as an Integer, a Float, a Rational,
- *           a BigDecimal, or a String.
- *
- *           If it is a String, spaces are ignored and unrecognized characters
- *           terminate the value.
- *
- * digits:: The number of significant digits, as an Integer. If omitted or 0,
- *          the number of significant digits is determined from the initial
- *          value.
- *
- * The actual number of significant digits used in computation is usually
- * larger than the specified number.
- *
- * ==== Exceptions
- *
- * TypeError:: If the +initial+ type is neither Integer, Float,
- *             Rational, nor BigDecimal, this exception is raised.
- *
- * TypeError:: If the +digits+ is not an Integer, this exception is raised.
- *
- * ArgumentError:: If +initial+ is a Float, and the +digits+ is larger than
- *                 Float::DIG + 1, this exception is raised.
- *
- * ArgumentError:: If the +initial+ is a Float or Rational, and the +digits+
- *                 value is omitted, this exception is raised.
- */
-static VALUE
-BigDecimal_s_new(int argc, VALUE *argv, VALUE self)
-{
-  rb_warning("BigDecimal.new is deprecated; use Kernel.BigDecimal method instead.");
-  return rb_call_super(argc, argv);
-}
-
 static VALUE
 BigDecimal_initialize(int argc, VALUE *argv, VALUE self)
 {
@@ -2704,7 +2666,37 @@ BigDecimal_new(int argc, VALUE *argv)
     return VpAlloc(mf, RSTRING_PTR(iniValue));
 }
 
-/* See also BigDecimal.new */
+/* call-seq:
+ *   BigDecimal(initial, digits)
+ *
+ * Create a new BigDecimal object.
+ *
+ * initial:: The initial value, as an Integer, a Float, a Rational,
+ *           a BigDecimal, or a String.
+ *
+ *           If it is a String, spaces are ignored and unrecognized characters
+ *           terminate the value.
+ *
+ * digits:: The number of significant digits, as an Integer. If omitted or 0,
+ *          the number of significant digits is determined from the initial
+ *          value.
+ *
+ * The actual number of significant digits used in computation is usually
+ * larger than the specified number.
+ *
+ * ==== Exceptions
+ *
+ * TypeError:: If the +initial+ type is neither Integer, Float,
+ *             Rational, nor BigDecimal, this exception is raised.
+ *
+ * TypeError:: If the +digits+ is not an Integer, this exception is raised.
+ *
+ * ArgumentError:: If +initial+ is a Float, and the +digits+ is larger than
+ *                 Float::DIG + 1, this exception is raised.
+ *
+ * ArgumentError:: If the +initial+ is a Float or Rational, and the +digits+
+ *                 value is omitted, this exception is raised.
+ */
 static VALUE
 BigDecimal_global_new(int argc, VALUE *argv, VALUE self)
 {
@@ -3285,7 +3277,7 @@ Init_bigdecimal(void)
     rb_define_global_function("BigDecimal", BigDecimal_global_new, -1);
 
     /* Class methods */
-    rb_define_singleton_method(rb_cBigDecimal, "new", BigDecimal_s_new, -1);
+    rb_undef_method(CLASS_OF(rb_cBigDecimal), "new");
     rb_define_singleton_method(rb_cBigDecimal, "mode", BigDecimal_mode, -1);
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
     rb_define_singleton_method(rb_cBigDecimal, "double_fig", BigDecimal_double_fig, 0);
