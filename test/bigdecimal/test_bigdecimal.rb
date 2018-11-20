@@ -130,9 +130,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_s_ver
-    assert_warning(/BigDecimal\.ver is deprecated; use BigDecimal::VERSION instead/) do
-      BigDecimal.ver
-    end
+    assert_raise(NoMethodError, /undefined method `ver`/) { BigDecimal.ver }
   end
 
   def test_s_allocate

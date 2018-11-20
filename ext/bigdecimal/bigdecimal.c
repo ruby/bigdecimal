@@ -136,24 +136,6 @@ rb_rational_den(VALUE rat)
 #define DoSomeOne(x,y,f) rb_num_coerce_bin(x,y,f)
 
 /*
- * Returns the BigDecimal version number.
- */
-static VALUE
-BigDecimal_version(VALUE self)
-{
-  /*
-   * 1.0.0: Ruby 1.8.0
-   * 1.0.1: Ruby 1.8.1
-   * 1.1.0: Ruby 1.9.3
-   */
-#ifndef RUBY_BIGDECIMAL_VERSION
-# error RUBY_BIGDECIMAL_VERSION is not defined
-#endif
-  rb_warning("BigDecimal.ver is deprecated; use BigDecimal::VERSION instead.");
-  return rb_str_new2(RUBY_BIGDECIMAL_VERSION);
-}
-
-/*
  *   VP routines used in BigDecimal part
  */
 static unsigned short VpGetException(void);
@@ -3276,7 +3258,6 @@ Init_bigdecimal(void)
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
     rb_define_singleton_method(rb_cBigDecimal, "double_fig", BigDecimal_double_fig, 0);
     rb_define_singleton_method(rb_cBigDecimal, "_load", BigDecimal_load, 1);
-    rb_define_singleton_method(rb_cBigDecimal, "ver", BigDecimal_version, 0);
 
     rb_define_singleton_method(rb_cBigDecimal, "save_exception_mode", BigDecimal_save_exception_mode, 0);
     rb_define_singleton_method(rb_cBigDecimal, "save_rounding_mode", BigDecimal_save_rounding_mode, 0);
