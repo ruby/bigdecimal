@@ -5,6 +5,7 @@
 # and provides BigDecimal#to_d and BigDecimal#to_digits.
 #++
 
+require 'bigdecimal'
 
 class Integer < Numeric
   # call-seq:
