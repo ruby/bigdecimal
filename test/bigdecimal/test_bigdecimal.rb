@@ -44,7 +44,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_not_equal
-    assert_not_equal BigDecimal("1"), BigDecimal.allocate
+    assert_not_equal BigDecimal("1"), BigDecimal("2")
   end
 
   def test_global_new
@@ -133,6 +133,10 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_warning(/BigDecimal\.ver is deprecated; use BigDecimal::VERSION instead/) do
       BigDecimal.ver
     end
+  end
+
+  def test_s_allocate
+    assert_raise(NoMethodError, /undefined method `allocate`/) { BigDecimal.allocate }
   end
 
   def test_s_new

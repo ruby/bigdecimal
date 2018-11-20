@@ -2561,12 +2561,6 @@ BigDecimal_power_op(VALUE self, VALUE exp)
     return BigDecimal_power(1, &exp, self);
 }
 
-static VALUE
-BigDecimal_s_allocate(VALUE klass)
-{
-    return VpNewRbClass(0, NULL, klass)->obj;
-}
-
 static Real *BigDecimal_new(int argc, VALUE *argv);
 
 static VALUE
@@ -3271,12 +3265,12 @@ Init_bigdecimal(void)
 
     /* Class and method registration */
     rb_cBigDecimal = rb_define_class("BigDecimal", rb_cNumeric);
-    rb_define_alloc_func(rb_cBigDecimal, BigDecimal_s_allocate);
 
     /* Global function */
     rb_define_global_function("BigDecimal", BigDecimal_global_new, -1);
 
     /* Class methods */
+    rb_undef_method(CLASS_OF(rb_cBigDecimal), "allocate");
     rb_undef_method(CLASS_OF(rb_cBigDecimal), "new");
     rb_define_singleton_method(rb_cBigDecimal, "mode", BigDecimal_mode, -1);
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
