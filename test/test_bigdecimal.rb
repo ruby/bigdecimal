@@ -1778,6 +1778,12 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
+  def test_frozen_p
+    x = BigDecimal(1)
+    assert(x.frozen?)
+    assert((x + x).frozen?)
+  end
+
   def test_clone
     assert_warning(/^$/) do
       x = BigDecimal(0)

@@ -667,6 +667,7 @@ VpNewRbClass(size_t mx, const char *str, VALUE klass)
     Real *pv = VpAlloc(mx,str);
     RTYPEDDATA_DATA(obj) = pv;
     pv->obj = obj;
+    RB_OBJ_FREEZE(obj);
     return pv;
 }
 
@@ -2715,6 +2716,7 @@ BigDecimal_global_new(int argc, VALUE *argv, VALUE self)
     GUARD_OBJ(pv, BigDecimal_new(argc, argv));
     if (ToValue(pv)) pv = VpCopy(NULL, pv);
     RTYPEDDATA_DATA(obj) = pv;
+    RB_OBJ_FREEZE(obj);
     return pv->obj = obj;
 }
 
