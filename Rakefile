@@ -23,6 +23,7 @@ end
 
 Rake::TestTask.new do |t|
   t.libs << 'test/lib'
+  t.test_files = FileList['test/bigdecimal/**/test_*.rb']
   t.warning = true
 end
 
