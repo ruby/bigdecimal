@@ -6,6 +6,7 @@
 #++
 
 require 'bigdecimal'
+require 'bigdecimal/util.so'
 
 class Integer < Numeric
   # call-seq:
@@ -65,13 +66,6 @@ class String
   #
   # See also BigDecimal::new.
   #
-  def to_d
-    begin
-      BigDecimal(self)
-    rescue ArgumentError
-      BigDecimal(0)
-    end
-  end
 end
 
 

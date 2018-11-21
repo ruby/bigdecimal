@@ -3103,6 +3103,21 @@ get_vp_value:
     return y;
 }
 
+VALUE
+rmpd_util_str_to_d(VALUE str)
+{
+  ENTER(1);
+  char const *c_str;
+  Real *pv;
+  VALUE obj;
+
+  c_str = StringValueCStr(str);
+  GUARD_OBJ(pv, (VpAlloc)(0, c_str, 0));
+  obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, pv);
+  RB_OBJ_FREEZE(obj);
+  return obj;
+}
+
 /* Document-class: BigDecimal
  * BigDecimal provides arbitrary-precision floating point decimal arithmetic.
  *
@@ -4001,7 +4016,7 @@ overflow:
  *   NULL be returned if memory allocation is failed,or any error.
  */
 VP_EXPORT Real *
-VpAlloc(size_t mx, const char *szVal)
+(VpAlloc)(size_t mx, const char *szVal, int strict_p)
 {
     const char *orig_szVal = szVal;
     size_t i, ni, ipn, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
@@ -4032,6 +4047,7 @@ VpAlloc(size_t mx, const char *szVal)
         }
     }
     else {
+      return_zero:
         /* necessary to be able to store */
         /* at least mx digits. */
         /* szVal==NULL ==> allocate zero value. */
@@ -4156,8 +4172,12 @@ VpAlloc(size_t mx, const char *szVal)
     if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
         VALUE str;
       invalid_value:
-	str = rb_str_new2(orig_szVal);
-	rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
+        if (!strict_p) {
+          goto return_zero;
+        }
+
+        str = rb_str_new2(orig_szVal);
+        rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
     }
 
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
