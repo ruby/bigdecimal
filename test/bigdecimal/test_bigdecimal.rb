@@ -84,6 +84,15 @@ class TestBigDecimal < Test::Unit::TestCase
         BigDecimal(invalid_string)
       end
     end
+
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+      assert_raise(ArgumentError, /"Infinity_"/) { BigDecimal("Infinity_") }
+      assert_raise(ArgumentError, /"+Infinity_"/) { BigDecimal("+Infinity_") }
+      assert_raise(ArgumentError, /"-Infinity_"/) { BigDecimal("-Infinity_") }
+      assert_raise(ArgumentError, /"NaN_"/) { BigDecimal("NaN_") }
+    end
   end
 
   def test_BigDecimal_with_integer
