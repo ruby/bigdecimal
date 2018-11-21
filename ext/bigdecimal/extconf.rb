@@ -1,5 +1,10 @@
 # frozen_string_literal: false
 require 'mkmf'
+require 'pathname'
+
+def windows_platform?
+  /cygwin|mingw|mswin/ === RUBY_PLATFORM
+end
 
 gemspec_name = gemspec_path = nil
 unless ['', '../../'].any? {|dir|
@@ -27,6 +32,17 @@ have_func("rb_rational_num", "ruby.h")
 have_func("rb_rational_den", "ruby.h")
 have_func("rb_array_const_ptr", "ruby.h")
 have_func("rb_sym2str", "ruby.h")
+
+checking_for(checking_message("Windows")) do
+  if windows_platform?
+    import_library_name = "libruby-bigdecimal.a"
+    $DLDFLAGS << " $(srcdir)/bigdecimal.def -Wl,--out-implib=#{import_library_name}"
+    $cleanfiles << import_library_name
+    true
+  else
+    false
+  end
+end
 
 create_makefile('bigdecimal') {|mf|
   mf << "\nall:\n\nextconf.h: $(srcdir)/#{gemspec_name}\n"

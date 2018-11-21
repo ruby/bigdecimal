@@ -1,6 +1,6 @@
 #include "ruby.h"
 
-VALUE rmpd_util_str_to_d(VALUE str);
+RUBY_EXTERN VALUE rmpd_util_str_to_d(VALUE str);
 
 void
 Init_util(void)
