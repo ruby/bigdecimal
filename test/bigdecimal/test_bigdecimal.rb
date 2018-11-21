@@ -56,6 +56,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1234, BigDecimal(" \t\n\r \r1234 \t\n\r \r"))
 
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
+    assert_raise(ArgumentError, /"1__1_1"/) { BigDecimal("1__1_1") }
     assert_raise(ArgumentError, /"_1_1_1"/) { BigDecimal("_1_1_1") }
 
     BigDecimal.save_exception_mode do

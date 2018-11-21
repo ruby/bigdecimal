@@ -50,6 +50,7 @@ class TestBigDecimalUtil < Test::Unit::TestCase
   end
 
   def test_String_to_d
+    assert_equal(BigDecimal('1'), "1__1_1".to_d)
     assert_equal(BigDecimal('2.5'), "2.5".to_d)
     assert_equal(BigDecimal('2.5'), "2.5 degrees".to_d)
     assert_equal(BigDecimal('0'), "degrees 100.0".to_d)
