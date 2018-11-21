@@ -646,7 +646,7 @@ VP_EXPORT Real *
 VpNewRbClass(size_t mx, const char *str, VALUE klass)
 {
     VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-    Real *pv = VpAlloc(mx,str);
+    Real *pv = VpAlloc(mx, str, 1);
     RTYPEDDATA_DATA(obj) = pv;
     pv->obj = obj;
     RB_OBJ_FREEZE(obj);
@@ -2634,7 +2634,7 @@ BigDecimal_new(int argc, VALUE *argv)
 	break;
     }
     StringValueCStr(iniValue);
-    return VpAlloc(mf, RSTRING_PTR(iniValue));
+    return VpAlloc(mf, RSTRING_PTR(iniValue), 1);
 }
 
 /* call-seq:
@@ -3112,7 +3112,7 @@ rmpd_util_str_to_d(VALUE str)
   VALUE obj;
 
   c_str = StringValueCStr(str);
-  GUARD_OBJ(pv, (VpAlloc)(0, c_str, 0));
+  GUARD_OBJ(pv, VpAlloc(0, c_str, 0));
   obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, pv);
   RB_OBJ_FREEZE(obj);
   return obj;
@@ -3937,8 +3937,8 @@ VpInit(BDIGIT BaseVal)
     VpGetDoubleNegZero();
 
     /* Allocates Vp constants. */
-    VpConstOne = VpAlloc(1UL, "1");
-    VpPt5 = VpAlloc(1UL, ".5");
+    VpConstOne = VpAlloc(1UL, "1", 1);
+    VpPt5 = VpAlloc(1UL, ".5", 1);
 
 #ifdef BIGDECIMAL_DEBUG
     gnAlloc = 0;
@@ -4062,10 +4062,10 @@ rmpd_parse_special_string(const char *str)
  *   NULL be returned if memory allocation is failed,or any error.
  */
 VP_EXPORT Real *
-(VpAlloc)(size_t mx, const char *szVal, int strict_p)
+VpAlloc(size_t mx, const char *szVal, int strict_p)
 {
     const char *orig_szVal = szVal;
-    size_t i, ni, ipn, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
+    size_t i, j, ni, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
     char v, *psz;
     int  sign=1;
     Real *vp = NULL;
@@ -4109,102 +4109,157 @@ VP_EXPORT Real *
         return vp;
     }
 
-    /* Skip all '_' after digit: 2006-6-30 */
-    ni = 0;
+    /* Scanning digits */
+
+    /* A buffer for keeping scanned digits */
     buf = rb_str_tmp_new(strlen(szVal) + 1);
     psz = RSTRING_PTR(buf);
-    i   = 0;
-    ipn = 0;
-    while ((psz[i] = szVal[ipn]) != 0) {
-        if (ISSPACE(psz[i])) {
-            psz[i] = 0;
+
+    /* cursor: i for psz, and j for szVal */
+    i = j = 0;
+
+    /* Scanning: sign part */
+    v = psz[i] = szVal[j];
+    if ((v == '-') || (v == '+')) {
+        sign = -(v == '-');
+        ++i;
+        ++j;
+    }
+
+    /* Scanning: integer part */
+    ni  = 0; /* number of digits in the integer part */
+    while ((v = psz[i] = szVal[j]) != '\0') {
+        if (!strict_p && ISSPACE(v)) {
+            v = psz[i] = '\0';
             break;
         }
-        if (ISDIGIT(psz[i])) ++ni;
-        if (psz[i] == '_') {
+        if (v == '_') {
             if (ni > 0) {
-                ipn++;
-                continue;
+                v = szVal[j+1];
+                if (v == '\0' || ISSPACE(v) || ISDIGIT(v)) {
+                    ++j;
+                    continue;
+                }
+                if (!strict_p) {
+                    v = psz[i] = '\0';
+                    break;
+                }
             }
-            psz[i] = 0;
+            goto invalid_value;
+        }
+        if (!ISDIGIT(v)) {
             break;
         }
-        ++i;
-        ++ipn;
-    }
-    szVal = psz;
-
-    ipn = i = 0;
-
-    /* Scanning sign part */
-    if      (szVal[i] == '-') { sign=-1; ++i; }
-    else if (szVal[i] == '+')            ++i;
-
-    /* Scanning integral part in szVal */
-    ni = 0;            /* digits in mantissa */
-    while ((v = szVal[i]) != 0) {
-        if (!ISDIGIT(v)) break;
-        ++i;
         ++ni;
+        ++i;
+        ++j;
     }
 
-    nf  = 0;
-    ipf = 0;
-    ipe = 0;
-    ne  = 0;
+    /* Scanning: fractional part */
+    nf  = 0; /* number of digits in the fractional part */
+    ne  = 0; /* number of digits in the exponential part */
+    ipf = 0; /* index of the beginning of the fractional part */
+    ipe = 0; /* index of the beginning of the exponential part */
     dot_seen = 0;
     exp_seen = 0;
 
-    /* After the integral part */
-    if (v) {
+    if (v != '\0') {
         /* Scanning fractional part */
-        if (szVal[i] == '.') {
+        if ((psz[i] = szVal[j]) == '.') {
             dot_seen = 1;
             ++i;
+            ++j;
             ipf = i;
-            while ((v = szVal[i]) != 0) {    /* get fraction part. */
+            while ((v = psz[i] = szVal[j]) != '\0') {
+                if (!strict_p && ISSPACE(v)) {
+                    v = psz[i] = '\0';
+                    break;
+                }
+                if (v == '_') {
+                    if (nf > 0 && ISDIGIT(szVal[j+1])) {
+                        ++j;
+                        continue;
+                    }
+                    if (!strict_p) {
+                        v = psz[i] = '\0';
+                        if (nf == 0) {
+                            dot_seen = 0;
+                        }
+                        break;
+                    }
+                    goto invalid_value;
+                }
                 if (!ISDIGIT(v)) break;
                 ++i;
+                ++j;
                 ++nf;
             }
         }
 
         /* Scanning exponential part */
-        ipe = 0;
-        switch (szVal[i]) {
-            case '\0':
-                break;
-            case 'e': case 'E':
-            case 'd': case 'D':
-                exp_seen = 1;
-                ++i;
-                ipe = i;
-                v = szVal[i];
-                if ((v == '-') || (v == '+')) ++i;
-                while ((v=szVal[i]) != 0) {
-                    if (!ISDIGIT(v)) break;
+        if (v != '\0') {
+            switch ((psz[i] = szVal[j])) {
+                case '\0':
+                    break;
+                case 'e': case 'E':
+                case 'd': case 'D':
+                    exp_seen = 1;
                     ++i;
-                    ++ne;
-                }
-                break;
-            default:
-                break;
+                    ++j;
+                    ipe = i;
+                    v = psz[i] = szVal[j];
+                    if ((v == '-') || (v == '+')) {
+                        ++i;
+                        ++j;
+                    }
+                    while ((v = psz[i] = szVal[j]) != '\0') {
+                        if (!strict_p && ISSPACE(v)) {
+                            v = psz[i] = '\0';
+                            break;
+                        }
+                        if (v == '_') {
+                            if (ne > 0 && ISDIGIT(szVal[j+1])) {
+                                ++j;
+                                continue;
+                            }
+                            if (!strict_p) {
+                                v = psz[i] = '\0';
+                                if (ne == 0) {
+                                    exp_seen = 0;
+                                }
+                                break;
+                            }
+                            goto invalid_value;
+                        }
+                        if (!ISDIGIT(v)) break;
+                        ++i;
+                        ++j;
+                        ++ne;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
 
-        /* Scanning trailing spaces */
-        while (ISSPACE(szVal[i])) i++;
+        if (v != '\0') {
+            /* Scanning trailing spaces */
+            while (ISSPACE(szVal[j])) ++j;
 
-        /* Invalid character */
-        if (szVal[i] && !ISSPACE(szVal[i])) {
-            goto invalid_value;
+            /* Invalid character */
+            if (szVal[j]) {
+                goto invalid_value;
+            }
         }
     }
+
+    psz[i] = '\0';
 
     if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
         VALUE str;
       invalid_value:
         if (!strict_p) {
-          goto return_zero;
+            goto return_zero;
         }
 
         str = rb_str_new2(orig_szVal);
@@ -4220,7 +4275,7 @@ VP_EXPORT Real *
     /* xmalloc() alway returns(or throw interruption) */
     vp->MaxPrec = mx;        /* set max precision */
     VpSetZero(vp, sign);
-    VpCtoV(vp, &szVal[ipn], ni, &szVal[ipf], nf, &szVal[ipe], ne);
+    VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
     rb_str_resize(buf, 0);
     return vp;
 }
@@ -4783,7 +4838,7 @@ VpMult(Real *c, Real *a, Real *b)
 
     if (MxIndC < MxIndAB) {    /* The Max. prec. of c < Prec(a)+Prec(b) */
 	w = c;
-	c = VpAlloc((size_t)((MxIndAB + 1) * BASE_FIG), "#0");
+	c = VpAlloc((size_t)((MxIndAB + 1) * BASE_FIG), "#0", 1);
 	MxIndC = MxIndAB;
     }
 
@@ -5951,8 +6006,8 @@ VpSqrt(Real *y, Real *x)
     if (x->MaxPrec > (size_t)n) n = (ssize_t)x->MaxPrec;
 
     /* allocate temporally variables  */
-    f = VpAlloc(y->MaxPrec * (BASE_FIG + 2), "#1");
-    r = VpAlloc((n + n) * (BASE_FIG + 2), "#1");
+    f = VpAlloc(y->MaxPrec * (BASE_FIG + 2), "#1", 1);
+    r = VpAlloc((n + n) * (BASE_FIG + 2), "#1", 1);
 
     nr = 0;
     y_prec = y->MaxPrec;
@@ -6404,8 +6459,8 @@ VpPower(Real *y, Real *x, SIGNED_VALUE n)
 
     /* Allocate working variables  */
 
-    w1 = VpAlloc((y->MaxPrec + 2) * BASE_FIG, "#0");
-    w2 = VpAlloc((w1->MaxPrec * 2 + 1) * BASE_FIG, "#0");
+    w1 = VpAlloc((y->MaxPrec + 2) * BASE_FIG, "#0", 1);
+    w2 = VpAlloc((w1->MaxPrec * 2 + 1) * BASE_FIG, "#0", 1);
     /* calculation start */
 
     VpAsgn(y, x, 1);

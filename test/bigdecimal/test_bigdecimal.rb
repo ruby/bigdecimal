@@ -78,7 +78,7 @@ class TestBigDecimal < Test::Unit::TestCase
       '2,30', '19,000.0', '-2,30', '-19,000.0', '+2,30', '+19,000.0',
       '2.3,0', '19.000,0', '-2.3,0', '-19.000,0', '+2.3,0', '+19.000,0',
       '2.3.0', '19.000.0', '-2.3.0', '-19.000.0', '+2.3.0', '+19.000.0',
-      'invlaid value'
+      'invlaid value', '123 xyz'
     ].each do |invalid_string|
       assert_raise_with_message(ArgumentError, %Q[invalid value for BigDecimal(): "#{invalid_string}"]) do
         BigDecimal(invalid_string)
