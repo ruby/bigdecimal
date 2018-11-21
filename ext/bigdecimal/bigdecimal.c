@@ -2313,7 +2313,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     n = NIL_P(prec) ? (ssize_t)(x->Prec*VpBaseFig()) : NUM2SSIZET(prec);
 
     if (VpIsNaN(x)) {
-	y = VpCreateRbObject(n, "0#");
+	y = VpCreateRbObject(n, "0");
 	RB_GC_GUARD(y->obj);
 	VpSetNaN(y);
 	return ToValue(y);
@@ -2437,7 +2437,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	    }
 	}
 	else {
-	    y = VpCreateRbObject(n, "0#");
+	    y = VpCreateRbObject(n, "0");
 	    if (BIGDECIMAL_NEGATIVE_P(x)) {
 		if (is_integer(vexp)) {
 		    if (is_even(vexp)) {
@@ -2470,7 +2470,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	}
 	else if (RTEST(rb_funcall(abs_value, '<', 1, INT2FIX(1)))) {
 	    if (is_negative(vexp)) {
-		y = VpCreateRbObject(n, "0#");
+		y = VpCreateRbObject(n, "0");
 		if (is_even(vexp)) {
 		    VpSetInf(y, VpGetSign(x));
 		}
@@ -2488,7 +2488,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	}
 	else {
 	    if (is_positive(vexp)) {
-		y = VpCreateRbObject(n, "0#");
+		y = VpCreateRbObject(n, "0");
 		if (is_even(vexp)) {
 		    VpSetInf(y, VpGetSign(x));
 		}
@@ -4015,7 +4015,10 @@ VpAlloc(size_t mx, const char *szVal)
     if (mx == 0) ++mx;
 
     if (szVal) {
+        /* Skipping leading spaces */
         while (ISSPACE(*szVal)) szVal++;
+
+        /* Processing the leading one `#` */
         if (*szVal != '#') {
             if (mf) {
                 mf = (mf + BASE_FIG - 1) / BASE_FIG + 2; /* Needs 1 more for div */
@@ -4084,26 +4087,31 @@ VpAlloc(size_t mx, const char *szVal)
         return vp;
     }
 
-    /* check on number szVal[] */
     ipn = i = 0;
+
+    /* Scanning sign part */
     if      (szVal[i] == '-') { sign=-1; ++i; }
     else if (szVal[i] == '+')            ++i;
-    /* Skip digits */
+
+    /* Scanning integral part in szVal */
     ni = 0;            /* digits in mantissa */
     while ((v = szVal[i]) != 0) {
         if (!ISDIGIT(v)) break;
         ++i;
         ++ni;
     }
+
     nf  = 0;
     ipf = 0;
     ipe = 0;
     ne  = 0;
     dot_seen = 0;
     exp_seen = 0;
+
+    /* After the integral part */
     if (v) {
-        /* other than digit nor \0 */
-        if (szVal[i] == '.') {    /* xxx. */
+        /* Scanning fractional part */
+        if (szVal[i] == '.') {
             dot_seen = 1;
             ++i;
             ipf = i;
@@ -4113,8 +4121,9 @@ VpAlloc(size_t mx, const char *szVal)
                 ++nf;
             }
         }
-        ipe = 0;        /* Exponent */
 
+        /* Scanning exponential part */
+        ipe = 0;
         switch (szVal[i]) {
             case '\0':
                 break;
@@ -4134,9 +4143,20 @@ VpAlloc(size_t mx, const char *szVal)
             default:
                 break;
         }
+
+        /* Scanning trailing spaces */
+        while (ISSPACE(szVal[i])) i++;
+
+        /* Invalid character */
+        if (szVal[i] && !ISSPACE(szVal[i])) {
+            goto invalid_value;
+        }
     }
+
     if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
-	VALUE str = rb_str_new2(orig_szVal);
+        VALUE str;
+      invalid_value:
+	str = rb_str_new2(orig_szVal);
 	rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
     }
 
