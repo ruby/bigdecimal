@@ -4002,6 +4002,52 @@ overflow:
     return VpException(VP_EXCEPTION_OVERFLOW, "Exponent overflow", 0);
 }
 
+Real *
+rmpd_parse_special_string(const char *str)
+{
+    static const struct {
+        const char *str;
+        size_t len;
+        int sign;
+    } table[] = {
+        { SZ_INF,  sizeof(SZ_INF)  - 1, VP_SIGN_POSITIVE_INFINITE },
+        { SZ_PINF, sizeof(SZ_PINF) - 1, VP_SIGN_POSITIVE_INFINITE },
+        { SZ_NINF, sizeof(SZ_NINF) - 1, VP_SIGN_NEGATIVE_INFINITE },
+        { SZ_NaN,  sizeof(SZ_NaN)  - 1, VP_SIGN_NaN               }
+    };
+    static const size_t table_length = sizeof(table) / sizeof(table[0]);
+    size_t i;
+
+    for (i = 0; i < table_length; ++i) {
+        const char *p;
+        if (strncmp(str, table[i].str, table[i].len) != 0) {
+            continue;
+        }
+
+        p = str + table[i].len;
+        while (*p && ISSPACE(*p)) ++p;
+        if (*p == '\0') {
+            Real *vp = VpAllocReal(1);
+            vp->MaxPrec = 1;
+            switch (table[i].sign) {
+              default:
+                UNREACHABLE; break;
+              case VP_SIGN_POSITIVE_INFINITE:
+                VpSetPosInf(vp);
+                return vp;
+              case VP_SIGN_NEGATIVE_INFINITE:
+                VpSetNegInf(vp);
+                return vp;
+              case VP_SIGN_NaN:
+                VpSetNaN(vp);
+                return vp;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 /*
  * Allocates variable.
  * [Input]
@@ -4059,22 +4105,7 @@ VP_EXPORT Real *
     }
 
     /* Check on Inf & NaN */
-    if (StrCmp(szVal, SZ_PINF) == 0 || StrCmp(szVal, SZ_INF) == 0 ) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetPosInf(vp);
-        return vp;
-    }
-    if (StrCmp(szVal, SZ_NINF) == 0) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetNegInf(vp);
-        return vp;
-    }
-    if (StrCmp(szVal, SZ_NaN) == 0) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetNaN(vp);
+    if ((vp = rmpd_parse_special_string(szVal)) != NULL) {
         return vp;
     }
 
