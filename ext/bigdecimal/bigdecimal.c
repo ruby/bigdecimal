@@ -646,7 +646,7 @@ VP_EXPORT Real *
 VpNewRbClass(size_t mx, const char *str, VALUE klass)
 {
     VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-    Real *pv = VpAlloc(mx,str);
+    Real *pv = VpAlloc(mx, str, 1);
     RTYPEDDATA_DATA(obj) = pv;
     pv->obj = obj;
     RB_OBJ_FREEZE(obj);
@@ -2313,7 +2313,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     n = NIL_P(prec) ? (ssize_t)(x->Prec*VpBaseFig()) : NUM2SSIZET(prec);
 
     if (VpIsNaN(x)) {
-	y = VpCreateRbObject(n, "0#");
+	y = VpCreateRbObject(n, "0");
 	RB_GC_GUARD(y->obj);
 	VpSetNaN(y);
 	return ToValue(y);
@@ -2437,7 +2437,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	    }
 	}
 	else {
-	    y = VpCreateRbObject(n, "0#");
+	    y = VpCreateRbObject(n, "0");
 	    if (BIGDECIMAL_NEGATIVE_P(x)) {
 		if (is_integer(vexp)) {
 		    if (is_even(vexp)) {
@@ -2470,7 +2470,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	}
 	else if (RTEST(rb_funcall(abs_value, '<', 1, INT2FIX(1)))) {
 	    if (is_negative(vexp)) {
-		y = VpCreateRbObject(n, "0#");
+		y = VpCreateRbObject(n, "0");
 		if (is_even(vexp)) {
 		    VpSetInf(y, VpGetSign(x));
 		}
@@ -2488,7 +2488,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	}
 	else {
 	    if (is_positive(vexp)) {
-		y = VpCreateRbObject(n, "0#");
+		y = VpCreateRbObject(n, "0");
 		if (is_even(vexp)) {
 		    VpSetInf(y, VpGetSign(x));
 		}
@@ -2634,7 +2634,7 @@ BigDecimal_new(int argc, VALUE *argv)
 	break;
     }
     StringValueCStr(iniValue);
-    return VpAlloc(mf, RSTRING_PTR(iniValue));
+    return VpAlloc(mf, RSTRING_PTR(iniValue), 1);
 }
 
 /* call-seq:
@@ -3101,6 +3101,21 @@ get_vp_value:
     }
 
     return y;
+}
+
+VALUE
+rmpd_util_str_to_d(VALUE str)
+{
+  ENTER(1);
+  char const *c_str;
+  Real *pv;
+  VALUE obj;
+
+  c_str = StringValueCStr(str);
+  GUARD_OBJ(pv, VpAlloc(0, c_str, 0));
+  obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, pv);
+  RB_OBJ_FREEZE(obj);
+  return obj;
 }
 
 /* Document-class: BigDecimal
@@ -3922,8 +3937,8 @@ VpInit(BDIGIT BaseVal)
     VpGetDoubleNegZero();
 
     /* Allocates Vp constants. */
-    VpConstOne = VpAlloc(1UL, "1");
-    VpPt5 = VpAlloc(1UL, ".5");
+    VpConstOne = VpAlloc(1UL, "1", 1);
+    VpPt5 = VpAlloc(1UL, ".5", 1);
 
 #ifdef BIGDECIMAL_DEBUG
     gnAlloc = 0;
@@ -3987,6 +4002,52 @@ overflow:
     return VpException(VP_EXCEPTION_OVERFLOW, "Exponent overflow", 0);
 }
 
+Real *
+rmpd_parse_special_string(const char *str)
+{
+    static const struct {
+        const char *str;
+        size_t len;
+        int sign;
+    } table[] = {
+        { SZ_INF,  sizeof(SZ_INF)  - 1, VP_SIGN_POSITIVE_INFINITE },
+        { SZ_PINF, sizeof(SZ_PINF) - 1, VP_SIGN_POSITIVE_INFINITE },
+        { SZ_NINF, sizeof(SZ_NINF) - 1, VP_SIGN_NEGATIVE_INFINITE },
+        { SZ_NaN,  sizeof(SZ_NaN)  - 1, VP_SIGN_NaN               }
+    };
+    static const size_t table_length = sizeof(table) / sizeof(table[0]);
+    size_t i;
+
+    for (i = 0; i < table_length; ++i) {
+        const char *p;
+        if (strncmp(str, table[i].str, table[i].len) != 0) {
+            continue;
+        }
+
+        p = str + table[i].len;
+        while (*p && ISSPACE(*p)) ++p;
+        if (*p == '\0') {
+            Real *vp = VpAllocReal(1);
+            vp->MaxPrec = 1;
+            switch (table[i].sign) {
+              default:
+                UNREACHABLE; break;
+              case VP_SIGN_POSITIVE_INFINITE:
+                VpSetPosInf(vp);
+                return vp;
+              case VP_SIGN_NEGATIVE_INFINITE:
+                VpSetNegInf(vp);
+                return vp;
+              case VP_SIGN_NaN:
+                VpSetNaN(vp);
+                return vp;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 /*
  * Allocates variable.
  * [Input]
@@ -4001,10 +4062,10 @@ overflow:
  *   NULL be returned if memory allocation is failed,or any error.
  */
 VP_EXPORT Real *
-VpAlloc(size_t mx, const char *szVal)
+VpAlloc(size_t mx, const char *szVal, int strict_p)
 {
     const char *orig_szVal = szVal;
-    size_t i, ni, ipn, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
+    size_t i, j, ni, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
     char v, *psz;
     int  sign=1;
     Real *vp = NULL;
@@ -4015,7 +4076,10 @@ VpAlloc(size_t mx, const char *szVal)
     if (mx == 0) ++mx;
 
     if (szVal) {
+        /* Skipping leading spaces */
         while (ISSPACE(*szVal)) szVal++;
+
+        /* Processing the leading one `#` */
         if (*szVal != '#') {
             if (mf) {
                 mf = (mf + BASE_FIG - 1) / BASE_FIG + 2; /* Needs 1 more for div */
@@ -4029,6 +4093,7 @@ VpAlloc(size_t mx, const char *szVal)
         }
     }
     else {
+      return_zero:
         /* necessary to be able to store */
         /* at least mx digits. */
         /* szVal==NULL ==> allocate zero value. */
@@ -4039,105 +4104,166 @@ VpAlloc(size_t mx, const char *szVal)
         return vp;
     }
 
-    /* Skip all '_' after digit: 2006-6-30 */
-    ni = 0;
+    /* Check on Inf & NaN */
+    if ((vp = rmpd_parse_special_string(szVal)) != NULL) {
+        return vp;
+    }
+
+    /* Scanning digits */
+
+    /* A buffer for keeping scanned digits */
     buf = rb_str_tmp_new(strlen(szVal) + 1);
     psz = RSTRING_PTR(buf);
-    i   = 0;
-    ipn = 0;
-    while ((psz[i] = szVal[ipn]) != 0) {
-        if (ISSPACE(psz[i])) {
-            psz[i] = 0;
+
+    /* cursor: i for psz, and j for szVal */
+    i = j = 0;
+
+    /* Scanning: sign part */
+    v = psz[i] = szVal[j];
+    if ((v == '-') || (v == '+')) {
+        sign = -(v == '-');
+        ++i;
+        ++j;
+    }
+
+    /* Scanning: integer part */
+    ni  = 0; /* number of digits in the integer part */
+    while ((v = psz[i] = szVal[j]) != '\0') {
+        if (!strict_p && ISSPACE(v)) {
+            v = psz[i] = '\0';
             break;
         }
-        if (ISDIGIT(psz[i])) ++ni;
-        if (psz[i] == '_') {
+        if (v == '_') {
             if (ni > 0) {
-                ipn++;
-                continue;
+                v = szVal[j+1];
+                if (v == '\0' || ISSPACE(v) || ISDIGIT(v)) {
+                    ++j;
+                    continue;
+                }
+                if (!strict_p) {
+                    v = psz[i] = '\0';
+                    break;
+                }
             }
-            psz[i] = 0;
+            goto invalid_value;
+        }
+        if (!ISDIGIT(v)) {
             break;
         }
-        ++i;
-        ++ipn;
-    }
-    szVal = psz;
-
-    /* Check on Inf & NaN */
-    if (StrCmp(szVal, SZ_PINF) == 0 || StrCmp(szVal, SZ_INF) == 0 ) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetPosInf(vp);
-        return vp;
-    }
-    if (StrCmp(szVal, SZ_NINF) == 0) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetNegInf(vp);
-        return vp;
-    }
-    if (StrCmp(szVal, SZ_NaN) == 0) {
-        vp = VpAllocReal(1);
-        vp->MaxPrec = 1;    /* set max precision */
-        VpSetNaN(vp);
-        return vp;
-    }
-
-    /* check on number szVal[] */
-    ipn = i = 0;
-    if      (szVal[i] == '-') { sign=-1; ++i; }
-    else if (szVal[i] == '+')            ++i;
-    /* Skip digits */
-    ni = 0;            /* digits in mantissa */
-    while ((v = szVal[i]) != 0) {
-        if (!ISDIGIT(v)) break;
-        ++i;
         ++ni;
+        ++i;
+        ++j;
     }
-    nf  = 0;
-    ipf = 0;
-    ipe = 0;
-    ne  = 0;
+
+    /* Scanning: fractional part */
+    nf  = 0; /* number of digits in the fractional part */
+    ne  = 0; /* number of digits in the exponential part */
+    ipf = 0; /* index of the beginning of the fractional part */
+    ipe = 0; /* index of the beginning of the exponential part */
     dot_seen = 0;
     exp_seen = 0;
-    if (v) {
-        /* other than digit nor \0 */
-        if (szVal[i] == '.') {    /* xxx. */
+
+    if (v != '\0') {
+        /* Scanning fractional part */
+        if ((psz[i] = szVal[j]) == '.') {
             dot_seen = 1;
             ++i;
+            ++j;
             ipf = i;
-            while ((v = szVal[i]) != 0) {    /* get fraction part. */
+            while ((v = psz[i] = szVal[j]) != '\0') {
+                if (!strict_p && ISSPACE(v)) {
+                    v = psz[i] = '\0';
+                    break;
+                }
+                if (v == '_') {
+                    if (nf > 0 && ISDIGIT(szVal[j+1])) {
+                        ++j;
+                        continue;
+                    }
+                    if (!strict_p) {
+                        v = psz[i] = '\0';
+                        if (nf == 0) {
+                            dot_seen = 0;
+                        }
+                        break;
+                    }
+                    goto invalid_value;
+                }
                 if (!ISDIGIT(v)) break;
                 ++i;
+                ++j;
                 ++nf;
             }
         }
-        ipe = 0;        /* Exponent */
 
-        switch (szVal[i]) {
-            case '\0':
-                break;
-            case 'e': case 'E':
-            case 'd': case 'D':
-                exp_seen = 1;
-                ++i;
-                ipe = i;
-                v = szVal[i];
-                if ((v == '-') || (v == '+')) ++i;
-                while ((v=szVal[i]) != 0) {
-                    if (!ISDIGIT(v)) break;
+        /* Scanning exponential part */
+        if (v != '\0') {
+            switch ((psz[i] = szVal[j])) {
+                case '\0':
+                    break;
+                case 'e': case 'E':
+                case 'd': case 'D':
+                    exp_seen = 1;
                     ++i;
-                    ++ne;
-                }
-                break;
-            default:
-                break;
+                    ++j;
+                    ipe = i;
+                    v = psz[i] = szVal[j];
+                    if ((v == '-') || (v == '+')) {
+                        ++i;
+                        ++j;
+                    }
+                    while ((v = psz[i] = szVal[j]) != '\0') {
+                        if (!strict_p && ISSPACE(v)) {
+                            v = psz[i] = '\0';
+                            break;
+                        }
+                        if (v == '_') {
+                            if (ne > 0 && ISDIGIT(szVal[j+1])) {
+                                ++j;
+                                continue;
+                            }
+                            if (!strict_p) {
+                                v = psz[i] = '\0';
+                                if (ne == 0) {
+                                    exp_seen = 0;
+                                }
+                                break;
+                            }
+                            goto invalid_value;
+                        }
+                        if (!ISDIGIT(v)) break;
+                        ++i;
+                        ++j;
+                        ++ne;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (v != '\0') {
+            /* Scanning trailing spaces */
+            while (ISSPACE(szVal[j])) ++j;
+
+            /* Invalid character */
+            if (szVal[j]) {
+                goto invalid_value;
+            }
         }
     }
+
+    psz[i] = '\0';
+
     if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
-	VALUE str = rb_str_new2(orig_szVal);
-	rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
+        VALUE str;
+      invalid_value:
+        if (!strict_p) {
+            goto return_zero;
+        }
+
+        str = rb_str_new2(orig_szVal);
+        rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
     }
 
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
@@ -4149,7 +4275,7 @@ VpAlloc(size_t mx, const char *szVal)
     /* xmalloc() alway returns(or throw interruption) */
     vp->MaxPrec = mx;        /* set max precision */
     VpSetZero(vp, sign);
-    VpCtoV(vp, &szVal[ipn], ni, &szVal[ipf], nf, &szVal[ipe], ne);
+    VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
     rb_str_resize(buf, 0);
     return vp;
 }
@@ -4712,7 +4838,7 @@ VpMult(Real *c, Real *a, Real *b)
 
     if (MxIndC < MxIndAB) {    /* The Max. prec. of c < Prec(a)+Prec(b) */
 	w = c;
-	c = VpAlloc((size_t)((MxIndAB + 1) * BASE_FIG), "#0");
+	c = VpAlloc((size_t)((MxIndAB + 1) * BASE_FIG), "#0", 1);
 	MxIndC = MxIndAB;
     }
 
@@ -5880,8 +6006,8 @@ VpSqrt(Real *y, Real *x)
     if (x->MaxPrec > (size_t)n) n = (ssize_t)x->MaxPrec;
 
     /* allocate temporally variables  */
-    f = VpAlloc(y->MaxPrec * (BASE_FIG + 2), "#1");
-    r = VpAlloc((n + n) * (BASE_FIG + 2), "#1");
+    f = VpAlloc(y->MaxPrec * (BASE_FIG + 2), "#1", 1);
+    r = VpAlloc((n + n) * (BASE_FIG + 2), "#1", 1);
 
     nr = 0;
     y_prec = y->MaxPrec;
@@ -6333,8 +6459,8 @@ VpPower(Real *y, Real *x, SIGNED_VALUE n)
 
     /* Allocate working variables  */
 
-    w1 = VpAlloc((y->MaxPrec + 2) * BASE_FIG, "#0");
-    w2 = VpAlloc((w1->MaxPrec * 2 + 1) * BASE_FIG, "#0");
+    w1 = VpAlloc((y->MaxPrec + 2) * BASE_FIG, "#0", 1);
+    w2 = VpAlloc((w1->MaxPrec * 2 + 1) * BASE_FIG, "#0", 1);
     /* calculation start */
 
     VpAsgn(y, x, 1);

@@ -56,6 +56,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(1234, BigDecimal(" \t\n\r \r1234 \t\n\r \r"))
 
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
+    assert_raise(ArgumentError, /"1__1_1"/) { BigDecimal("1__1_1") }
     assert_raise(ArgumentError, /"_1_1_1"/) { BigDecimal("_1_1_1") }
 
     BigDecimal.save_exception_mode do
@@ -74,11 +75,23 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_BigDecimal_with_invalid_string
     [
       '', '.', 'e1', 'd1', '.e', '.d', '1.e', '1.d', '.1e', '.1d',
-      'invlaid value'
+      '2,30', '19,000.0', '-2,30', '-19,000.0', '+2,30', '+19,000.0',
+      '2.3,0', '19.000,0', '-2.3,0', '-19.000,0', '+2.3,0', '+19.000,0',
+      '2.3.0', '19.000.0', '-2.3.0', '-19.000.0', '+2.3.0', '+19.000.0',
+      'invlaid value', '123 xyz'
     ].each do |invalid_string|
       assert_raise_with_message(ArgumentError, %Q[invalid value for BigDecimal(): "#{invalid_string}"]) do
         BigDecimal(invalid_string)
       end
+    end
+
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+      assert_raise(ArgumentError, /"Infinity_"/) { BigDecimal("Infinity_") }
+      assert_raise(ArgumentError, /"+Infinity_"/) { BigDecimal("+Infinity_") }
+      assert_raise(ArgumentError, /"-Infinity_"/) { BigDecimal("-Infinity_") }
+      assert_raise(ArgumentError, /"NaN_"/) { BigDecimal("NaN_") }
     end
   end
 
