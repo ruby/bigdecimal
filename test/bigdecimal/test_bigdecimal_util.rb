@@ -25,6 +25,9 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     bug9214 = '[ruby-core:58858]'
     assert_equal((-0.0).to_d.sign, -1, bug9214)
 
+    assert_raise(TypeError) { 0.3.to_d(nil) }
+    assert_raise(TypeError) { 0.3.to_d(false) }
+
     assert(1.1.to_d.frozen?)
   end
 
