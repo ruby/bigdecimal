@@ -2,6 +2,34 @@
 
 ## master
 
+* Fix the string parsing logic in `BigDecimal()` to follow `Float()`
+
+  **Kenta Murata**
+
+* Fix `String#to_d` to follow `String#to_f`
+
+  **Kenta Murata**
+
+* Update `BigDecimal#inspect` documentation
+
+  **Dana Sherson**
+
+* Remove `BigDecimal.ver`, `BigDecimal.allocate`, and `BigDecimal.new`
+
+  **Kenta Murata**
+
+* No more support Ruby < 2.3
+
+  **Kenta Murata**
+
+* Make BigDecimal objects frozen
+
+  **Kenta Murata**
+
+* Remove division by zero from the internal implementation
+
+  **Urabe, Shyouhei**
+
 ## 1.3.5
 
 * Add NilClass#to_d
