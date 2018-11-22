@@ -1,6 +1,5 @@
 # frozen_string_literal: false
 require 'mkmf'
-require 'pathname'
 
 def windows_platform?
   /cygwin|mingw|mswin/ === RUBY_PLATFORM
