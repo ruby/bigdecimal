@@ -24,4 +24,4 @@ checking_for(checking_message("Windows")) do
   end
 end
 
-create_makefile('util')
+create_makefile('bigdecimal/util')
