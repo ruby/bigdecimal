@@ -18,6 +18,7 @@ Gem::Specification.new do |s|
   s.files         = %w[
     bigdecimal.gemspec
     ext/bigdecimal/bigdecimal.c
+    ext/bigdecimal/bigdecimal.def
     ext/bigdecimal/bigdecimal.h
     ext/bigdecimal/depend
     ext/bigdecimal/extconf.rb
