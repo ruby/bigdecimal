@@ -2538,28 +2538,6 @@ BigDecimal_power_op(VALUE self, VALUE exp)
     return BigDecimal_power(1, &exp, self);
 }
 
-static Real *BigDecimal_new(int argc, VALUE *argv);
-
-static VALUE
-BigDecimal_initialize(int argc, VALUE *argv, VALUE self)
-{
-    ENTER(1);
-    Real *pv = rb_check_typeddata(self, &BigDecimal_data_type);
-    Real *x;
-
-    GUARD_OBJ(x, BigDecimal_new(argc, argv));
-    if (ToValue(x)) {
-	pv = VpCopy(pv, x);
-    }
-    else {
-	VpFree(pv);
-	pv = x;
-    }
-    DATA_PTR(self) = pv;
-    pv->obj = self;
-    return self;
-}
-
 /* :nodoc:
  *
  * private method for dup and clone the provided BigDecimal +other+
@@ -3394,7 +3372,6 @@ Init_bigdecimal(void)
 
 
     /* instance methods */
-    rb_define_method(rb_cBigDecimal, "initialize", BigDecimal_initialize, -1);
     rb_define_method(rb_cBigDecimal, "initialize_copy", BigDecimal_initialize_copy, 1);
     rb_define_method(rb_cBigDecimal, "precs", BigDecimal_prec, 0);
 
