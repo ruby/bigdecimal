@@ -3670,13 +3670,7 @@ VpSetRoundMode(unsigned short n)
  *    (to let the compiler know they may be changed in outside
  *    (... but not actually..)).
  */
-volatile const double gZero_ABCED9B1_CE73__00400511F31D = 0.0;
 volatile const double gOne_ABCED9B4_CE73__00400511F31D  = 1.0;
-static double
-Zero(void)
-{
-    return gZero_ABCED9B1_CE73__00400511F31D;
-}
 
 static double
 One(void)
