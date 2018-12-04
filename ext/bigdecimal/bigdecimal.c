@@ -2669,7 +2669,7 @@ BigDecimal_new(int argc, VALUE *argv)
  *                 value is omitted, this exception is raised.
  */
 static VALUE
-BigDecimal_global_new(int argc, VALUE *argv, VALUE self)
+f_BigDecimal(int argc, VALUE *argv, VALUE self)
 {
     ENTER(1);
     Real *pv;
@@ -3259,7 +3259,7 @@ Init_bigdecimal(void)
     rb_cBigDecimal = rb_define_class("BigDecimal", rb_cNumeric);
 
     /* Global function */
-    rb_define_global_function("BigDecimal", BigDecimal_global_new, -1);
+    rb_define_global_function("BigDecimal", f_BigDecimal, -1);
 
     /* Class methods */
     rb_undef_method(CLASS_OF(rb_cBigDecimal), "allocate");
@@ -3387,10 +3387,10 @@ Init_bigdecimal(void)
 
     arg = rb_str_new2("+Infinity");
     /* Positive infinity value. */
-    rb_define_const(rb_cBigDecimal, "INFINITY", BigDecimal_global_new(1, &arg, rb_cBigDecimal));
+    rb_define_const(rb_cBigDecimal, "INFINITY", f_BigDecimal(1, &arg, rb_cBigDecimal));
     arg = rb_str_new2("NaN");
     /* 'Not a Number' value. */
-    rb_define_const(rb_cBigDecimal, "NAN", BigDecimal_global_new(1, &arg, rb_cBigDecimal));
+    rb_define_const(rb_cBigDecimal, "NAN", f_BigDecimal(1, &arg, rb_cBigDecimal));
 
 
     /* instance methods */
