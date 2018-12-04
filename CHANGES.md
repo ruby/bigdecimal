@@ -2,6 +2,14 @@
 
 ## master
 
+* Support `exception:` keyword in `BigDecimal()`
+
+  **Kenta Murata**
+
+* Remove `BigDecimal#initialize`
+
+  **Kenta Murata**
+
 * Fix the string parsing logic in `BigDecimal()` to follow `Float()`
 
   **Kenta Murata**
