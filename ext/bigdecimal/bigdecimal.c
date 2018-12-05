@@ -3141,13 +3141,12 @@ rmpd_util_str_to_d(VALUE str)
   ENTER(1);
   char const *c_str;
   Real *pv;
-  VALUE obj;
 
   c_str = StringValueCStr(str);
   GUARD_OBJ(pv, VpAlloc(0, c_str, 0, 1));
-  obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, pv);
-  RB_OBJ_FREEZE(obj);
-  return obj;
+  pv->obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, pv);
+  RB_OBJ_FREEZE(pv->obj);
+  return pv->obj;
 }
 
 /* Document-class: BigDecimal
