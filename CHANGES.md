@@ -2,6 +2,10 @@
 
 ## master
 
+* Restore `BigDecimal.new` just for version 1.4 for very old version of Rails
+
+  **Kenta Murata**
+
 * Support `exception:` keyword in `BigDecimal()`
 
   **Kenta Murata**
