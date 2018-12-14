@@ -217,7 +217,13 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_s_new
-    assert_raise_with_message(NoMethodError, /undefined method `new'/) { BigDecimal.new("1") }
+    # TODO: BigDecimal.new will be removed on 1.5
+    # assert_raise_with_message(NoMethodError, /undefined method `new'/) { BigDecimal.new("1") }
+    assert_equal(BigDecimal(1), BigDecimal.new(1))
+    assert_raise(ArgumentError) { BigDecimal.new(',', exception: true) }
+    assert_nothing_raised { assert_equal(nil, BigDecimal.new(',', exception: false)) }
+    assert_raise(TypeError) { BigDecimal.new(nil, exception: true) }
+    assert_nothing_raised { assert_equal(nil, BigDecimal.new(nil, exception: false)) }
   end
 
   def _test_mode(type)
@@ -1821,7 +1827,13 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_dup_subclass
     c = Class.new(BigDecimal)
-    assert_raise_with_message(NoMethodError, /undefined method `new'/) { c.new(1) }
+    # TODO: BigDecimal.new will be removed on 1.5
+    # assert_raise_with_message(NoMethodError, /undefined method `new'/) { c.new(1) }
+    assert_equal(BigDecimal(1), c.new(1))
+    assert_raise(ArgumentError) { c.new(',', exception: true) }
+    assert_nothing_raised { assert_equal(nil, c.new(',', exception: false)) }
+    assert_raise(TypeError) { c.new(nil, exception: true) }
+    assert_nothing_raised { assert_equal(nil, c.new(nil, exception: false)) }
   end
 
   def test_to_d
