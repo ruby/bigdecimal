@@ -2,6 +2,10 @@
 
 ## master
 
+* Fix VpAlloc so that '1.2.3'.to_d is 1.2
+
+  **Nobuyoshi Nakada**
+
 * Restore `BigDecimal.new` just for version 1.4 for very old version of Rails
 
   **Kenta Murata**
