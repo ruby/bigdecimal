@@ -2,6 +2,10 @@
 
 ## 1.4.0
 
+* Update documentation of `exception:` keyword.
+
+  **Victor Shepelev**
+
 * Fix VpAlloc so that '1.2.3'.to_d is 1.2
 
   **Nobuyoshi Nakada**
