@@ -3955,9 +3955,6 @@ VP_EXPORT size_t
 VpInit(BDIGIT BaseVal)
 {
     /* Setup +/- Inf  NaN -0 */
-    VpGetDoubleNaN();
-    VpGetDoublePosInf();
-    VpGetDoubleNegInf();
     VpGetDoubleNegZero();
 
     /* Allocates Vp constants. */
