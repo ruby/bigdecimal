@@ -1,6 +1,6 @@
 # CHANGES
 
-## master
+## 1.4.0
 
 * Fix VpAlloc so that '1.2.3'.to_d is 1.2
 
