@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
     ext/bigdecimal/extconf.rb
     ext/bigdecimal/util/extconf.rb
     ext/bigdecimal/util/util.c
+    lib/bigdecimal.rb
     lib/bigdecimal/jacobian.rb
     lib/bigdecimal/ludcmp.rb
     lib/bigdecimal/math.rb
