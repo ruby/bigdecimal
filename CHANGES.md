@@ -1,5 +1,11 @@
 # CHANGES
 
+## 1.4.1
+
+* Fix wrong packaging.
+
+  **Ben Ford**
+
 ## 1.4.0
 
 * Update documentation of `exception:` keyword.
