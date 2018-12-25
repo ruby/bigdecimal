@@ -7,6 +7,7 @@ build_script:
   - rake -rdevkit compile
 test_script:
   - rake test
+  - rake install
 deploy: off
 environment:
   matrix:
