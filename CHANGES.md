@@ -1,5 +1,11 @@
 # CHANGES
 
+## 1.4.2
+
+* Fix gem installation issue on mingw32.
+
+  **Kenta Murata**
+
 ## 1.4.1
 
 * Fix wrong packaging.

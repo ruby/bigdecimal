@@ -1,6 +1,6 @@
 # coding: utf-8
 
-bigdecimal_version = '1.4.2.pre.20181216a'
+bigdecimal_version = '1.4.2'
 
 Gem::Specification.new do |s|
   s.name          = "bigdecimal"
