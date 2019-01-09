@@ -2573,7 +2573,7 @@ opts_exception_p(VALUE opts)
 }
 
 static Real *
-BigDecimal_new(int argc, VALUE *argv)
+VpNewVarArg(int argc, VALUE *argv)
 {
     size_t mf;
     VALUE  opts = Qnil;
@@ -2711,7 +2711,7 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
     VALUE obj;
 
     obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
-    pv = BigDecimal_new(argc, argv);
+    pv = VpNewVarArg(argc, argv);
     if (pv == NULL) return Qnil;
     SAVE(pv);
     if (ToValue(pv)) pv = VpCopy(NULL, pv);
