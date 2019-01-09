@@ -2573,7 +2573,7 @@ opts_exception_p(VALUE opts)
 }
 
 static Real *
-BigDecimal_new(int argc, VALUE *argv)
+VpNewVarArgs(int argc, VALUE *argv)
 {
     size_t mf;
     VALUE  opts = Qnil;
@@ -2667,6 +2667,23 @@ BigDecimal_new(int argc, VALUE *argv)
     return VpAlloc(mf, RSTRING_PTR(iniValue), 1, exc);
 }
 
+static VALUE
+BigDecimal_new(int argc, VALUE *argv, VALUE klass)
+{
+    ENTER(1);
+    Real *pv;
+    VALUE obj;
+
+    obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
+    pv = VpNewVarArgs(argc, argv);
+    if (pv == NULL) return Qnil;
+    SAVE(pv);
+    if (ToValue(pv)) pv = VpCopy(NULL, pv);
+    RTYPEDDATA_DATA(obj) = pv;
+    RB_OBJ_FREEZE(obj);
+    return pv->obj = obj;
+}
+
 /* call-seq:
  *   BigDecimal(initial, digits, exception: true)
  *
@@ -2706,18 +2723,14 @@ BigDecimal_new(int argc, VALUE *argv)
 static VALUE
 f_BigDecimal(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(1);
-    Real *pv;
-    VALUE obj;
+    return BigDecimal_new(argc, argv, rb_cBigDecimal);
+}
 
-    obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
-    pv = BigDecimal_new(argc, argv);
-    if (pv == NULL) return Qnil;
-    SAVE(pv);
-    if (ToValue(pv)) pv = VpCopy(NULL, pv);
-    RTYPEDDATA_DATA(obj) = pv;
-    RB_OBJ_FREEZE(obj);
-    return pv->obj = obj;
+/* DEPRECATED: BigDecimal.new() */
+static VALUE
+BigDecimal_s_new(int argc, VALUE *argv, VALUE klass)
+{
+    return BigDecimal_new(argc, argv, klass);
 }
 
  /* call-seq:
@@ -3299,7 +3312,7 @@ Init_bigdecimal(void)
 
     /* Class methods */
     rb_undef_method(CLASS_OF(rb_cBigDecimal), "allocate");
-    rb_undef_method(CLASS_OF(rb_cBigDecimal), "new");
+    rb_define_singleton_method(rb_cBigDecimal, "new", BigDecimal_s_new, -1);
     rb_define_singleton_method(rb_cBigDecimal, "mode", BigDecimal_mode, -1);
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
     rb_define_singleton_method(rb_cBigDecimal, "double_fig", BigDecimal_double_fig, 0);

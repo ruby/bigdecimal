@@ -1828,12 +1828,17 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
-  def test_dup_subclass
-    c = Class.new(BigDecimal)
-    # TODO: BigDecimal.new will be removed on 1.5
-    # assert_raise_with_message(NoMethodError, /undefined method `new'/) { c.new(1) }
+  def test_define_subclass
+    assert_warning(/subclassing BigDecimal will be disallowed/) do
+      Class.new(BigDecimal)
+    end
+  end
+
+  def test_subclass_behavior
     verbose, $VERBOSE = $VERBOSE, nil
+    c = Class.new(BigDecimal)
     assert_equal(BigDecimal(1), c.new(1))
+    assert_kind_of(c, c.new(1))
     assert_raise(ArgumentError) { c.new(',', exception: true) }
     assert_nothing_raised { assert_equal(nil, c.new(',', exception: false)) }
     assert_raise(TypeError) { c.new(nil, exception: true) }
