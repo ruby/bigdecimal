@@ -24,3 +24,5 @@ matrix:
       rvm: 2.6
     - name: "trunk"
       rvm: ruby-head
+  allow_failures:
+    - rvm: 2.3
