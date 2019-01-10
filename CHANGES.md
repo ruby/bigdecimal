@@ -6,6 +6,12 @@
 
   **Kenta Murata**
 
+## 1.4.3
+
+* Restore subclassing support
+
+  **Kenta Murata**
+
 ## 1.4.2
 
 * Fix gem installation issue on mingw32.
