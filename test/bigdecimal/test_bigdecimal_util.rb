@@ -76,6 +76,7 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert_equal(BigDecimal('1'), "0.1e1__0".to_d)
     assert_equal(BigDecimal('1.2'), "1.2.3".to_d)
     assert_equal(BigDecimal('1'), "1.".to_d)
+    assert_equal(BigDecimal('1'), "1e".to_d)
 
     assert("2.5".to_d.frozen?)
   end
