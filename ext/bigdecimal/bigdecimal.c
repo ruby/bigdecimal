@@ -4281,7 +4281,7 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
 
     psz[i] = '\0';
 
-    if (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0)) {
+    if (strict_p && (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0))) {
         VALUE str;
       invalid_value:
         if (!strict_p) {
