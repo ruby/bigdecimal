@@ -21,6 +21,14 @@ Or install it yourself as:
 
     $ gem install bigdecimal
 
+### For RubyInstaller users
+
+If your Ruby comes from [RubyInstaller](https://rubyinstaller.org/), make sure [Devkit](https://github.com/oneclick/rubyinstaller/wiki/Development-Kit) is available on your environment before installing bigdecimal.
+
+### For Chocolatey
+
+I don't have enough knowledge about Chocolatey.  Please tell me what should I write here.
+
 ## Which version should you select
 
 The differences among versions are given below:
