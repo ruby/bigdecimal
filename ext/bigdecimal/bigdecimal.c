@@ -1758,7 +1758,6 @@ BigDecimal_fix(VALUE self)
  * Round to the nearest integer (by default), returning the result as a
  * BigDecimal if n is specified, or as Integer if it isn't.
  *
- *
  *	BigDecimal('3.14159').round #=> 3
  *	BigDecimal('8.7').round #=> 9
  *	BigDecimal('-9.9').round #=> -10
