@@ -1,5 +1,11 @@
 # CHANGES
 
+## 1.4.x
+
+* Fix String#to_d against the string with trailing "e" like "1e"
+
+  **Ibrahim Awwal**
+
 ## 1.4.3
 
 * Restore subclassing support
