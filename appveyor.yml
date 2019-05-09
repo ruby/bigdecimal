@@ -1,4 +1,5 @@
 ---
+image: Visual Studio 2017
 clone_depth: 10
 install:
   - SET PATH=C:\Ruby%ruby_version%\bin;%PATH%
@@ -11,9 +12,11 @@ test_script:
 deploy: off
 environment:
   matrix:
-    - ruby_version: "23"
-    - ruby_version: "23-x64"
-    - ruby_version: "24"
-    - ruby_version: "24-x64"
+    - ruby_version: "26"
+    - ruby_version: "26-x64"
     - ruby_version: "25"
     - ruby_version: "25-x64"
+    - ruby_version: "24"
+    - ruby_version: "24-x64"
+    - ruby_version: "23"
+    - ruby_version: "23-x64"
