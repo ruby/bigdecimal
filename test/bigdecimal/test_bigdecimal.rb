@@ -220,6 +220,29 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise_with_message(NoMethodError, /undefined method `new'/) { BigDecimal.new("1") }
   end
 
+  def test_s_interpret_loosely
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("1__1_1"))
+    assert_equal(BigDecimal('2.5'), BigDecimal.interpret_loosely("2.5"))
+    assert_equal(BigDecimal('2.5'), BigDecimal.interpret_loosely("2.5 degrees"))
+    assert_equal(BigDecimal('2.5e1'), BigDecimal.interpret_loosely("2.5e1 degrees"))
+    assert_equal(BigDecimal('0'), BigDecimal.interpret_loosely("degrees 100.0"))
+    assert_equal(BigDecimal('0.125'), BigDecimal.interpret_loosely("0.1_2_5"))
+    assert_equal(BigDecimal('0.125'), BigDecimal.interpret_loosely("0.1_2_5__"))
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("1_.125"))
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("1._125"))
+    assert_equal(BigDecimal('0.1'), BigDecimal.interpret_loosely("0.1__2_5"))
+    assert_equal(BigDecimal('0.1'), BigDecimal.interpret_loosely("0.1_e10"))
+    assert_equal(BigDecimal('0.1'), BigDecimal.interpret_loosely("0.1e_10"))
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("0.1e1__0"))
+    assert_equal(BigDecimal('1.2'), BigDecimal.interpret_loosely("1.2.3"))
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("1."))
+    assert_equal(BigDecimal('1'), BigDecimal.interpret_loosely("1e"))
+
+    assert_equal(BigDecimal('0.0'), BigDecimal.interpret_loosely("invalid"))
+
+    assert(BigDecimal.interpret_loosely("2.5").frozen?)
+  end
+
   def _test_mode(type)
     BigDecimal.mode(type, true)
     assert_raise(FloatDomainError) { yield }

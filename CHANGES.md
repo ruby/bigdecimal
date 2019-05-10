@@ -6,6 +6,11 @@
 
   **Kenta Murata**
 
+* Add BigDecimal.interpret_loosely, use it in String#to_d,
+  and remove bigdecimal/util.so and rmpd_util_str_to_d
+
+  **Kenta Murata**
+
 ## 1.4.3
 
 * Restore subclassing support
