@@ -2726,6 +2726,20 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
     return BigDecimal_new(argc, argv, rb_cBigDecimal);
 }
 
+static VALUE
+BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
+{
+  ENTER(1);
+  char const *c_str;
+  Real *pv;
+
+  c_str = StringValueCStr(str);
+  GUARD_OBJ(pv, VpAlloc(0, c_str, 0, 1));
+  pv->obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, pv);
+  RB_OBJ_FREEZE(pv->obj);
+  return pv->obj;
+}
+
 /* DEPRECATED: BigDecimal.new() */
 static VALUE
 BigDecimal_s_new(int argc, VALUE *argv, VALUE klass)
@@ -3312,6 +3326,7 @@ Init_bigdecimal(void)
 
     /* Class methods */
     rb_undef_method(CLASS_OF(rb_cBigDecimal), "allocate");
+    rb_define_singleton_method(rb_cBigDecimal, "interpret_loosely", BigDecimal_s_interpret_loosely, 1);
     rb_define_singleton_method(rb_cBigDecimal, "new", BigDecimal_s_new, -1);
     rb_define_singleton_method(rb_cBigDecimal, "mode", BigDecimal_mode, -1);
     rb_define_singleton_method(rb_cBigDecimal, "limit", BigDecimal_limit, -1);
