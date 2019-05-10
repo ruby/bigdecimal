@@ -18,7 +18,6 @@ Gem::Specification.new do |s|
   s.files         = %w[
     bigdecimal.gemspec
     ext/bigdecimal/bigdecimal.c
-    ext/bigdecimal/bigdecimal.def
     ext/bigdecimal/bigdecimal.h
     lib/bigdecimal.rb
     lib/bigdecimal/jacobian.rb
