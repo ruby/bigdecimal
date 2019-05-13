@@ -1,6 +1,6 @@
 # CHANGES
 
-## 1.4.x
+## 1.4.4
 
 * Fix String#to_d against the string with trailing "e" like "1e"
 
