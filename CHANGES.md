@@ -6,6 +6,12 @@
 
   **Kenta Murata**
 
+## 1.4.4
+
+* Fix String#to_d against the string with trailing "e" like "1e"
+
+  **Ibrahim Awwal**
+
 * Add BigDecimal.interpret_loosely, use it in String#to_d,
   and remove bigdecimal/util.so and rmpd_util_str_to_d
 
