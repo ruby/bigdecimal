@@ -2563,6 +2563,10 @@ BigDecimal_clone(VALUE self)
   return self;
 }
 
+#ifdef HAVE_RB_OPTS_EXCEPTION_P
+int rb_opts_exception_p(VALUE opts, int default_value);
+#define opts_exception_p(opts) rb_opts_exception_p((opts), 1)
+#else
 static int
 opts_exception_p(VALUE opts)
 {
@@ -2572,8 +2576,16 @@ opts_exception_p(VALUE opts)
         kwds[0] = rb_intern_const("exception");
     }
     rb_get_kwargs(opts, kwds, 0, 1, &exception);
+    switch (exception) {
+      case Qtrue: case Qfalse:
+        break;
+      default:
+        rb_raise(rb_eArgError, "true or false is expected as exception: %+"PRIsVALUE,
+                 flagname, obj);
+    }
     return exception != Qfalse;
 }
+#endif
 
 static Real *
 VpNewVarArg(int argc, VALUE *argv)
