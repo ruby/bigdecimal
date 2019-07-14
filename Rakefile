@@ -6,6 +6,7 @@ require "rake/extensiontask"
 require "rake/testtask"
 
 spec = eval(File.read('bigdecimal.gemspec'))
+spec.require_paths.insert(0, *%w[stub])
 Rake::ExtensionTask.new('bigdecimal', spec) do |ext|
   ext.lib_dir = File.join(*['lib', ENV['FAT_DIR']].compact)
   ext.cross_compile = true

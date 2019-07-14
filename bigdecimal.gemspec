@@ -19,7 +19,6 @@ Gem::Specification.new do |s|
     bigdecimal.gemspec
     ext/bigdecimal/bigdecimal.c
     ext/bigdecimal/bigdecimal.h
-    lib/bigdecimal.rb
     lib/bigdecimal/jacobian.rb
     lib/bigdecimal/ludcmp.rb
     lib/bigdecimal/math.rb
@@ -28,6 +27,7 @@ Gem::Specification.new do |s|
     sample/linear.rb
     sample/nlsolve.rb
     sample/pi.rb
+    stub/bigdecimal.rb
   ]
 
   s.required_ruby_version = Gem::Requirement.new(">= 2.3.0".freeze)
