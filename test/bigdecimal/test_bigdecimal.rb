@@ -55,6 +55,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(10**(-1), BigDecimal("1E-1"), '#4825')
     assert_equal(1234, BigDecimal(" \t\n\r \r1234 \t\n\r \r"))
 
+    bd = BigDecimal.new("1.12", 1)
+    assert_same(bd, BigDecimal(bd))
+    assert_same(bd, BigDecimal(bd, exception: false))
+    assert_not_same(bd, BigDecimal(bd, 1))
+    assert_not_same(bd, BigDecimal(bd, 1, exception: false))
+
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
     assert_raise_with_message(ArgumentError, /"1__1_1"/) { BigDecimal("1__1_1") }
     assert_raise_with_message(ArgumentError, /"_1_1_1"/) { BigDecimal("_1_1_1") }
