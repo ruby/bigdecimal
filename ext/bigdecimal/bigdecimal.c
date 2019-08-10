@@ -2956,6 +2956,10 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
     n = prec + rmpd_double_figures();
     negative = BIGDECIMAL_NEGATIVE_P(vx);
     if (negative) {
+        VALUE x_zero = INT2NUM(1);
+        VALUE x_copy = f_BigDecimal(1, &x_zero, klass);
+        x = BigDecimal_initialize_copy(x_copy, x);
+        vx = DATA_PTR(x);
 	VpSetSign(vx, 1);
     }
 
