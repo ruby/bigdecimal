@@ -1614,6 +1614,13 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_exp_with_negative
+    x = BigDecimal(-1)
+    y = BigMath.exp(x, 20)
+    assert_equal(y, BigMath.exp(-1, 20))
+    assert_equal(BigDecimal(-1), x)
+  end
+
   def test_exp_with_negative_infinite
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
