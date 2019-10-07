@@ -72,6 +72,14 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_BigDecimal_bug7522
+    bd = BigDecimal("1.12", 1)
+    assert_same(bd, BigDecimal(bd))
+    assert_same(bd, BigDecimal(bd, exception: false))
+    assert_not_same(bd, BigDecimal(bd, 1))
+    assert_not_same(bd, BigDecimal(bd, 1, exception: false))
+  end
+
   def test_BigDecimal_with_invalid_string
     [
       '', '.', 'e1', 'd1', '.e', '.d', '1.e', '1.d', '.1e', '.1d',

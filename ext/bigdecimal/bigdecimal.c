@@ -2563,6 +2563,10 @@ BigDecimal_clone(VALUE self)
   return self;
 }
 
+#ifdef HAVE_RB_OPTS_EXCEPTION_P
+int rb_opts_exception_p(VALUE opts, int default_value);
+#define opts_exception_p(opts) rb_opts_exception_p((opts), 1)
+#else
 static int
 opts_exception_p(VALUE opts)
 {
@@ -2571,9 +2575,17 @@ opts_exception_p(VALUE opts)
     if (!kwds[0]) {
         kwds[0] = rb_intern_const("exception");
     }
-    rb_get_kwargs(opts, kwds, 0, 1, &exception);
+    if (!rb_get_kwargs(opts, kwds, 0, 1, &exception)) return 1;
+    switch (exception) {
+      case Qtrue: case Qfalse:
+        break;
+      default:
+        rb_raise(rb_eArgError, "true or false is expected as exception: %+"PRIsVALUE,
+                 exception);
+    }
     return exception != Qfalse;
 }
+#endif
 
 static Real *
 VpNewVarArg(int argc, VALUE *argv)
@@ -2713,6 +2725,9 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
     Real *pv;
     VALUE obj;
 
+    if (argc > 0 && CLASS_OF(argv[0]) == rb_cBigDecimal) {
+        if (argc == 1 || (argc == 2 && RB_TYPE_P(argv[1], T_HASH))) return argv[0];
+    }
     obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
     pv = VpNewVarArg(argc, argv);
     if (pv == NULL) return Qnil;
