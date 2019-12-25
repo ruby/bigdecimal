@@ -1,5 +1,11 @@
 # CHANGES
 
+## 2.0.1
+
+* Let BigDecimal#to_s return US-ASCII string
+
+  **Kenta Murata**
+
 ## 2.0.0
 
 * Remove `BigDecimal.new`
