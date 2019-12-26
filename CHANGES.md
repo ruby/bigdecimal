@@ -1,10 +1,45 @@
 # CHANGES
 
-## master
+## 2.0.1
+
+* Let BigDecimal#to_s return US-ASCII string
+
+  **Kenta Murata**
+
+## 2.0.0
 
 * Remove `BigDecimal.new`
 
   **Kenta Murata**
+
+* Drop fat-gem support
+
+  **Akira Matsuda**
+
+* Do not mutate frozen BigDecimal argument in BigMath.exp
+
+  **Jeremy Evans**
+
+* Make Kernel#BigDecimal return argument if given correct type
+  [Bug #7522]
+
+  **Jeremy Evans**
+
+* Undef BigDecimal#initialize_copy
+
+  **Jeremy Evans**
+
+* Support conversion from Complex without the imaginary part
+
+  **Kenta Murata**
+
+* Remove taint checking
+
+  **Jeremy Evans**
+
+* Code maintenance
+
+  **Nobuyoshi Nakada**
 
 ## 1.4.4
 
