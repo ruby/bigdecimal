@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/ruby/bigdecimal.svg?branch=master)](https://travis-ci.org/ruby/bigdecimal)
 [![Build status](https://ci.appveyor.com/api/projects/status/4j596bhldmmtcjpf/branch/master?svg=true)](https://ci.appveyor.com/project/ruby/bigdecimal/branch/master)
+[![Current Version](https://badge.fury.io/rb/bigdecimal.svg)](https://badge.fury.io/rb/bigdecimal) 
+[![Default Gem](https://img.shields.io/badge/stdgem-default-9c1260.svg)](https://stdgems.org/bigdecimal)
 
 BigDecimal provides an arbitrary-precision decimal floating-point number class.
 
