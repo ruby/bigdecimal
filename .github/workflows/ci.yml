@@ -1,0 +1,50 @@
+name: CI
+
+on:
+- push
+- pull_request
+
+jobs:
+  host:
+    name: ${{ matrix.os }} ${{ matrix.ruby }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu-20.04
+        - ubuntu-18.04
+        - macos-11.0
+        - macos-10.15
+        - windows-latest
+        ruby:
+        - 3.0.0-preview2
+        - 2.7
+        - 2.6
+        - 2.5
+        - 2.4
+        - debug
+        include:
+        - { os: windows-latest , ruby: mingw }
+        - { os: windows-latest , ruby: mswin }
+        exclude:
+        - { os: windows-latest , ruby: 3.0.0-preview2 }
+        - { os: windows-latest , ruby: debug }
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - run: bundle install
+
+      - run: rake compile
+
+      - run: rake build
+
+      - run: rake test
+
+      - run: gem install pkg/*.gem
