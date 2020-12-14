@@ -2365,7 +2365,10 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	    }
 	    goto retry;
 	}
-	exp = GetVpValueWithPrec(vexp, DBL_DIG+1, 1);
+        if (NIL_P(prec)) {
+            n += DBLE_FIG;
+        }
+        exp = GetVpValueWithPrec(vexp, DBLE_FIG, 1);
 	break;
 
       case T_RATIONAL:
@@ -2380,6 +2383,9 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	    goto retry;
 	}
 	exp = GetVpValueWithPrec(vexp, n, 1);
+        if (NIL_P(prec)) {
+            n += n;
+        }
 	break;
 
       case T_DATA:
@@ -2390,6 +2396,10 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 		vexp = BigDecimal_to_i(vexp);
 		goto retry;
 	    }
+            if (NIL_P(prec)) {
+                GUARD_OBJ(y, GetVpValue(vexp, 1));
+                n += y->Prec*VpBaseFig();
+            }
 	    exp = DATA_PTR(vexp);
 	    break;
 	}
