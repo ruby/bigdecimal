@@ -1,5 +1,20 @@
 # CHANGES
 
+## 2.0.2
+
+* Deprecate taint/trust and related methods, and make the methods no-ops
+
+  **Jeremy Evans**
+
+* Make BigDecimal#round with argument < 1 return Integer
+
+  **Jeremy Evans**
+
+* Use higher default precision for BigDecimal#power and #**
+
+  **Jeremy Evans**
+  **Kenta Murata**
+
 ## 2.0.1
 
 * Let BigDecimal#to_s return US-ASCII string
