@@ -860,6 +860,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_kind_of(BigDecimal, BigDecimal("3") * 1.5)
   end
 
+  def test_mult_with_float_bug13331
+    assert_equal(BigDecimal(64.4, Float::DIG),
+                 BigDecimal(1) * 64.4,
+                 "[ruby-core:80234] [Bug #13331]")
+  end
+
   def test_mult_with_rational
     assert_kind_of(BigDecimal, BigDecimal("3") * 1.quo(3))
   end
