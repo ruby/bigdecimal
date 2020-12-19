@@ -359,8 +359,9 @@ BigDecimal_double_fig(VALUE self)
  *  internal storage properties.
  *
  *  This method is deprecated and will be removed in the future.
- *  Instead, use BigDecimal#precision for obtaining the number of decimal
- *  digits.
+ *  Instead, use BigDecimal#n_significant_digits for obtaining the number of
+ *  significant digits in scientific notation, and BigDecimal#precision for
+ *  obtaining the number of digits in decimal notation.
  *
  *     BigDecimal('5').precs #=> [9, 18]
  */
