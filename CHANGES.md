@@ -1,5 +1,28 @@
 # CHANGES
 
+## 2.0.3
+
+* Deprecate `BigDecimal#precs`.
+
+  **Kenta Murata**
+
+* Add `BigDecimal#n_significant_digits`.
+
+  **Kenta Murata**
+
+* Add `BigDecimal#precision`.
+
+  **Kenta Murata**
+
+* Fix a bug of the way to undefine `allocate` method.
+
+  **Kenta Murata**
+
+* FIx the defaullt precision of `Float#to_d`.
+  [Bug #13331]
+
+  **Kenta Murata**
+
 ## 2.0.2
 
 * Deprecate taint/trust and related methods, and make the methods no-ops
