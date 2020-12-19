@@ -34,6 +34,7 @@ The differences among versions are given below:
 
 | version | characteristics | Supported ruby version range |
 | ------- | --------------- | ----------------------- |
+| 3.0.0   | You can use BigDecimal with Ractor on Ruby 3.0 | 2.5 .. |
 | 2.0.x   | You cannot use BigDecimal.new and do subclassing | 2.4 .. |
 | 1.4.x   | BigDecimal.new and subclassing always prints warning. | 2.3 .. 2.6 |
 | 1.3.5   | You can use BigDecimal.new and subclassing without warning | .. 2.5 |
