@@ -371,6 +371,10 @@ BigDecimal_prec(VALUE self)
     Real *p;
     VALUE obj;
 
+    rb_category_warn(RB_WARN_CATEGORY_DEPRECATED,
+                     "BigDecimal#precs is deprecated and will be removed in the future; "
+                     "use BigDecimal#precision instead.");
+
     GUARD_OBJ(p, GetVpValue(self, 1));
     obj = rb_assoc_new(SIZET2NUM(p->Prec*VpBaseFig()),
 		       SIZET2NUM(p->MaxPrec*VpBaseFig()));
