@@ -611,13 +611,10 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_precs_deprecated
-    saved = Warning[:deprecated]
-    Warning[:deprecated] = true
     assert_warn(/BigDecimal#precs is deprecated and will be removed in the future/) do
+      Warning[:deprecated] = true if defined?(Warning.[])
       BigDecimal("1").precs
     end
-  ensure
-    Warning[:deprecated] = saved
   end
 
   def test_precs
