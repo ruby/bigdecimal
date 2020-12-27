@@ -18,6 +18,7 @@ jobs:
         - macos-10.15
         - windows-latest
         ruby:
+        - 3.0
         - 2.7
         - 2.6
         - 2.5
@@ -27,7 +28,7 @@ jobs:
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
-        - { os: windows-latest , ruby: 3.0.0-preview2 }
+        - { os: windows-latest , ruby: 3.0 }
         - { os: windows-latest , ruby: debug }
 
     steps:
