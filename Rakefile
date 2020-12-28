@@ -16,3 +16,28 @@ end
 
 task travis: :test
 task test: :compile
+
+benchmark_tasks = []
+namespace :benchmark do
+  Dir.glob("benchmark/*.yml") do |benchmark|
+    name = File.basename(benchmark, ".*")
+    env = {
+      "RUBYLIB" => nil,
+      "BUNDLER_ORIG_RUBYLIB" => nil,
+    }
+    command_line = [
+      RbConfig.ruby, "-v", "-S", "benchmark-driver", File.expand_path(benchmark)
+    ]
+
+    desc "Run #{name} benchmark"
+    task name do
+      puts("```")
+      sh(env, *command_line)
+      puts("```")
+    end
+    benchmark_tasks << "benchmark:#{name}"
+  end
+end
+
+desc "Run all benchmarks"
+task benchmark: benchmark_tasks
