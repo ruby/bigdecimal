@@ -1,0 +1,15 @@
+loop_count: 100
+
+contexts:
+- gems:
+    bigdecimal: 3.0.1.dev
+- name: "master"
+  prelude: |-
+    $LOAD_PATH.unshift(File.expand_path("lib"))
+    require "bigdecimal"
+
+prelude: |-
+  big_1e100 = 10**100
+
+benchmark:
+  big_1e100: BigDecimal(big_1e100)

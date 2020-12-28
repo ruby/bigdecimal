@@ -1,0 +1,43 @@
+name: Benchmarking
+
+on:
+- push
+- pull_request
+
+jobs:
+  host:
+    name: ${{ matrix.os }} ${{ matrix.ruby }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu-latest
+        - macos-10.15
+        - windows-latest
+        ruby:
+        - 3.0
+        - 2.7
+        - head
+        include:
+        - { os: windows-latest , ruby: mingw }
+        - { os: windows-latest , ruby: mswin }
+        exclude:
+        - { os: windows-latest , ruby: 3.0 }
+        - { os: windows-latest , ruby: debug }
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+
+    - name: Install dependencies
+      run: |
+        bundle install
+        gem install bigdecimal -v 3.0.0
+        rake install
+
+    - run: rake benchmark
