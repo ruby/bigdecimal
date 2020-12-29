@@ -9,7 +9,9 @@ contexts:
     require "bigdecimal"
 
 prelude: |-
-  big_1e100 = 10**100
+  figs = (0..9).to_a
+
+  big_n10000 = 9999.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
 
 benchmark:
-  big_1e100: BigDecimal(big_1e100)
+  big_n10000: BigDecimal(big_n10000)
