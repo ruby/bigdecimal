@@ -1,0 +1,17 @@
+loop_count: 1000
+
+contexts:
+- gems:
+    bigdecimal: 3.0.0
+- name: "master"
+  prelude: |-
+    $LOAD_PATH.unshift(File.expand_path("lib"))
+    require "bigdecimal"
+
+prelude: |-
+  figs = (0..9).to_a
+
+  big_n10000 = 9999.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
+
+benchmark:
+  big_n10000: BigDecimal(big_n10000)

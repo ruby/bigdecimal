@@ -1,4 +1,4 @@
-loop_count: 100
+loop_count: 100000
 
 contexts:
 - gems:
@@ -13,9 +13,7 @@ prelude: |-
 
   big_n9 = 8.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
   big_n19 = 18.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
-  big_n10000 = 9999.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
 
 benchmark:
   big_n9: BigDecimal(big_n9)
   big_n19: BigDecimal(big_n19)
-  big_n10000: BigDecimal(big_n10000)
