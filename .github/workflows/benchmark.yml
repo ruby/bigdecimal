@@ -38,6 +38,7 @@ jobs:
       run: |
         bundle install
         gem install bigdecimal -v 3.0.0
-        rake install
+
+    - run: rake compile
 
     - run: rake benchmark
