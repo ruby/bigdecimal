@@ -1,0 +1,23 @@
+loop_count: 100000
+
+contexts:
+- gems:
+    bigdecimal: 3.0.0
+- name: "master"
+  prelude: |-
+    $LOAD_PATH.unshift(File.expand_path("lib"))
+    require "bigdecimal"
+
+prelude: |-
+  flt_e0 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}".to_f
+  flt_ep10 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e+10".to_f
+  flt_ep100 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e+100".to_f
+  flt_em10 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e-10".to_f
+  flt_em100 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e-100".to_f
+
+benchmark:
+  flt_e0: BigDecimal(flt_e0, Float::DIG+1)
+  flt_ep10: BigDecimal(flt_ep10, Float::DIG+1)
+  flt_ep100: BigDecimal(flt_ep100, Float::DIG+1)
+  flt_em10: BigDecimal(flt_em10, Float::DIG+1)
+  flt_em100: BigDecimal(flt_em100, Float::DIG+1)
