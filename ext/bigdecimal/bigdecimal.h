@@ -10,9 +10,11 @@
 #define  RUBY_BIG_DECIMAL_H 1
 
 #define RUBY_NO_OLD_COMPATIBILITY
-
 #include "ruby/ruby.h"
-#include <float.h>
+
+#ifdef HAVE_FLOAT_H
+# include <float.h>
+#endif
 
 #if defined(__bool_true_false_are_defined)
 # /* Take that. */

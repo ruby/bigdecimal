@@ -45,6 +45,7 @@ check_bigdecimal_version(gemspec_path)
 have_builtin_func("__builtin_clz", "__builtin_clz(0)")
 have_builtin_func("__builtin_clzl", "__builtin_clzl(0)")
 
+have_header("float.h")
 have_header("stdbool.h")
 if have_func("_lzcnt_u64", "x86intrin.h") # check availability
   $defs << "-DHAVE_X86INTRIN_H"
