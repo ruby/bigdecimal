@@ -55,7 +55,7 @@ nlz_int32(uint32_t x)
      * safety. */
     return (unsigned int)__lzcnt(x);
 
-#elif defined(__x86_64__) && defined(HAVE__LZCNT_U32)
+#elif defined(__x86_64__) && defined(__LZCNT__) && defined(HAVE__LZCNT_U32)
     return (unsigned int)_lzcnt_u32(x);
 
 #elif defined(_MSC_VER) && defined(HAVE__BITSCANREVERSE)
@@ -84,7 +84,7 @@ nlz_int64(uint64_t x)
 #if defined(_MSC_VER) && defined(__AVX2__) && defined(HAVE___LZCNT64)
     return (unsigned int)__lzcnt64(x);
 
-#elif defined(__x86_64__) && defined(HAVE__LZCNT_U64)
+#elif defined(__x86_64__) && defined(__LZCNT__) && defined(HAVE__LZCNT_U64)
     return (unsigned int)_lzcnt_u64(x);
 
 #elif defined(_WIN64) && defined(_MSC_VER) && defined(HAVE__BITSCANREVERSE64)
