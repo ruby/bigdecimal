@@ -13,7 +13,9 @@ prelude: |-
 
   int_n9 = 8.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
   int_n19 = 18.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
+  int_n38 = 37.times.inject(figs[1..-1].sample) {|a, x| a * 10 + x }
 
 benchmark:
   int_n9: BigDecimal(int_n9)
   int_n19: BigDecimal(int_n19)
+  int_n38: BigDecimal(int_n38)
