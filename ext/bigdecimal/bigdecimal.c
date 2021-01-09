@@ -2849,8 +2849,10 @@ rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
                  "can't omit precision for a %"PRIsVALUE".",
                  CLASS_OF(val));
     }
-    Real *vp = GetVpValueWithPrec(val, digs, 1);
-    return check_exception(vp->obj);
+
+    VALUE num = rb_inum_convert_to_BigDecimal(rb_rational_num(val), 0, raise_exception);
+    VALUE d = BigDecimal_div2(num, rb_rational_den(val), SIZET2NUM(digs));
+    return d;
 }
 
 static VALUE
