@@ -200,17 +200,16 @@ cannot_be_coerced_into_BigDecimal(VALUE exc_class, VALUE v)
 
 static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
 static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
+static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static Real*
 GetVpValueWithPrec(VALUE v, long prec, int must)
 {
     ENTER(1);
     Real *pv;
-    VALUE num, bg;
+    VALUE bg;
     char szD[128];
-    VALUE orig = Qundef;
 
-again:
     switch(TYPE(v)) {
       case T_FLOAT: {
         VALUE obj = rb_float_convert_to_BigDecimal(v, prec, must);
@@ -218,20 +217,11 @@ again:
         return pv;
       }
 
-      case T_RATIONAL:
-	if (prec < 0) goto unable_to_coerce_without_prec;
-
-	if (orig == Qundef ? (orig = v, 1) : orig != v) {
-	    num = rb_rational_num(v);
-	    pv = GetVpValueWithPrec(num, -1, must);
-	    if (pv == NULL) goto SomeOneMayDoIt;
-
-            v = BigDecimal_div2(VpCheckGetValue(pv), rb_rational_den(v), LONG2NUM(prec));
-	    goto again;
-	}
-
-	v = orig;
-	goto SomeOneMayDoIt;
+      case T_RATIONAL: {
+        VALUE obj = rb_rational_convert_to_BigDecimal(v, prec, must);
+        TypedData_Get_Struct(obj, Real, &BigDecimal_data_type, pv);
+        return pv;
+      }
 
       case T_DATA:
 	if (is_kind_of_BigDecimal(v)) {
@@ -268,14 +258,6 @@ SomeOneMayDoIt:
 	cannot_be_coerced_into_BigDecimal(rb_eTypeError, v);
     }
     return NULL; /* NULL means to coerce */
-
-unable_to_coerce_without_prec:
-    if (must) {
-	rb_raise(rb_eArgError,
-		 "%"PRIsVALUE" can't be coerced into BigDecimal without a precision",
-		 RB_OBJ_CLASSNAME(v));
-    }
-    return NULL;
 }
 
 static Real*
@@ -2793,8 +2775,6 @@ rb_inum_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_e
         return rb_big_convert_to_BigDecimal(val, digs, raise_exception);
     }
 }
-
-static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static VALUE
 rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
