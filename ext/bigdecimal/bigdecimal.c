@@ -199,6 +199,7 @@ cannot_be_coerced_into_BigDecimal(VALUE exc_class, VALUE v)
 }
 
 static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
+static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static Real*
 GetVpValueWithPrec(VALUE v, long prec, int must)
@@ -208,27 +209,14 @@ GetVpValueWithPrec(VALUE v, long prec, int must)
     VALUE num, bg;
     char szD[128];
     VALUE orig = Qundef;
-    double d;
 
 again:
     switch(TYPE(v)) {
-      case T_FLOAT:
-	if (prec < 0) goto unable_to_coerce_without_prec;
-	if (prec > (long)DBLE_FIG) goto SomeOneMayDoIt;
-	d = RFLOAT_VALUE(v);
-	if (!isfinite(d)) {
-            pv = VpCreateRbObject(1, NULL, true);
-	    VpDtoV(pv, d);
-	    return pv;
-	}
-	if (d != 0.0) {
-	    v = rb_funcall(v, id_to_r, 0);
-	    goto again;
-	}
-	if (1/d < 0.0) {
-            return VpCreateRbObject(prec, "-0", true);
-	}
-        return VpCreateRbObject(prec, "0", true);
+      case T_FLOAT: {
+        VALUE obj = rb_float_convert_to_BigDecimal(v, prec, must);
+        TypedData_Get_Struct(obj, Real, &BigDecimal_data_type, pv);
+        return pv;
+      }
 
       case T_RATIONAL:
 	if (prec < 0) goto unable_to_coerce_without_prec;
