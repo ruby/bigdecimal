@@ -2806,10 +2806,13 @@ rb_inum_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_e
     }
 }
 
+static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
+
 static VALUE
 rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
 {
     double d = RFLOAT_VALUE(val);
+
     if (!isfinite(d)) {
         Real *vp = VpCreateRbObject(1, NULL, true);  /* vp->obj is allocated */
         VpDtoV(vp, d);
@@ -2829,7 +2832,18 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         rb_raise(rb_eArgError, "precision too large.");
     }
 
-    Real *vp = GetVpValueWithPrec(val, digs, 1);
+    if (d != 0.0) {
+        val = rb_funcall(val, id_to_r, 0);
+        return rb_rational_convert_to_BigDecimal(val, digs, raise_exception);
+    }
+
+    Real *vp;
+    if (1/d < 0.0) {
+        vp = VpCreateRbObject(digs, "-0", true);
+    }
+    else {
+        vp = VpCreateRbObject(digs, "0", true);
+    }
     return check_exception(vp->obj);
 }
 
