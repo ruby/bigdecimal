@@ -199,14 +199,16 @@ cannot_be_coerced_into_BigDecimal(VALUE exc_class, VALUE v)
 }
 
 static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
-static VALUE rb_inum_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static Real*
 GetVpValueWithPrec(VALUE v, long prec, int must)
 {
+    ENTER(1);
     Real *pv;
+    VALUE bg;
+    char szD[128];
 
     switch(TYPE(v)) {
       case T_FLOAT: {
@@ -232,11 +234,8 @@ GetVpValueWithPrec(VALUE v, long prec, int must)
 	break;
 
       case T_FIXNUM:
-      case T_BIGNUM: {
-        VALUE obj = rb_inum_convert_to_BigDecimal(v, prec, must);
-        TypedData_Get_Struct(obj, Real, &BigDecimal_data_type, pv);
-        return pv;
-      }
+	sprintf(szD, "%ld", FIX2LONG(v));
+        return VpCreateRbObject(VpBaseFig() * 2 + 1, szD, true);
 
 #ifdef ENABLE_NUMERIC_STRING
       case T_STRING:
@@ -245,6 +244,11 @@ GetVpValueWithPrec(VALUE v, long prec, int must)
                                 RSTRING_PTR(v), true);
 #endif /* ENABLE_NUMERIC_STRING */
 
+      case T_BIGNUM:
+	bg = rb_big2str(v, 10);
+	PUSH(bg);
+        return VpCreateRbObject(strlen(RSTRING_PTR(bg)) + VpBaseFig() + 1,
+                                RSTRING_PTR(bg), true);
       default:
 	goto SomeOneMayDoIt;
     }
