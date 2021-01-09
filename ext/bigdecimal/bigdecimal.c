@@ -2759,7 +2759,10 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
     }
 #endif
     else {
-        Real *vp = GetVpValue(val, 1);
+        VALUE str = rb_big2str(val, 10);
+        Real *vp = VpCreateRbObject(RSTRING_LEN(str) + BASE_FIG + 1,
+                                    RSTRING_PTR(str), true);
+        RB_GC_GUARD(str);
         return check_exception(vp->obj);
     }
 }
