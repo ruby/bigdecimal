@@ -2925,9 +2925,8 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
  *           If it is a String, spaces are ignored and unrecognized characters
  *           terminate the value.
  *
- * digits:: The number of significant digits, as an Integer. If omitted or 0,
- *          the number of significant digits is determined from the initial
- *          value.
+ * digits:: The number of significant digits, as an Integer. This is required if
+ *          +initial+ is a Float or Rational, and ignored otherwise.
  *
  *          The actual number of significant digits used in computation is
  *          usually larger than the specified number.
