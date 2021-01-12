@@ -2934,7 +2934,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         }
         return Qnil;
     }
-    return rb_str_convert_to_BigDecimal(val, digs, raise_exception);
+    return rb_str_convert_to_BigDecimal(str, digs, raise_exception);
 }
 
 /* call-seq:
