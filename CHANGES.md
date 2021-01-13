@@ -1,5 +1,21 @@
 # CHANGES
 
+## 3.0.1
+
+* Improve the conversion speed of BigDecimal() and to_d methods.
+
+  **Kenta Murata**
+
+* Permit 0 digits in BigDecimal(float) and Float#to_d.
+  It means auto-detection of the smallest number of digits to represent
+  the given Float number without error.
+
+  **Kenta Murata**
+
+* Fix precision issue of Float [GH-70]
+
+  Reported by @casperisfine
+
 ## 3.0.0
 
 * Deprecate `BigDecimal#precs`.
