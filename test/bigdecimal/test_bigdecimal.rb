@@ -936,7 +936,9 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(2, BigDecimal("2") / 1)
     assert_equal(-2, BigDecimal("2") / -1)
 
-    assert_not_equal(BigDecimal('1487.0'), BigDecimal('1472.0') / BigDecimal('0.99'), '[ruby-core:59365] [#9316]')
+    assert_equal(BigDecimal('1486.868686869'),
+                 (BigDecimal('1472.0') / BigDecimal('0.99')).round(9),
+                 '[ruby-core:59365] [#9316]')
 
     assert_in_delta(4.124045235,
                     (BigDecimal('0.9932') / (700 * BigDecimal('0.344045') / BigDecimal('1000.0'))).round(9, half: :up),
