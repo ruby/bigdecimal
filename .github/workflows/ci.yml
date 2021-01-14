@@ -48,8 +48,8 @@ jobs:
 
       - run: rake compile
 
-      - run: rake build
-
       - run: rake test
+
+      - run: rake build
 
       - run: gem install pkg/*.gem
