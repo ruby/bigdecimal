@@ -1017,6 +1017,13 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise(ZeroDivisionError){BigDecimal("0").divmod(0)}
   end
 
+  def test_divmod_precision
+    a = BigDecimal('2e55')
+    b = BigDecimal('1.23456789e10')
+    q, r = a.divmod(b)
+    assert_equal((a/b), q)
+  end
+
   def test_add_bigdecimal
     x = BigDecimal((2**100).to_s)
     assert_equal(3000000000000000000000000000000, x.add(x, 1))
