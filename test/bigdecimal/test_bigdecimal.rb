@@ -974,6 +974,15 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.quo(3))
   end
 
+  def test_div_with_complex
+    q = BigDecimal("3") / 1i
+    assert_kind_of(Complex, q)
+  end
+
+  def test_div_error
+    assert_raise(TypeError) { BigDecimal(20) / '2' }
+  end
+
   def test_mod
     x = BigDecimal((2**100).to_s)
     assert_equal(1, x % 3)
@@ -1026,6 +1035,10 @@ class TestBigDecimal < Test::Unit::TestCase
     b = BigDecimal('-1.23456789e10')
     q, r = a.divmod(b)
     assert_equal((a/b), q)
+  end
+
+  def test_divmod_error
+    assert_raise(TypeError) { BigDecimal(20).divmod('2') }
   end
 
   def test_add_bigdecimal
