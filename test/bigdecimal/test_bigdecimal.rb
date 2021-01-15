@@ -1022,6 +1022,10 @@ class TestBigDecimal < Test::Unit::TestCase
     b = BigDecimal('1.23456789e10')
     q, r = a.divmod(b)
     assert_equal((a/b), q)
+
+    b = BigDecimal('-1.23456789e10')
+    q, r = a.divmod(b)
+    assert_equal((a/b), q)
   end
 
   def test_add_bigdecimal
