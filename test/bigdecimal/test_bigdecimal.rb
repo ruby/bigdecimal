@@ -936,9 +936,13 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(2, BigDecimal("2") / 1)
     assert_equal(-2, BigDecimal("2") / -1)
 
-    assert_equal(BigDecimal('1486.868686869'), BigDecimal('1472.0') / BigDecimal('0.99'), '[ruby-core:59365] [#9316]')
+    assert_equal(BigDecimal('1486.868686869'),
+                 (BigDecimal('1472.0') / BigDecimal('0.99')).round(9),
+                 '[ruby-core:59365] [#9316]')
 
-    assert_equal(4.124045235, BigDecimal('0.9932') / (700 * BigDecimal('0.344045') / BigDecimal('1000.0')), '[#9305]')
+    assert_in_delta(4.124045235,
+                    (BigDecimal('0.9932') / (700 * BigDecimal('0.344045') / BigDecimal('1000.0'))).round(9, half: :up),
+                    10**Float::MIN_10_EXP, '[#9305]')
 
     BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
     assert_positive_zero(BigDecimal("1.0")  / BigDecimal("Infinity"))
@@ -952,6 +956,15 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise_with_message(FloatDomainError, "Computation results to '-Infinity'") { BigDecimal("-1") / 0 }
   end
 
+  def test_dev_precision
+    bug13754 = '[ruby-core:82107] [Bug #13754]'
+    a = BigDecimal('101')
+    b = BigDecimal('0.9163472602589686')
+    c = a/b
+    assert(c.precision > b.precision,
+           "(101/0.9163472602589686).precision >= (0.9163472602589686).precision #{bug13754}")
+  end
+
   def test_div_with_float
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.5)
     assert_equal(BigDecimal("0.5"), BigDecimal(1) / 2.0)
@@ -959,6 +972,15 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_div_with_rational
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.quo(3))
+  end
+
+  def test_div_with_complex
+    q = BigDecimal("3") / 1i
+    assert_kind_of(Complex, q)
+  end
+
+  def test_div_error
+    assert_raise(TypeError) { BigDecimal(20) / '2' }
   end
 
   def test_mod
@@ -1002,6 +1024,21 @@ class TestBigDecimal < Test::Unit::TestCase
 
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_raise(ZeroDivisionError){BigDecimal("0").divmod(0)}
+  end
+
+  def test_divmod_precision
+    a = BigDecimal('2e55')
+    b = BigDecimal('1.23456789e10')
+    q, r = a.divmod(b)
+    assert_equal((a/b), q)
+
+    b = BigDecimal('-1.23456789e10')
+    q, r = a.divmod(b)
+    assert_equal((a/b), q)
+  end
+
+  def test_divmod_error
+    assert_raise(TypeError) { BigDecimal(20).divmod('2') }
   end
 
   def test_add_bigdecimal
