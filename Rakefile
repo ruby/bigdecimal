@@ -10,6 +10,7 @@ Rake::ExtensionTask.new('bigdecimal', spec)
 
 Rake::TestTask.new do |t|
   t.libs << 'test/lib'
+  t.ruby_opts << '-rhelper'
   t.test_files = FileList['test/bigdecimal/**/test_*.rb']
   t.warning = true
 end
@@ -41,3 +42,10 @@ end
 
 desc "Run all benchmarks"
 task benchmark: benchmark_tasks
+
+task :sync_tool do
+  require 'fileutils'
+  FileUtils.cp "../ruby/tool/lib/test/unit/core_assertions.rb", "./test/lib"
+  FileUtils.cp "../ruby/tool/lib/envutil.rb", "./test/lib"
+  FileUtils.cp "../ruby/tool/lib/find_executable.rb", "./test/lib"
+end
