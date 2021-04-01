@@ -16,7 +16,6 @@ Gem::Specification.new do |s|
   s.require_paths = %w[lib]
   s.extensions    = %w[ext/bigdecimal/extconf.rb]
   s.files         = %w[
-    bigdecimal.gemspec
     ext/bigdecimal/bigdecimal.c
     ext/bigdecimal/bigdecimal.h
     ext/bigdecimal/bits.h
