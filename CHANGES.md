@@ -1,6 +1,14 @@
 # CHANGES
 
+## 3.0.2
+
+*This version is totally same as 3.0.0.  This was released for reverting 3.0.1.*
+
+* Revert the changes in 3.0.1 due to remaining bugs.
+
 ## 3.0.1
+
+*This version is yanked due to the remaining bugs.*
 
 * Improve the conversion speed of BigDecimal() and to_d methods.
 
