@@ -23,7 +23,7 @@ jobs:
         - macos-10.15
         - windows-latest
         ruby:
-        - 3.0
+        - "3.0" # Quoted to avoid 3.0 becoming "3" as a String.
         - 2.7
         - 2.6
         - 2.5
