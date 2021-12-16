@@ -52,4 +52,4 @@ jobs:
       - run: rake build
 
       - run: gem install pkg/*.gem
-        if: ${{ matrix.ruby != 'debug' }}
+        if: ${{ ( matrix.ruby != 'debug' && matrix.os == 'linux-latest' ) || ( matrix.ruby != 'debug' && matrix.os == 'macos-latest' ) }}
