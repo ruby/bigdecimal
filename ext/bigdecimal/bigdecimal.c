@@ -3923,7 +3923,7 @@ BigDecimal_negative_zero(void)
  * For a calculation using a \BigDecimal and another +value+,
  * the precision of the result depends on the type of +value+:
  *
- * - If +value+ is not a \BigDecimal,
+ * - If +value+ is a \Float,
  *   the precision is Float::DIG + 1.
  * - If +value+ is a \BigDecimal, the precision is +value+'s precision in the
  *   internal representation, which is platform-dependent.
