@@ -3367,7 +3367,6 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
  *
  *  Raises an exception if +value+ evaluates to a Float
  *  and +digits+ is larger than Float::DIG + 1.
- *  Float::DIG is often 15.
  *
  */
 static VALUE
