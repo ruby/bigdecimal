@@ -3327,6 +3327,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
 }
 
 /*  call-seq:
+ *    BigDecimal(value, exception: true) -> bigdecimal
  *    BigDecimal(value, ndigits, exception: true) -> bigdecimal
  *
  *   Returns the \BigDecimal converted from +value+
