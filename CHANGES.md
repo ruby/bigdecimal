@@ -1,5 +1,61 @@
 # CHANGES
 
+## 3.1.0
+
+* Improve documentation [GH-209]
+
+  **Burdette Lamar**
+
+* Let BigDecimal#quo accept precision. [GH-214] [Bug #8826]
+
+  Reported by Földes László
+
+* Allow passing both float and precision in BigDecimal#div. [GH-212] [Bug #8826]
+
+  Reported by Földes László
+
+* Add `BigDecimal#scale` and `BigDecimal#precision_scale`
+
+  **Kenta Murata**
+
+* Fix a bug of `BigDecimal#precision` for the case that a BigDecimal has single internal digit [GH-205]
+
+  **Kenta Murata**
+
+* Fix segmentation fault due to a bug of `VpReallocReal`
+
+  **Kenta Murata**
+
+* Use larger precision in divide for irrational or recurring results. [GH-94] [Bug #13754]
+
+  Reported by Lionel PERRIN
+
+* Fix negative Bignum conversion [GH-196]
+
+  **Jean byroot Boussier**
+
+* Fix grammar in error messages. [GH-196]
+
+  **Olle Jonsson**
+
+* Improve the conversion speed of `Kernel#BigDecimal` and `to_d` methods.
+
+  **Kenta Murata**
+
+* Fix trailing zeros handling in `rb_uint64_convert_to_BigDecimal`. [GH-192]
+
+  Reported by @kamipo
+
+* Permit 0 digits in `BigDecimal(float)` and `Float#to_d`.
+  It means auto-detection of the smallest number of digits to represent
+  the given Float number without error. [GH-180]
+
+  **Kenta Murata**
+
+* Fix precision issue of Float. [GH-70] [Bug #13331]
+
+  Reported by @casperisfine
+
 ## 3.0.2
 
 *This version is totally same as 3.0.0.  This was released for reverting 3.0.1.*
@@ -9,20 +65,6 @@
 ## 3.0.1
 
 *This version is yanked due to the remaining bugs.*
-
-* Improve the conversion speed of BigDecimal() and to_d methods.
-
-  **Kenta Murata**
-
-* Permit 0 digits in BigDecimal(float) and Float#to_d.
-  It means auto-detection of the smallest number of digits to represent
-  the given Float number without error.
-
-  **Kenta Murata**
-
-* Fix precision issue of Float [GH-70]
-
-  Reported by @casperisfine
 
 ## 3.0.0
 
