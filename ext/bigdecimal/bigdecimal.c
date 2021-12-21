@@ -3925,6 +3925,7 @@ BigDecimal_negative_zero(void)
  *
  * - If +value+ is a \Float,
  *   the precision is Float::DIG + 1.
+ * - If +value+ is a \Rational, the precision is larger than Float::DIG + 1.
  * - If +value+ is a \BigDecimal, the precision is +value+'s precision in the
  *   internal representation, which is platform-dependent.
  * - If +value+ is other object, the precision is determined by the result of +BigDecimal(value)+.
