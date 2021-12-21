@@ -3925,7 +3925,6 @@ BigDecimal_negative_zero(void)
  *
  * - If +value+ is not a \BigDecimal,
  *   the precision is Float::DIG + 1.
- *   (Float::DIG is often 15.)
  * - If +value+ is a \BigDecimal, the precision is +value+'s precision in the
  *   internal representation, which is platform-dependent.
  *
