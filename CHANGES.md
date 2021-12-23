@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.1
+
+* Fix the result precision of `BigDecimal#divmod`. [GH-219]
+
+  **Kenta Murata**
+
 ## 3.1.0
 
 * Improve documentation [GH-209]
