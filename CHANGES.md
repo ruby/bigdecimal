@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.2
+
+* Fix the maximum precision of the quotient. [GH-220]
+
+  Reported by @grk
+
 ## 3.1.1
 
 * Fix the result precision of `BigDecimal#divmod`. [GH-219]
