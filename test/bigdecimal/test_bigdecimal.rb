@@ -181,6 +181,7 @@ class TestBigDecimal < Test::Unit::TestCase
     end
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+      p ahi: Float::INFINITY, uhi: Float::INFINITY.infinite?
       assert_positive_infinite(BigDecimal(Float::INFINITY))
       assert_same(BigDecimal(Float::INFINITY), BigDecimal(Float::INFINITY))
       assert_negative_infinite(BigDecimal(-Float::INFINITY))
