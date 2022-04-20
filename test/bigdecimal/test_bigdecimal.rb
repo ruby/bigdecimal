@@ -1492,9 +1492,35 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
-  def test_power_with_BigDecimal
-    assert_nothing_raised do
-      assert_in_delta(3 ** 3, BigDecimal(3) ** BigDecimal(3))
+  data(
+    "BigDecimal(3) ** BigDecimal(3) -> BigDecimal(3**3)" => [BigDecimal(3), BigDecimal(3), BigDecimal(3**3)],
+    "BigDecimal(10) ** Inf -> Inf" => [BigDecimal(10), BigDecimal::INFINITY, :pos_inf],
+    "BigDecimal(10) ** NaN -> NaN" => [BigDecimal(10), BigDecimal::NAN, :nan],
+    "Inf ** BigDecimal(0) -> BigDecimal(1)" => [BigDecimal::INFINITY, BigDecimal(0), BigDecimal(1)],
+    "-Inf ** BigDecimal(0) -> BigDecimal(-1)" => [-BigDecimal::INFINITY, BigDecimal(0), BigDecimal(1)],
+    "BigDecimal(1) ** Inf -> 1" => [BigDecimal(1), BigDecimal::INFINITY, BigDecimal(1)],
+    "BigDecimal(1) ** -Inf -> 1" => [BigDecimal(1), -BigDecimal::INFINITY, BigDecimal(1)],
+    "BigDecimal(0) ** Inf -> 0" => [BigDecimal(0), BigDecimal::INFINITY, BigDecimal(0)],
+    "BigDecimal(0) ** -Inf -> Inf" => [BigDecimal(0), -BigDecimal::INFINITY, :pos_inf],
+    "BigDecimal(-1) ** Inf -> Math::DomainError" => [BigDecimal(-1), BigDecimal::INFINITY, :math_domain_error],
+    "BigDecimal(-1) ** -Inf -> Math::DomainError" => [BigDecimal(-1), -BigDecimal::INFINITY, :math_domain_error]
+  )
+  def test_power_with_BigDecimal(data)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_ALL, false)
+      x, y, res = *data
+      case res
+      when :pos_inf
+        assert_nothing_raised { assert_positive_infinite(x ** y) }
+      when :neg_inf
+        assert_nothing_raised { assert_negative_infinite(x ** y) }
+      when :nan
+        assert_nothing_raised { assert_nan(x ** y) }
+      when :math_domain_error
+        assert_raise(Math::DomainError) { x ** y }
+      else
+        assert_nothing_raised { assert_in_delta(res, x ** y) }
+      end
     end
   end
 
