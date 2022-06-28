@@ -53,6 +53,16 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(0.0, cos(PI(N) * BigDecimal("301.5"), N))
   end
 
+  def test_tan
+    assert_in_delta(0.0, tan(BigDecimal("0.0"), N))
+    assert_in_delta(0.0, tan(PI(N), N))
+    assert_in_delta(1.0, tan(PI(N) / 4, N))
+    assert_in_delta(Math.sqrt(3.0), tan(PI(N) / 3, N))
+    assert_in_delta(0.0, tan(-PI(N), N))
+    assert_in_delta(-1.0, tan(-PI(N) / 4, N))
+    assert_in_delta(-Math.sqrt(3.0), tan(-PI(N) / 3, N))
+  end
+
   def test_atan
     assert_equal(0.0, atan(BigDecimal("0.0"), N))
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))
