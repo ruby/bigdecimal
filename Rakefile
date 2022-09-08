@@ -47,8 +47,8 @@ task :sync_tool do
   require 'fileutils'
 
   sync_files = [
-    "../ruby/tool/lib/test/unit/core_assertions.rb",
-    "../ruby/tool/lib/test/unit/core_assertions.rb",
+    "../ruby/tool/lib/core_assertions.rb",
+    "../ruby/tool/lib/find_executable.rb",
     "../ruby/tool/lib/envutil.rb"
   ]
 
