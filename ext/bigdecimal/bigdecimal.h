@@ -283,6 +283,7 @@ VP_EXPORT Real *VpOne(void);
 #define VpSetInf(a,s)   (void)(((s)>0)?VpSetPosInf(a):VpSetNegInf(a))
 #define VpHasVal(a)     (a->frac[0])
 #define VpIsOne(a)      ((a->Prec==1)&&(a->frac[0]==1)&&(a->exponent==1))
+#define VpIsPosOne(a)   (((a)->sign>0)&&VpIsOne(a))
 #define VpExponent(a)   (a->exponent)
 #ifdef BIGDECIMAL_DEBUG
 int VpVarCheck(Real * v);

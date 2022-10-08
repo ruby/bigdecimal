@@ -2769,7 +2769,14 @@ bigdecimal_power_by_bigdecimal(Real const* x, Real const* exp, ssize_t const n)
     VALUE log_x, multiplied, y;
     volatile VALUE obj = exp->obj;
 
-    if (VpIsZero(exp)) {
+    if (VpIsNaN(exp)) {
+        Real *nan = VpCreateRbObject(n, "0", true);
+	RB_GC_GUARD(nan->obj);
+	VpSetNaN(nan);
+        return VpCheckGetValue(nan);
+    }
+
+    if (VpIsZero(exp) || VpIsPosOne(x)) {
         return VpCheckGetValue(VpCreateRbObject(n, "1", true));
     }
 
@@ -2858,15 +2865,16 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 
       case T_DATA:
 	if (is_kind_of_BigDecimal(vexp)) {
-	    VALUE zero = INT2FIX(0);
-	    VALUE rounded = BigDecimal_round(1, &zero, vexp);
-	    if (RTEST(BigDecimal_eq(vexp, rounded))) {
-		vexp = BigDecimal_to_i(vexp);
-		goto retry;
-	    }
-            if (NIL_P(prec)) {
-                GUARD_OBJ(y, GetVpValue(vexp, 1));
-                n += y->Prec*VpBaseFig();
+            if (BigDecimal_IsFinite(vexp)) {
+                VALUE rounded = BigDecimal_round(0, NULL, vexp);
+                if (RTEST(BigDecimal_eq(vexp, rounded))) {
+                    vexp = BigDecimal_to_i(vexp);
+                    goto retry;
+                }
+                if (NIL_P(prec)) {
+                    GUARD_OBJ(y, GetVpValue(vexp, 1));
+                    n += y->Prec*VpBaseFig();
+                }
             }
 	    exp = DATA_PTR(vexp);
 	    break;
