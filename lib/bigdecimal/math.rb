@@ -148,7 +148,9 @@ module BigMath
   #   #=> "0.999999999999999999999955588155008544487055622030633191403625599381672572e0"
   #
   def tan(x, prec)
-    sin(x, prec) / cos(x, prec)
+    sine = sin(x, prec)
+    cosine = sqrt(1 - sine**2, prec)
+    sine / cosine
   end
 
   # call-seq:
