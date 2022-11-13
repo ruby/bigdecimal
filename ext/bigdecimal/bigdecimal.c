@@ -1855,22 +1855,37 @@ static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod);
  */
 static VALUE
 BigDecimal_div(VALUE self, VALUE r)
-/* For c = self/r: with round operation */
 {
-    ENTER(5);
-    Real *c=NULL, *res=NULL, *div = NULL;
-    r = BigDecimal_divide(self, r, &c, &res, &div);
-    if (!NIL_P(r)) return r; /* coerced by other */
-    SAVE(c); SAVE(res); SAVE(div);
-    /* a/b = c + r/b */
-    /* c xxxxx
-       r 00000yyyyy  ==> (y/b)*BASE >= HALF_BASE
-     */
-    /* Round */
-    if (VpHasVal(div)) { /* frac[0] must be zero for NaN,INF,Zero */
-        VpInternalRound(c, 0, c->frac[c->Prec-1], (DECDIG)(VpBaseVal() * (DECDIG_DBL)res->frac[0] / div->frac[0]));
+    VALUE rr = r;
+    if (is_kind_of_BigDecimal(rr)) {
+        /* do nothing */
     }
-    return VpCheckGetValue(c);
+    else if (RB_INTEGER_TYPE_P(r)) {
+        rr = rb_inum_convert_to_BigDecimal(r, 0, true);
+    }
+    else if (RB_TYPE_P(r, T_FLOAT)) {
+        rr = rb_float_convert_to_BigDecimal(r, 0, true);
+    }
+    else if (RB_TYPE_P(r, T_RATIONAL)) {
+        Real *a;
+        TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
+        rr = rb_rational_convert_to_BigDecimal(r, a->Prec*BASE_FIG, true);
+    }
+
+    if (!is_kind_of_BigDecimal(rr)) {
+        return DoSomeOne(self, r, '/');
+    }
+
+    ssize_t a_prec, b_prec;
+    BigDecimal_count_precision_and_scale(self, &a_prec, NULL);
+    BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
+
+    size_t n = a_prec + b_prec;
+    if (n < 2*BIGDECIMAL_DOUBLE_FIGURES) {
+        n = 2*BIGDECIMAL_DOUBLE_FIGURES;
+    }
+
+    return BigDecimal_div2(self, rr, SIZET2NUM(n));
 }
 
 static VALUE BigDecimal_round(int argc, VALUE *argv, VALUE self);
@@ -2148,7 +2163,7 @@ BigDecimal_divmod(VALUE self, VALUE r)
  * Do the same manner as Float#div when n is nil.
  * Do the same manner as BigDecimal#quo when n is 0.
  */
-static inline VALUE
+static VALUE
 BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(5);
@@ -7182,9 +7197,14 @@ Exit:
 }
 
 /*
- * Round relatively from the decimal point.
- *    f: rounding mode
- *   nf: digit location to round from the decimal point.
+ * Round y on the specified mode and the location that counted from
+ * the decimal point.
+ *
+ * @param y   a BigDecimal number to be rounded
+ * @param f   the rounding mode
+ * @param nf  the decimal location of rounding
+ *
+ * @return    1 if rounding was performed, otherwise 0
  */
 VP_EXPORT int
 VpMidRound(Real *y, unsigned short f, ssize_t nf)
@@ -7348,11 +7368,18 @@ VpMidRound(Real *y, unsigned short f, ssize_t nf)
     return 1;
 }
 
+/*
+ * Round y on the specified mode and the location that counted from
+ * the most significant digit in y->frac[0] including leading zeros.
+ *
+ * @param y   a BigDecimal number to be rounded
+ * @param f   the rounding mode
+ * @param nf  the decimal location of rounding
+ *
+ * @return    1 if rounding was performed, otherwise 0
+ */
 VP_EXPORT int
 VpLeftRound(Real *y, unsigned short f, ssize_t nf)
-/*
- * Round from the left hand side of the digits.
- */
 {
     DECDIG v;
     if (!VpHasVal(y)) return 0; /* Unable to round */

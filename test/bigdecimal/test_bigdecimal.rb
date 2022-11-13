@@ -973,11 +973,39 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise_with_message(FloatDomainError, "Computation results in '-Infinity'") { BigDecimal("-1") / 0 }
   end
 
+  def test_div_rounding_mode
+    BigDecimal.mode(BigDecimal::ROUND_MODE, :half_up)
+    assert_equal BigDecimal("0.55555555555555555555555555555556"), BigDecimal(5) / 9
+    BigDecimal.mode(BigDecimal::ROUND_MODE, :half_down)
+    assert_equal BigDecimal("0.55555555555555555555555555555555"), BigDecimal(5) / 9
+  end
+
   def test_div_gh220
+    # https://github.com/ruby/bigdecimal/issues/220
     x = BigDecimal("1.0")
     y = BigDecimal("3672577333.6608990499165058135986328125")
-    c = BigDecimal("0.272288343892592687909520102748926752911779209181321744700032723729015151607289998e-9")
+    c = BigDecimal("0.272288343892592687909520102748926752912e-9")
+    # c = BigDecimal("0.272288343892592687909520102748926752911779209181321744700032723729015151607289998e-9")
     assert_equal(c, x / y, "[GH-220]")
+  end
+
+  def test_div_gh222
+    # https://github.com/ruby/bigdecimal/issues/222
+    divisor = BigDecimal("1.03")
+    one = divisor.coerce(1.0)[0]
+
+    x = one
+    results = 10.times.map { x /= divisor }
+
+    x = one
+    expected_results = 10.times.map do |i|
+      x = x.div(divisor, 100).round(results[i].precision, half: :up)
+    end
+
+    10.times do |i|
+      assert_operator results[i].precision, :<=, 119
+      assert_equal expected_results[i], results[i]
+    end
   end
 
   def test_div_precision
@@ -1113,7 +1141,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_quo_without_prec
     x = BigDecimal(5)
     y = BigDecimal(229)
-    assert_equal(BigDecimal("0.021834061135371179039301310043668122"), x.quo(y))
+    assert_equal(BigDecimal("0.021834061135371179039301310043668"), x.quo(y))
   end
 
   def test_quo_with_prec
@@ -1123,7 +1151,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
       x = BigDecimal(5)
       y = BigDecimal(229)
-      assert_equal(BigDecimal("0.021834061135371179039301310043668122"), x.quo(y, 0))
+      assert_equal(BigDecimal("0.021834061135371179039301310043668"), x.quo(y, 0))
       assert_equal(BigDecimal("0.022"), x.quo(y, 2))
       assert_equal(BigDecimal("0.0218"), x.quo(y, 3))
       assert_equal(BigDecimal("0.0218341"), x.quo(y, 6))
