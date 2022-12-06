@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.3
+
+* Adjust a local variable type to exponent. [GH-223]
+* Remove checks for `struct RRational` and `struct RComplex` . [GH-233]
+* Suppress macro redefinition warnings. [GH-239]
+
 ## 3.1.2
 
 * Fix the maximum precision of the quotient. [GH-220]
