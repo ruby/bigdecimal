@@ -28,12 +28,14 @@ jobs:
         - 2.6
         - 2.5
         - debug
+        - truffleruby
         include:
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
         - { os: windows-latest , ruby: 3.0 }
         - { os: windows-latest , ruby: debug }
+        - { os: windows-latest , ruby: truffleruby }
 
     steps:
       - uses: actions/checkout@v3
