@@ -6,7 +6,12 @@ require "rake/extensiontask"
 require "rake/testtask"
 
 spec = eval(File.read('bigdecimal.gemspec'))
-Rake::ExtensionTask.new('bigdecimal', spec)
+if RUBY_ENGINE == 'jruby'
+  # JRuby's extension is included with JRuby currently
+  task :compile do; end
+else
+  Rake::ExtensionTask.new('bigdecimal', spec)
+end
 
 Rake::TestTask.new do |t|
   t.libs << 'test/lib'
