@@ -11,7 +11,15 @@ on:
     - reopened
 
 jobs:
+  ruby-versions:
+    uses: ruby/actions/.github/workflows/ruby_versions.yml@master
+    with:
+      engine: cruby
+      min_version: 2.7
+      versions: '["debug"]'
+
   host:
+    needs: ruby-versions
     name: ${{ matrix.os }} ${{ matrix.ruby }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -21,15 +29,11 @@ jobs:
         - ubuntu-latest
         - macos-10.15
         - windows-latest
-        ruby:
-        - 3.0
-        - 2.7
-        - head
+        ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         include:
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
-        - { os: windows-latest , ruby: 3.0 }
         - { os: windows-latest , ruby: debug }
 
     steps:

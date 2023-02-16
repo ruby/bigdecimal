@@ -11,7 +11,15 @@ on:
     - reopened
 
 jobs:
+  ruby-versions:
+    uses: ruby/actions/.github/workflows/ruby_versions.yml@master
+    with:
+      engine: cruby-truffleruby
+      min_version: 2.5
+      versions: '["debug"]'
+
   host:
+    needs: ruby-versions
     name: ${{ matrix.os }} ${{ matrix.ruby }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -22,20 +30,14 @@ jobs:
         - ubuntu-18.04
         - macos-10.15
         - windows-latest
-        ruby:
-        - "3.0" # Quoted to avoid 3.0 becoming "3" as a String.
-        - 2.7
-        - 2.6
-        - 2.5
-        - debug
-        - truffleruby
+        ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         include:
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
-        - { os: windows-latest , ruby: 3.0 }
         - { os: windows-latest , ruby: debug }
         - { os: windows-latest , ruby: truffleruby }
+        - { os: windows-latest , ruby: truffleruby-head }
 
     steps:
       - uses: actions/checkout@v3
