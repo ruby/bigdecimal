@@ -46,22 +46,3 @@ end
 
 desc "Run all benchmarks"
 task benchmark: benchmark_tasks
-
-task :sync_tool do
-  require 'fileutils'
-
-  sync_files = [
-    "../ruby/tool/lib/core_assertions.rb",
-    "../ruby/tool/lib/find_executable.rb",
-    "../ruby/tool/lib/envutil.rb"
-  ]
-
-  unless sync_files.all? {|fn| File.file?(fn) }
-    $stderr.puts "ruby/ruby must be git-cloned at ../ruby before running `rake sync_tool` here."
-    abort
-  end
-
-  sync_files.each do |file|
-    FileUtils.cp file, "./test/lib"
-  end
-end
