@@ -4552,13 +4552,13 @@ Init_bigdecimal(void)
     /* Negative zero value. */
     BIGDECIMAL_LITERAL(NEGATIVE_ZERO, -0);
 
-    /* Positive infinity value. */
+    /* Positive infinity[rdoc-ref:BigDecimal@Infinity] value. */
     rb_define_const(rb_cBigDecimal, "INFINITY", BIGDECIMAL_LITERAL(POSITIVE_INFINITY, +Infinity));
 
     /* Negative infinity value. */
     BIGDECIMAL_LITERAL(NEGATIVE_INFINITY, -Infinity);
 
-    /* 'Not a Number' value. */
+    /* '{Not a Number}[rdoc-ref:BigDecimal@Not+a+Number]' value. */
     rb_define_const(rb_cBigDecimal, "NAN", BIGDECIMAL_LITERAL(NAN, NaN));
 
     /* instance methods */
