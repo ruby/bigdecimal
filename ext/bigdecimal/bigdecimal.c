@@ -4372,7 +4372,7 @@ BigDecimal_negative_zero(void)
  * - {#to_json}[https://docs.ruby-lang.org/en/master/BigDecimal.html#method-i-to_json]:
  *   Returns a \JSON string representing +self+.
  *
- * To make these methods available:
+ * These methods are provided by the {JSON gem}[https://github.com/flori/json]. To make these methods available:
  *
  *   require 'json/add/bigdecimal'
  *
