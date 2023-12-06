@@ -1780,6 +1780,17 @@ BigDecimal_neg(VALUE self)
     return VpCheckGetValue(c);
 }
 
+/*
+ * call-seq:
+ *   a * b   -> bigdecimal
+ *
+ * Multiply by the specified value.
+ *
+ * The result precision will be the precision of the sum of each precision.
+ *
+ * See BigDecimal#mult.
+ */
+
 static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
@@ -3257,10 +3268,11 @@ BigDecimal_initialize_copy(VALUE self, VALUE other)
     return self;
 }
 
+/* :nodoc: */
 static VALUE
 BigDecimal_clone(VALUE self)
 {
-  return self;
+    return self;
 }
 
 #ifdef HAVE_RB_OPTS_EXCEPTION_P
@@ -3757,6 +3769,12 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
 
     return rb_convert_to_BigDecimal(val, digs, exception);
 }
+
+/*  call-seq:
+ *    BigDecimal.interpret_loosely(string) -> bigdecimal
+ *
+ *  Returns the +BigDecimal+ converted loosely from +string+.
+ */
 
 static VALUE
 BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
