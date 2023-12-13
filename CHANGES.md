@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.4
+
+* Handle correctly #reminder with infinity. Fixes [GH-187] [GH-243]
+
+  **@mrzasa**
+
 ## 3.1.3
 
 * Adjust a local variable type to exponent. [GH-223]
