@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.5
+
+* Add .to_s('F') digit grouping for integer part [GH-264]
+
+  **@cryptogopher**
+
 ## 3.1.4
 
 * Handle correctly #reminder with infinity. Fixes [GH-187] [GH-243]
