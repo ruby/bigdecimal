@@ -7230,7 +7230,7 @@ VpSqrt(Real *y, Real *x)
     y->MaxPrec = Min((size_t)n , y_prec);
     f->MaxPrec = y->MaxPrec + 1;
     n = (SIGNED_VALUE)(y_prec * BASE_FIG);
-    if (n < (SIGNED_VALUE)maxnr) n = (SIGNED_VALUE)maxnr;
+    if (n > (SIGNED_VALUE)maxnr) n = (SIGNED_VALUE)maxnr;
 
     /*
      * Perform: y_{n+1} = (y_n - x/y_n) / 2
