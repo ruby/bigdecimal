@@ -23,6 +23,7 @@ Gem::Specification.new do |s|
 
   s.require_paths = %w[lib]
   s.files         = %w[
+    LICENSE
     bigdecimal.gemspec
     lib/bigdecimal.rb
     lib/bigdecimal/jacobian.rb
