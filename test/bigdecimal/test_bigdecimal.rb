@@ -1768,11 +1768,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_split_under_gc_stress
     bug3258 = '[ruby-dev:41213]'
     expect = 10.upto(20).map{|i|[1, "1", 10, i+1].inspect}
-    # for test-bundled-gems in ruby/ruby repository
-    extension_paths = Dir.glob(File.expand_path('../../../../../.bundle/extensions', __dir__) + '/**/*/bigdecimal-*').join(":")
-    opts = ["-rbigdecimal", "--disable-gems"]
-    opts.unshift "-I#{extension_paths}" unless extension_paths.empty?
-    assert_in_out_err(opts, <<-EOS, expect, [], bug3258)
+    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, expect, [], bug3258)
     GC.stress = true
     10.upto(20) do |i|
       p BigDecimal("1"+"0"*i).split
@@ -1781,11 +1777,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_coerce_under_gc_stress
-    # for test-bundled-gems in ruby/ruby repository
-    extension_paths = Dir.glob(File.expand_path('../../../../../.bundle/extensions', __dir__) + '/**/*/bigdecimal-*').join(":")
-    opts = ["-rbigdecimal", "--disable-gems"]
-    opts.unshift "-I#{extension_paths}" unless extension_paths.empty?
-    assert_in_out_err(opts, <<-EOS, [], [])
+    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       b = BigDecimal("1")
       GC.stress = true
@@ -1892,11 +1884,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_BigMath_exp_under_gc_stress
-    # for test-bundled-gems in ruby/ruby repository
-    extension_paths = Dir.glob(File.expand_path('../../../../../.bundle/extensions', __dir__) + '/**/*/bigdecimal-*').join(":")
-    opts = ["-rbigdecimal", "--disable-gems"]
-    opts.unshift "-I#{extension_paths}" unless extension_paths.empty?
-    assert_in_out_err(opts, <<-EOS, [], [])
+    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       10.times do
         begin
@@ -2038,11 +2026,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_BigMath_log_under_gc_stress
-    # for test-bundled-gems in ruby/ruby repository
-    extension_paths = Dir.glob(File.expand_path('../../../../../.bundle/extensions', __dir__) + '/**/*/bigdecimal-*').join(":")
-    opts = ["-rbigdecimal", "--disable-gems"]
-    opts.unshift "-I#{extension_paths}" unless extension_paths.empty?
-    assert_in_out_err(opts, <<-EOS, [], [])
+    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       10.times do
         begin
@@ -2089,11 +2073,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end if RUBY_VERSION < '2.5' # mathn was removed from Ruby 2.5
 
   def test_bug6406
-    # for test-bundled-gems in ruby/ruby repository
-    extension_paths = Dir.glob(File.expand_path('../../../../../.bundle/extensions', __dir__) + '/**/*/bigdecimal-*').join(":")
-    opts = ["-rbigdecimal", "--disable-gems"]
-    opts.unshift "-I#{extension_paths}" unless extension_paths.empty?
-    assert_in_out_err(opts, <<-EOS, [], [])
+    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
     Thread.current.keys.to_s
     EOS
   end
