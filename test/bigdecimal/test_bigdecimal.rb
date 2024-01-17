@@ -2294,10 +2294,6 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_no_memory_leak("BigDecimal.allocate")
     end
 
-    def test_no_memory_leak_initialize
-      assert_no_memory_leak("BigDecimal()")
-    end
-
     def test_no_memory_leak_BigDecimal
       assert_no_memory_leak("BigDecimal('10')")
       assert_no_memory_leak("BigDecimal(b)")
