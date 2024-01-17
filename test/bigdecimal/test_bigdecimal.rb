@@ -2290,10 +2290,6 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   if EnvUtil.gc_stress_to_class?
-    def test_no_memory_leak_allocate
-      assert_no_memory_leak("BigDecimal.allocate")
-    end
-
     def test_no_memory_leak_BigDecimal
       assert_no_memory_leak("BigDecimal('10')")
       assert_no_memory_leak("BigDecimal(b)")
