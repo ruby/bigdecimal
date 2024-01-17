@@ -2283,7 +2283,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def assert_no_memory_leak(code, *rest, **opt)
     code = "8.times {20_000.times {begin #{code}; rescue NoMemoryError; end}; GC.start}"
-    super(["-rbigdecimal"],
+    super(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal"],
           "b = BigDecimal('10'); b.nil?; " \
           "GC.add_stress_to_class(BigDecimal); "\
           "#{code}", code, *rest, rss: true, limit: 1.1, **opt)
