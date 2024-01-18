@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.6
+
+* Add LICENSE file to gem files [GH-282]
+
+  **@oleksii-leonov**
+
 ## 3.1.5
 
 * Add .to_s('F') digit grouping for integer part [GH-264]
