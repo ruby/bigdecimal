@@ -2070,12 +2070,6 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise_with_message(NoMethodError, /undefined method `new'/) { c.new(1) }
   end
 
-  def test_to_d
-    bug6093 = '[ruby-core:42969]'
-    code = "exit(BigDecimal('10.0') == 10.0.to_d)"
-    assert_ruby_status(%w[-rbigdecimal -rbigdecimal/util -rmathn -], code, bug6093)
-  end if RUBY_VERSION < '2.5' # mathn was removed from Ruby 2.5
-
   def test_bug6406
     paths = $LOAD_PATH.map{|path| "-I#{path}" }
     assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
@@ -2254,10 +2248,9 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_initialize_copy_dup_clone_frozen_error
     bd = BigDecimal(1)
     bd2 = BigDecimal(2)
-    err = RUBY_VERSION >= '2.5' ? FrozenError : TypeError
-    assert_raise(err) { bd.send(:initialize_copy, bd2) }
-    assert_raise(err) { bd.send(:initialize_clone, bd2) }
-    assert_raise(err) { bd.send(:initialize_dup, bd2) }
+    assert_raise(FrozenError) { bd.send(:initialize_copy, bd2) }
+    assert_raise(FrozenError) { bd.send(:initialize_clone, bd2) }
+    assert_raise(FrozenError) { bd.send(:initialize_dup, bd2) }
   end
 
   def test_llong_min_gh_200
