@@ -1768,7 +1768,8 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_split_under_gc_stress
     bug3258 = '[ruby-dev:41213]'
     expect = 10.upto(20).map{|i|[1, "1", 10, i+1].inspect}
-    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, expect, [], bug3258)
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, expect, [], bug3258)
     GC.stress = true
     10.upto(20) do |i|
       p BigDecimal("1"+"0"*i).split
@@ -1777,7 +1778,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_coerce_under_gc_stress
-    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       b = BigDecimal("1")
       GC.stress = true
@@ -1884,7 +1886,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_BigMath_exp_under_gc_stress
-    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       10.times do
         begin
@@ -2026,7 +2029,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_BigMath_log_under_gc_stress
-    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
       expect = ":too_long_to_embed_as_string can't be coerced into BigDecimal"
       10.times do
         begin
@@ -2073,7 +2077,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end if RUBY_VERSION < '2.5' # mathn was removed from Ruby 2.5
 
   def test_bug6406
-    assert_in_out_err(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
     Thread.current.keys.to_s
     EOS
   end
@@ -2283,7 +2288,8 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def assert_no_memory_leak(code, *rest, **opt)
     code = "8.times {20_000.times {begin #{code}; rescue NoMemoryError; end}; GC.start}"
-    super(["-I#{$LOAD_PATH.join(":")}", "-rbigdecimal"],
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    super([*paths, "-rbigdecimal"],
           "b = BigDecimal('10'); b.nil?; " \
           "GC.add_stress_to_class(BigDecimal); "\
           "#{code}", code, *rest, rss: true, limit: 1.1, **opt)
