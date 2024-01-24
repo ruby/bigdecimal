@@ -28,6 +28,7 @@ jobs:
         os:
         - ubuntu-latest
         - macos-latest
+        - macos-arm-oss
         - windows-latest
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         include:
