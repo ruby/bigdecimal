@@ -290,7 +290,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_s_ver
-    assert_raise_with_message(NoMethodError, /undefined method `ver'/) { BigDecimal.ver }
+    assert_raise_with_message(NoMethodError, /undefined method [`']ver'/) { BigDecimal.ver }
   end
 
   def test_s_allocate
@@ -302,7 +302,7 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_s_new
-    assert_raise_with_message(NoMethodError, /undefined method `new'/) { BigDecimal.new("1") }
+    assert_raise_with_message(NoMethodError, /undefined method [`']new'/) { BigDecimal.new("1") }
   end
 
   def test_s_interpret_loosely
@@ -2067,7 +2067,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_new_subclass
     c = Class.new(BigDecimal)
-    assert_raise_with_message(NoMethodError, /undefined method `new'/) { c.new(1) }
+    assert_raise_with_message(NoMethodError, /undefined method [`']new'/) { c.new(1) }
   end
 
   def test_bug6406
