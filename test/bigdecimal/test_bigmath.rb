@@ -10,9 +10,20 @@ class TestBigMath < Test::Unit::TestCase
   MINF = BigDecimal("-Infinity")
   NAN = BigDecimal("NaN")
 
-  def test_const
-    assert_in_delta(Math::PI, PI(N))
-    assert_in_delta(Math::E, E(N))
+  def test_PI
+    eps = "1e-#{Float::DIG}".to_f
+    assert_in_delta(Math::PI, PI(N), eps)
+    assert_in_delta(BigDecimal("3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068"),
+                    PI(100),
+                    BigDecimal("1e-100"))
+  end
+
+  def test_E
+    eps = "1e-#{Float::DIG}".to_f
+    assert_in_delta(Math::E, E(N), eps)
+    assert_in_delta(BigDecimal("2.718281828459045235360287471352662497757247093699959574966967627724076630353547594571382178525166427"),
+                    E(100),
+                    BigDecimal("1e-100"))
   end
 
   def test_sqrt
