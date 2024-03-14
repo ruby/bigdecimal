@@ -52,4 +52,6 @@ Gem::Specification.new do |s|
   end
 
   s.required_ruby_version = Gem::Requirement.new(">= 2.5.0")
+
+  s.metadata["changelog_uri"] = s.homepage + "/blob/master/CHANGES.md"
 end
