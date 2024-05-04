@@ -5203,6 +5203,48 @@ bigdecimal_parse_special_string(const char *str)
     return NULL;
 }
 
+struct VpCtoV_args {
+  Real *a;
+  const char *int_chr;
+  size_t ni;
+  const char *frac;
+  size_t nf;
+  const char *exp_chr;
+  size_t ne;
+};
+
+static VALUE
+call_VpCtoV(VALUE arg)
+{
+  struct VpCtoV_args *x = (struct VpCtoV_args *)arg;
+  return (VALUE)VpCtoV(x->a, x->int_chr, x->ni, x->frac, x->nf, x->exp_chr, x->ne);
+}
+
+static int
+protected_VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne, int free_on_error)
+{
+  struct VpCtoV_args args;
+  int state = 0;
+
+  args.a = a;
+  args.int_chr = int_chr;
+  args.ni = ni;
+  args.frac = frac;
+  args.nf = nf;
+  args.exp_chr = exp_chr;
+  args.ne = ne;
+
+  VALUE result = rb_protect(call_VpCtoV, (VALUE)&args, &state);
+  if (state) {
+    if (free_on_error) {
+      rbd_free_struct(a);
+    }
+    rb_jump_tag(state);
+  }
+
+  return (int)result;
+}
+
 /*
  * Allocates variable.
  * [Input]
@@ -5422,7 +5464,7 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
     vp = rbd_allocate_struct(len);
     vp->MaxPrec = len;        /* set max precision */
     VpSetZero(vp, sign);
-    VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
+    protected_VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne, true);
     rb_str_resize(buf, 0);
     return vp;
 }
