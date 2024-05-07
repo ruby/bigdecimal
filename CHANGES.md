@@ -13,6 +13,7 @@
 ## 3.1.7
 
 * Only consists of CI settings and test changes.
+  This release is needed for developing Ruby to run `make test-bundled-gems` with the released version of bigdecimal.
 
 ## 3.1.6
 
