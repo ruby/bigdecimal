@@ -1,5 +1,15 @@
 # CHANGES
 
+## 3.1.8
+
+* Add missing documents [GH-277]
+
+  **@nobu**
+
+* Fix memory leak in VpAlloc [GH-294] [GH-290]
+
+  Reoprted by **@MaxLap**
+
 ## 3.1.7
 
 * Only consists of CI settings and test changes.
