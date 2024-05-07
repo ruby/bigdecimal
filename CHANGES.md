@@ -1,5 +1,9 @@
 # CHANGES
 
+## 3.1.7
+
+* Only consists of CI settings and test changes.
+
 ## 3.1.6
 
 * Add LICENSE file to gem files [GH-282]
