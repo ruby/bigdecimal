@@ -1780,6 +1780,17 @@ BigDecimal_neg(VALUE self)
     return VpCheckGetValue(c);
 }
 
+/*
+ * call-seq:
+ *   a * b   -> bigdecimal
+ *
+ * Multiply by the specified value.
+ *
+ * The result precision will be the precision of the sum of each precision.
+ *
+ * See BigDecimal#mult.
+ */
+
 static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
@@ -3257,10 +3268,11 @@ BigDecimal_initialize_copy(VALUE self, VALUE other)
     return self;
 }
 
+/* :nodoc: */
 static VALUE
 BigDecimal_clone(VALUE self)
 {
-  return self;
+    return self;
 }
 
 #ifdef HAVE_RB_OPTS_EXCEPTION_P
@@ -3758,6 +3770,12 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
     return rb_convert_to_BigDecimal(val, digs, exception);
 }
 
+/*  call-seq:
+ *    BigDecimal.interpret_loosely(string) -> bigdecimal
+ *
+ *  Returns the +BigDecimal+ converted loosely from +string+.
+ */
+
 static VALUE
 BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
 {
@@ -4238,6 +4256,17 @@ BigDecimal_negative_zero(void)
     return BIGDECIMAL_NEGATIVE_ZERO;
 }
 
+static inline VALUE
+BigDecimal_literal(const char *str)
+{
+    VALUE arg = rb_str_new_cstr(str);
+    VALUE val = f_BigDecimal(1, &arg, rb_cBigDecimal);
+    rb_gc_register_mark_object(val);
+    return val;
+}
+
+#define BIGDECIMAL_LITERAL(var, val) (BIGDECIMAL_ ## var = BigDecimal_literal(#val))
+
 /* Document-class: BigDecimal
  * BigDecimal provides arbitrary-precision floating point decimal arithmetic.
  *
@@ -4394,7 +4423,6 @@ Init_bigdecimal(void)
 #ifdef HAVE_RB_EXT_RACTOR_SAFE
     rb_ext_ractor_safe(true);
 #endif
-    VALUE arg;
 
     id_BigDecimal_exception_mode = rb_intern_const("BigDecimal.exception_mode");
     id_BigDecimal_rounding_mode = rb_intern_const("BigDecimal.rounding_mode");
@@ -4532,33 +4560,19 @@ Init_bigdecimal(void)
     rb_define_const(rb_cBigDecimal, "SIGN_NEGATIVE_INFINITE", INT2FIX(VP_SIGN_NEGATIVE_INFINITE));
 
     /* Positive zero value. */
-    arg = rb_str_new2("+0");
-    BIGDECIMAL_POSITIVE_ZERO = f_BigDecimal(1, &arg, rb_cBigDecimal);
-    rb_gc_register_mark_object(BIGDECIMAL_POSITIVE_ZERO);
+    BIGDECIMAL_LITERAL(POSITIVE_ZERO, +0);
 
     /* Negative zero value. */
-    arg = rb_str_new2("-0");
-    BIGDECIMAL_NEGATIVE_ZERO = f_BigDecimal(1, &arg, rb_cBigDecimal);
-    rb_gc_register_mark_object(BIGDECIMAL_NEGATIVE_ZERO);
+    BIGDECIMAL_LITERAL(NEGATIVE_ZERO, -0);
 
-    /* Positive infinity value. */
-    arg = rb_str_new2("+Infinity");
-    BIGDECIMAL_POSITIVE_INFINITY = f_BigDecimal(1, &arg, rb_cBigDecimal);
-    rb_gc_register_mark_object(BIGDECIMAL_POSITIVE_INFINITY);
+    /* Positive infinity[rdoc-ref:BigDecimal@Infinity] value. */
+    rb_define_const(rb_cBigDecimal, "INFINITY", BIGDECIMAL_LITERAL(POSITIVE_INFINITY, +Infinity));
 
     /* Negative infinity value. */
-    arg = rb_str_new2("-Infinity");
-    BIGDECIMAL_NEGATIVE_INFINITY = f_BigDecimal(1, &arg, rb_cBigDecimal);
-    rb_gc_register_mark_object(BIGDECIMAL_NEGATIVE_INFINITY);
+    BIGDECIMAL_LITERAL(NEGATIVE_INFINITY, -Infinity);
 
-    /* 'Not a Number' value. */
-    arg = rb_str_new2("NaN");
-    BIGDECIMAL_NAN = f_BigDecimal(1, &arg, rb_cBigDecimal);
-    rb_gc_register_mark_object(BIGDECIMAL_NAN);
-
-    /* Special value constants */
-    rb_define_const(rb_cBigDecimal, "INFINITY", BIGDECIMAL_POSITIVE_INFINITY);
-    rb_define_const(rb_cBigDecimal, "NAN", BIGDECIMAL_NAN);
+    /* '{Not a Number}[rdoc-ref:BigDecimal@Not+a+Number]' value. */
+    rb_define_const(rb_cBigDecimal, "NAN", BIGDECIMAL_LITERAL(NAN, NaN));
 
     /* instance methods */
     rb_define_method(rb_cBigDecimal, "precs", BigDecimal_prec, 0);
