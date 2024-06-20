@@ -2467,7 +2467,7 @@ BigDecimal_fix(VALUE self)
  *
  *	BigDecimal('3.14159').round(2).class.name #=> "BigDecimal"
  *	BigDecimal('3.14159').round.class.name #=> "Integer"
- *      BigDecimal('3.14159').round(0).class.name #=> "Integer"
+ *	BigDecimal('3.14159').round(0).class.name #=> "Integer"
  *
  * If n is specified and positive, the fractional part of the result has no
  * more than that many digits.
