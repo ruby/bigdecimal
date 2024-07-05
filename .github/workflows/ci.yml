@@ -28,7 +28,7 @@ jobs:
         os:
         - ubuntu-latest
         - macos-latest
-        - macos-arm-oss
+        - macos-14
         - windows-latest
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         include:
@@ -36,7 +36,7 @@ jobs:
         - { os: windows-latest , ruby: mswin }
         exclude:
         - { os: macos-latest   , ruby: "2.5" }
-        - { os: macos-arm-oss  , ruby: "2.5" }
+        - { os: macos-14  , ruby: "2.5" }
         - { os: windows-latest , ruby: debug }
         - { os: windows-latest , ruby: truffleruby }
         - { os: windows-latest , ruby: truffleruby-head }
