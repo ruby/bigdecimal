@@ -155,7 +155,7 @@ class Complex < Numeric
   # See also Kernel.BigDecimal.
   #
   def to_d(*args)
-    BigDecimal(self) unless self.imag.zero? # to raise eerror
+    BigDecimal(self) unless self.imag.zero? # to raise error
 
     if args.length == 0
       case self.real
