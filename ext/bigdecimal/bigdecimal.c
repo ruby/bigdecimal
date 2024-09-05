@@ -5277,7 +5277,7 @@ VP_EXPORT Real *
 VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
 {
     const char *orig_szVal = szVal;
-    size_t i, j, ni, ipf, nf, ipe, ne, dot_seen, exp_seen, nalloc;
+    size_t i, j, ni, ipf, nf, ipe, ne, exp_seen, nalloc;
     size_t len;
     char v, *psz;
     int  sign=1;
@@ -5363,13 +5363,11 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
     ne  = 0; /* number of digits in the exponential part */
     ipf = 0; /* index of the beginning of the fractional part */
     ipe = 0; /* index of the beginning of the exponential part */
-    dot_seen = 0;
     exp_seen = 0;
 
     if (v != '\0') {
         /* Scanning fractional part */
         if ((psz[i] = szVal[j]) == '.') {
-            dot_seen = 1;
             ++i;
             ++j;
             ipf = i;
@@ -5385,9 +5383,6 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
                     }
                     if (!strict_p) {
                         v = psz[i] = '\0';
-                        if (nf == 0) {
-                            dot_seen = 0;
-                        }
                         break;
                     }
                     goto invalid_value;
@@ -5458,7 +5453,7 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
 
     psz[i] = '\0';
 
-    if (strict_p && (((ni == 0 || dot_seen) && nf == 0) || (exp_seen && ne == 0))) {
+    if (strict_p && ((ni == 0 && nf == 0) || (exp_seen && ne == 0))) {
         VALUE str;
       invalid_value:
         if (!strict_p) {
