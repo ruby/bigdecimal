@@ -24,15 +24,17 @@ have_header("math.h")
 have_header("stdbool.h")
 have_header("stdlib.h")
 
-have_header("x86intrin.h")
-have_func("_lzcnt_u32", "x86intrin.h")
-have_func("_lzcnt_u64", "x86intrin.h")
+if have_header("x86intrin.h")
+  have_func("_lzcnt_u32", "x86intrin.h")
+  have_func("_lzcnt_u64", "x86intrin.h")
+end
 
-have_header("intrin.h")
-have_func("__lzcnt", "intrin.h")
-have_func("__lzcnt64", "intrin.h")
-have_func("_BitScanReverse", "intrin.h")
-have_func("_BitScanReverse64", "intrin.h")
+if have_header("intrin.h")
+  have_func("__lzcnt", "intrin.h")
+  have_func("__lzcnt64", "intrin.h")
+  have_func("_BitScanReverse", "intrin.h")
+  have_func("_BitScanReverse64", "intrin.h")
+end
 
 have_func("labs", "stdlib.h")
 have_func("llabs", "stdlib.h")
