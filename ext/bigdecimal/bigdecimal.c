@@ -69,14 +69,14 @@ static struct {
 } rbd_rounding_modes[RBD_NUM_ROUNDING_MODES];
 
 /* MACRO's to guard objects from GC by keeping them in stack */
-#ifdef RBIMPL_ATTR_MAYBE_UNUSED
-#define ENTER(n) RBIMPL_ATTR_MAYBE_UNUSED() volatile VALUE vStack[n];int iStack=0
-#else
-#define ENTER(n) volatile VALUE RB_UNUSED_VAR(vStack[n]);int iStack=0
-#endif
-#define PUSH(x)  (vStack[iStack++] = (VALUE)(x))
-#define SAVE(p)  PUSH((p)->obj)
-#define GUARD_OBJ(p,y) ((p)=(y), SAVE(p))
+#define ENTER(n) /* nothing */
+#define SAVE(p) /* for labels */ ; \
+    volatile VALUE saved_obj_ ## p = ((p)->obj); \
+    RB_GC_GUARD(saved_obj_ ## p)
+#define GUARD_OBJ_VAR(line) TOKEN_PASTE(guard_obj_, line)
+#define GUARD_OBJ(p,y) /* for labels */ ; \
+    volatile VALUE GUARD_OBJ_VAR(__LINE__) = ((p)=(y))->obj; \
+    RB_GC_GUARD(GUARD_OBJ_VAR(__LINE__))
 
 #define BASE_FIG  BIGDECIMAL_COMPONENT_FIGURES
 #define BASE      BIGDECIMAL_BASE
