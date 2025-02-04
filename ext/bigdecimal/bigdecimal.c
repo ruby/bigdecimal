@@ -2172,8 +2172,8 @@ BigDecimal_divmod(VALUE self, VALUE r)
     Real *div = NULL, *mod = NULL;
 
     if (BigDecimal_DoDivmod(self, r, &div, &mod)) {
-	SAVE(div); SAVE(mod);
-        return rb_assoc_new(VpCheckGetValue(div), VpCheckGetValue(mod));
+	      SAVE(div); SAVE(mod);
+        return rb_assoc_new(BigDecimal_to_i(VpCheckGetValue(div)), VpCheckGetValue(mod));
     }
     return DoSomeOne(self,r,rb_intern("divmod"));
 }

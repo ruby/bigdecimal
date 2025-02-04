@@ -1052,6 +1052,10 @@ class TestBigDecimal < Test::Unit::TestCase
 
     assert_equal([0, 0], BigDecimal("0").divmod(2))
 
+    quotient, reminder =  BigDecimal("10").divmod(3)
+    assert_kind_of(Integer, quotient)
+    assert_kind_of(BigDecimal, reminder)
+
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_raise(ZeroDivisionError){BigDecimal("0").divmod(0)}
   end
