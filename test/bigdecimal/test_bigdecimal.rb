@@ -166,7 +166,8 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal("0.1235"), BigDecimal(0.1234567, 4))
     assert_equal(BigDecimal("-0.1235"), BigDecimal(-0.1234567, 4))
     assert_equal(BigDecimal("0.01"), BigDecimal(0.01, Float::DIG + 1))
-    assert_raise_with_message(ArgumentError, "can't omit precision for a Float.") { BigDecimal(4.2) }
+    assert_nothing_raised { BigDecimal(4.2) }
+    assert_equal(BigDecimal(4.2), BigDecimal('4.2'))
     assert_raise(ArgumentError) { BigDecimal(0.1, Float::DIG + 2) }
     assert_nothing_raised { BigDecimal(0.1, Float::DIG + 1) }
 
@@ -242,10 +243,10 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_equal(nil, BigDecimal(42.quo(7), exception: false))
     }
     assert_raise(ArgumentError) {
-      BigDecimal(4.2, exception: true)
+      BigDecimal(4.2, Float::DIG + 2, exception: true)
     }
     assert_nothing_raised(ArgumentError) {
-      assert_equal(nil, BigDecimal(4.2, exception: false))
+      assert_equal(nil, BigDecimal(4.2, Float::DIG + 2, exception: false))
     }
     # TODO: support conversion from complex
     # assert_raise(RangeError) {
