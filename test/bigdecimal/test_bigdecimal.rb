@@ -1452,6 +1452,16 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(0, BigDecimal("-0").sqrt(1))
     assert_equal(1, BigDecimal("1").sqrt(1))
     assert_positive_infinite(BigDecimal("Infinity").sqrt(1))
+
+    # Out of float range
+    assert_equal(BigDecimal('12e1024'), BigDecimal('144e2048').sqrt(10))
+    assert_equal(BigDecimal('12e-1024'), BigDecimal('144e-2048').sqrt(10))
+
+    sqrt2_300 = BigDecimal(2).sqrt(300)
+    (250..270).each do |prec|
+      sqrt_prec = prec + BigDecimal.double_fig - 1
+      assert_in_delta(sqrt2_300, BigDecimal(2).sqrt(prec), BigDecimal("1e#{-sqrt_prec}"))
+    end
   end
 
   def test_sqrt_5266
@@ -1466,6 +1476,20 @@ class TestBigDecimal < Test::Unit::TestCase
                  x.sqrt(110).to_s(110).split(' ')[0])
     assert_equal('0.1414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641572735013846',
                  x.sqrt(109).to_s(109).split(' ')[0])
+  end
+
+  def test_sqrt_minimum_precision
+    x = BigDecimal((2**200).to_s)
+    assert_equal(2**100, x.sqrt(1))
+
+    x = BigDecimal('1' * 60 + '.' + '1' * 40)
+    assert_in_delta(BigDecimal('3' * 30 + '.' + '3' * 70), x.sqrt(1), BigDecimal('1e-70'))
+
+    x = BigDecimal('1' * 40 + '.' + '1' * 60)
+    assert_in_delta(BigDecimal('3' * 20 + '.' + '3' * 80), x.sqrt(1), BigDecimal('1e-80'))
+
+    x = BigDecimal('0.' + '0' * 50 + '1' * 100)
+    assert_in_delta(BigDecimal('0.' + '0' * 25 + '3' * 100), x.sqrt(1), BigDecimal('1e-125'))
   end
 
   def test_fix
@@ -2431,17 +2455,19 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
-  def test_exp_log_pow_with_limit
+  def test_sqrt_exp_log_pow_with_limit
     prec = 100
     limit = 10
     x = BigDecimal(123).div(7, prec)
     y = BigDecimal(456).div(11, prec)
+    sqrt = BigMath.sqrt(x, prec)
     exp = BigMath.exp(x, prec)
     log = BigMath.log(x, prec)
     pow = x.power(y, prec)
     pow_lim = x.power(y, limit)
     BigDecimal.save_limit do
       BigDecimal.limit(limit)
+      assert_equal(sqrt, BigMath.sqrt(x, prec))
       assert_equal(exp, BigMath.exp(x, prec))
       assert_equal(log, BigMath.log(x, prec))
       assert_equal(pow, x.power(y, prec))

@@ -172,6 +172,37 @@ class BigDecimal
     end
     ans.mult(1, prec)
   end
+
+  # Returns the square root of the value.
+  #
+  # Result has at least prec significant digits.
+  #
+  def sqrt(prec)
+    if infinite? == 1
+      exception_mode = BigDecimal.mode(BigDecimal::EXCEPTION_ALL)
+      raise FloatDomainError, "Computation results in 'Infinity'" if exception_mode.anybits?(BigDecimal::EXCEPTION_INFINITY)
+      return INFINITY
+    end
+    raise ArgumentError, 'negative precision' if prec < 0
+    raise FloatDomainError, 'sqrt of negative value' if self < 0
+    raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
+    return self if zero?
+
+    # BigDecimal#sqrt calculates at least n_significant_digits precision.
+    # This feature maybe problematic for some cases.
+    n_digits = n_significant_digits
+    prec = [prec, n_digits].max
+
+    ex = exponent / 2
+    x = self.mult(BigDecimal("1e#{-ex * 2}"), n_significant_digits)
+    y = BigDecimal(Math.sqrt(x.to_f))
+    precs = [prec + BigDecimal.double_fig]
+    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
+    precs.reverse_each do |p|
+      y = y.add(x.div(y, p), p).div(2, p)
+    end
+    y.mult(BigDecimal("1e#{ex}"), precs.first)
+  end
 end
 
 # Core BigMath methods for BigDecimal (log, exp) are defined here.
@@ -217,12 +248,7 @@ module BigMath
       prec += BigDecimal.double_fig
 
       # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
-      sqrt_steps = [2 * Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
-
-      # Reduce sqrt_step until sqrt gets fast
-      # https://github.com/ruby/bigdecimal/pull/323
-      # https://github.com/ruby/bigdecimal/pull/343
-      sqrt_steps /= 10
+      sqrt_steps = [Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
 
       lg2 = 0.3010299956639812
       prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
