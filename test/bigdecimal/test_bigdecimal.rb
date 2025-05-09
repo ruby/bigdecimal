@@ -1345,8 +1345,6 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(true, (x.sqrt(300) - y).abs < BigDecimal("1E#{e-300}"))
     x = BigDecimal("-" + (2**100).to_s)
     assert_raise_with_message(FloatDomainError, "sqrt of negative value") { x.sqrt(1) }
-    x = BigDecimal((2**200).to_s)
-    assert_equal(2**100, x.sqrt(1))
 
     assert_in_delta(BigDecimal("4.0000000000000000000125"), BigDecimal("16.0000000000000000001").sqrt(100), BigDecimal("1e-40"))
 
@@ -1373,6 +1371,20 @@ class TestBigDecimal < Test::Unit::TestCase
                  x.sqrt(110).to_s(110).split(' ')[0])
     assert_equal('0.1414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641572735013846',
                  x.sqrt(109).to_s(109).split(' ')[0])
+  end
+
+  def test_sqrt_minimum_precision
+    x = BigDecimal((2**200).to_s)
+    assert_equal(2**100, x.sqrt(1))
+
+    x = BigDecimal('1' * 60 + '.' + '1' * 40)
+    assert_in_delta(BigDecimal('3' * 30 + '.' + '3' * 70), x.sqrt(1), BigDecimal('1e-70'))
+
+    x = BigDecimal('1' * 40 + '.' + '1' * 60)
+    assert_in_delta(BigDecimal('3' * 20 + '.' + '3' * 80), x.sqrt(1), BigDecimal('1e-80'))
+
+    x = BigDecimal('0.' + '0' * 50 + '1' * 100)
+    assert_in_delta(BigDecimal('0.' + '0' * 25 + '3' * 100), x.sqrt(1), BigDecimal('1e-125'))
   end
 
   def test_fix
