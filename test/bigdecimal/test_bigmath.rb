@@ -53,6 +53,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_fixed_point_precision {|n| sin(BigDecimal("1e-30"), n) }
     assert_fixed_point_precision {|n| sin(BigDecimal(PI(50)), n) }
     assert_fixed_point_precision {|n| sin(BigDecimal(PI(50) * 100), n) }
+    assert_operator(sin(PI(30) / 2, 30), :<=, 1)
+    assert_operator(sin(-PI(30) / 2, 30), :>=, -1)
   end
 
   def test_cos
@@ -74,6 +76,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_fixed_point_precision {|n| cos(BigDecimal("1e50"), n) }
     assert_fixed_point_precision {|n| cos(BigDecimal(PI(50) / 2), n) }
     assert_fixed_point_precision {|n| cos(BigDecimal(PI(50) * 201 / 2), n) }
+    assert_operator(cos(PI(30), 30), :>=, -1)
+    assert_operator(cos(PI(30) * 2, 30), :<=, 1)
   end
 
   def test_atan
