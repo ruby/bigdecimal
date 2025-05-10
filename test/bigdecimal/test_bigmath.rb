@@ -37,6 +37,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(0.0, sin(PI(N) * 21, N))
     assert_in_delta(0.0, sin(PI(N) * 30, N))
     assert_in_delta(-1.0, sin(PI(N) * BigDecimal("301.5"), N))
+    assert_operator(sin(PI(30) / 2, 30), :<=, 1)
+    assert_operator(sin(-PI(30) / 2, 30), :>=, -1)
   end
 
   def test_cos
@@ -51,6 +53,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(-1.0, cos(PI(N) * 21, N))
     assert_in_delta(1.0, cos(PI(N) * 30, N))
     assert_in_delta(0.0, cos(PI(N) * BigDecimal("301.5"), N))
+    assert_operator(cos(PI(30), 30), :>=, -1)
+    assert_operator(cos(PI(30) * 2, 30), :<=, 1)
   end
 
   def test_atan
