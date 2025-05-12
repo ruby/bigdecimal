@@ -80,6 +80,28 @@ class TestBigMath < Test::Unit::TestCase
     assert_operator(cos(PI(30) * 2, 30), :<=, 1)
   end
 
+  def test_tan
+    assert_in_delta(0.0, tan(-PI(N), N))
+    assert_in_delta(0.0, tan(BigDecimal(0), N))
+    assert_in_delta(0.0, tan(PI(N), N))
+    assert_in_delta(1.0, tan(PI(N) / 4, N))
+    assert_in_delta(-1.0, tan(-PI(N) / 4, N))
+    assert_in_delta(-1.0, tan(PI(N) * 3 / 4, N))
+    assert_in_delta(1.0, tan(-PI(N) * 3 / 4, N))
+    assert_in_delta(0.0, tan(PI(N) * 100, N))
+    assert_in_delta(1.0, tan(PI(N) * 101 / 4, N))
+    assert_in_delta(-1.0, tan(PI(N) * 103 / 4, N))
+    assert_in_delta(BigDecimal("1").div(SQRT3, 100), tan(PI(100) / 6, 100), BigDecimal("1e-100"))
+    assert_in_delta(SQRT3, tan(PI(100) / 3, 100), BigDecimal("1e-100"))
+    assert_relative_precision {|n| tan(BigDecimal("0.5"), n) }
+    assert_relative_precision {|n| tan(BigDecimal("1e-30"), n) }
+    assert_relative_precision {|n| tan(BigDecimal("1.5"), n) }
+    assert_relative_precision {|n| tan(PI(100) / 2, n) }
+    assert_relative_precision {|n| tan(PI(200) * 101 / 2, n) }
+    assert_relative_precision {|n| tan(PI(100), n) }
+    assert_relative_precision {|n| tan(PI(200) * 100, n) }
+  end
+
   def test_atan
     assert_equal(0.0, atan(BigDecimal("0.0"), N))
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))

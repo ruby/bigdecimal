@@ -7,6 +7,7 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
+#   tan (x, prec)
 #   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
@@ -132,6 +133,43 @@ module BigMath
       y  += d
     end
     y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
+  end
+
+  # Calculate a relative precision value from a block that calculates with a fixed precision.
+  private def _ensure_relative_precision(prec)
+    fixed_point_precision = prec + BigDecimal.double_fig
+    loop do
+      value = yield fixed_point_precision
+      return value if !value.zero? && prec - value.exponent <= fixed_point_precision
+
+      if value.zero? || fixed_point_precision < -value.exponent
+        # Multiply precision by 3/2 if the calculated precision is not enough for estimating required precision
+        fixed_point_precision = fixed_point_precision * 3 / 2
+      else
+        fixed_point_precision = prec - value.exponent + BigDecimal.double_fig
+      end
+    end
+  end
+
+  # call-seq:
+  #   tan(decimal, numeric) -> BigDecimal
+  #
+  # Computes the tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is Infinity or NaN, returns NaN.
+  #
+  #   BigMath.tan(BigMath.PI(16) / 3, 16).to_s
+  #   #=> "0.17320508075688772935274463415059e1"
+  #
+  def tan(x, prec)
+    return BigDecimal(0) if x.zero?
+
+    # BigMath calculates sin with relative precision only when x.abs is small
+    sin = x.abs < 3 ? sin(x, prec) : _ensure_relative_precision(prec) {|p| sin(x, p) }
+
+    cos = _ensure_relative_precision(prec) {|p| cos(x, p) }
+    sin.div(cos, prec + BigDecimal.double_fig)
   end
 
   # call-seq:
