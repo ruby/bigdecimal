@@ -7,13 +7,12 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
-#   atan(x, prec)  Note: |x|<1, x=0.9999 may not converge.
+#   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
 # where:
 #   x    ... BigDecimal number to be computed.
-#            |x| must be small enough to get convergence.
 #   prec ... Number of digits to be obtained.
 #++
 #
