@@ -7,6 +7,7 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
+#   tan (x, prec)
 #   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
@@ -129,6 +130,32 @@ module BigMath
       y  += d
     end
     y
+  end
+
+  # call-seq:
+  #   tan(decimal, numeric) -> BigDecimal
+  #
+  # Computes the tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is Infinity or NaN, returns NaN.
+  #
+  #   BigMath.tan(BigMath.PI(16) / 3, 16).to_s
+  #   #=> "0.17320508075688772935274463415059e1"
+  #
+  def tan(x, prec)
+    denominator_prec = prec + BigDecimal.double_fig
+    while true
+      cos = cos(x, denominator_prec)
+      break if prec - cos.exponent <= denominator_prec
+
+      if cos.exponent == 0 || denominator_prec < -cos.exponent
+        denominator_prec = denominator_prec * 3 / 2
+      else
+        denominator_prec = prec - cos.exponent + BigDecimal.double_fig
+      end
+    end
+    sin(x, prec).div(cos, prec + BigDecimal.double_fig)
   end
 
   # call-seq:
