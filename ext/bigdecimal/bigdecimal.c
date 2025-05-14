@@ -3458,11 +3458,7 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
     }
 
     if (digs == SIZE_MAX) {
-        if (!raise_exception)
-            return Qnil;
-        rb_raise(rb_eArgError,
-                 "can't omit precision for a %"PRIsVALUE".",
-                 CLASS_OF(val));
+        digs = 0;
     }
     else if (digs > BIGDECIMAL_DOUBLE_FIGURES) {
         if (!raise_exception)
@@ -3712,12 +3708,12 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
  *
  *  - Integer, Float, Rational, Complex, or BigDecimal: converted directly:
  *
- *      # Integer, Complex, or BigDecimal value does not require ndigits; ignored if given.
+ *      # Integer, Complex, Float, or BigDecimal value does not require ndigits; ignored if given.
  *      BigDecimal(2)                     # => 0.2e1
  *      BigDecimal(Complex(2, 0))         # => 0.2e1
  *      BigDecimal(BigDecimal(2))         # => 0.2e1
- *      # Float or Rational value requires ndigits.
- *      BigDecimal(2.0, 0)                # => 0.2e1
+ *      BigDecimal(2.0)                   # => 0.2e1
+ *      # Rational value requires ndigits.
  *      BigDecimal(Rational(2, 1), 0)     # => 0.2e1
  *
  *  - String: converted by parsing if it contains an integer or floating-point literal;
