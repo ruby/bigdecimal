@@ -6,29 +6,12 @@ class TestBigMath < Test::Unit::TestCase
   include TestBigDecimalBase
   include BigMath
   N = 20
-  N_LARGE = 100
   # SQRT in 116 (= 100 + double_fig) digits
   SQRT2 = BigDecimal("1.4142135623730950488016887242096980785696718753769480731766797379907324784621070388503875343276415727350138462309123")
   SQRT3 = BigDecimal("1.7320508075688772935274463415058723669428052538103806280558069794519330169088000370811461867572485756756261414154067")
   PINF = BigDecimal("+Infinity")
   MINF = BigDecimal("-Infinity")
   NAN = BigDecimal("NaN")
-
-  def assert_fixed_point_precision(n = N_LARGE)
-    value = yield(n)
-    expected = yield(2 * n)
-    precision = -(value - expected).exponent
-    assert(value != expected, "Unable to estimate precision for exact value")
-    assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
-  end
-
-  def assert_relative_precision(n = N_LARGE)
-    value = yield(n)
-    expected = yield(2 * n)
-    precision = -(value / expected - 1).exponent
-    assert(value != expected, "Unable to estimate precision for exact value")
-    assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
-  end
 
   def test_const
     assert_in_delta(Math::PI, PI(N))

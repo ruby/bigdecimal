@@ -36,4 +36,23 @@ module TestBigDecimalBase
   ensure
     GC.stress = stress
   end
+
+  # Asserts that the calculation of the given block converges to some value
+  # with a precision of at least n digits.
+
+  def assert_fixed_point_precision(n = 100)
+    value = yield(n)
+    expected = yield(2 * n)
+    precision = -(value - expected).exponent
+    assert(value != expected, "Unable to estimate precision for exact value")
+    assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
+  end
+
+  def assert_relative_precision(n = 100)
+    value = yield(n)
+    expected = yield(2 * n)
+    precision = -(value.div(expected, 2 * n) - 1).exponent
+    assert(value != expected, "Unable to estimate precision for exact value")
+    assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
+  end
 end
