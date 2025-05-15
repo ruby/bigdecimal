@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.1.9
+
+* Accept no digits in the fractional part (#302)
+
+  **@kou**
+
 ## 3.1.8
 
 * Add missing documents [GH-277]
