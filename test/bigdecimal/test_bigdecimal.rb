@@ -1660,8 +1660,7 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.save_limit do
       BigDecimal.limit(1)
       x = BigDecimal("3")
-      assert_equal(90, x ** 4) # OK? must it be 80?
-      # 3 * 3 * 3 * 3 = 10 * 3 * 3 = 30 * 3 = 90 ???
+      assert_equal(80, x ** 4)
       assert_raise(ArgumentError) { BigDecimal.limit(-1) }
 
       bug7458 = '[ruby-core:50269] [#7458]'

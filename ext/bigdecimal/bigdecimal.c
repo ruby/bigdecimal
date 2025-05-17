@@ -7655,7 +7655,7 @@ Exit:
 VP_EXPORT int
 VpPowerByInt(Real *y, Real *x, SIGNED_VALUE n)
 {
-    size_t s, ss;
+    size_t s;
     ssize_t sign;
     Real *w1 = NULL;
     Real *w2 = NULL;
@@ -7721,17 +7721,20 @@ VpPowerByInt(Real *y, Real *x, SIGNED_VALUE n)
     /* calculation start */
 
     VpAsgn(y, x, 1);
+    VpAsgn(w1, x, 1);
     --n;
-    while (n > 0) {
-	VpAsgn(w1, x, 1);
-	s = 1;
-	while (ss = s, (s += s) <= (size_t)n) {
+    s = 1;
+
+    while (s <= (size_t)n) {
+	if (s != 1) {
 	    VpMult(w2, w1, w1);
 	    VpAsgn(w1, w2, 1);
 	}
-	n -= (SIGNED_VALUE)ss;
-	VpMult(w2, y, w1);
-	VpAsgn(y, w2, 1);
+	if (s & n) {
+	    VpMult(w2, y, w1);
+	    VpAsgn(y, w2, 1);
+	}
+	s <<= 1;
     }
     if (sign < 0) {
 	VpDivd(w1, w2, VpConstOne, y);
