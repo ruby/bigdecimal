@@ -13,6 +13,11 @@ class TestBigMath < Test::Unit::TestCase
   MINF = BigDecimal("-Infinity")
   NAN = BigDecimal("NaN")
 
+  # Most BigMath methods calculates with extra 16 (= double_fig) digits.
+  # In this test, we ensures that the result is accurate to the requested precision + 12 (75% of extra calculation digit).
+  EXTRA_DIGITS = BigDecimal.double_fig * 3 / 4
+  SQRT_EXTRA_DIGITS = BigDecimal.double_fig / 2 * 3 / 4
+
   def test_const
     assert_in_delta(Math::PI, PI(N))
     assert_in_delta(Math::E, E(N))
@@ -28,9 +33,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_raise(FloatDomainError) {sqrt(PINF, N)}
     assert_in_delta(SQRT2, sqrt(BigDecimal("2"), 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT3, sqrt(BigDecimal("3"), 100), BigDecimal("1e-100"))
-    assert_relative_precision {|n| sqrt(BigDecimal("2"), n) }
-    assert_relative_precision {|n| sqrt(BigDecimal("2e-50"), n) }
-    assert_relative_precision {|n| sqrt(BigDecimal("2e50"), n) }
+    assert_relative_precision(extra_digits: SQRT_EXTRA_DIGITS) {|n| sqrt(BigDecimal("2"), n) }
+    assert_relative_precision(extra_digits: SQRT_EXTRA_DIGITS) {|n| sqrt(BigDecimal("2e-50"), n) }
+    assert_relative_precision(extra_digits: SQRT_EXTRA_DIGITS) {|n| sqrt(BigDecimal("2e50"), n) }
   end
 
   def test_sin
@@ -48,10 +53,10 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(BigDecimal('0.5'), sin(PI(100) / 6, 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT3 / 2, sin(PI(100) / 3, 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT2 / 2, sin(PI(100) / 4, 100), BigDecimal("1e-100"))
-    assert_fixed_point_precision {|n| sin(BigDecimal("1"), n) }
-    assert_fixed_point_precision {|n| sin(BigDecimal("1e-30"), n) }
-    assert_fixed_point_precision {|n| sin(BigDecimal(PI(50)), n) }
-    assert_fixed_point_precision {|n| sin(BigDecimal(PI(50) * 100), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| sin(BigDecimal("1"), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| sin(BigDecimal("1e-30"), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| sin(BigDecimal(PI(50)), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| sin(BigDecimal(PI(50) * 100), n) }
   end
 
   def test_cos
@@ -69,9 +74,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(BigDecimal('0.5'), cos(PI(100) / 3, 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT3 / 2, cos(PI(100) / 6, 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT2 / 2, cos(PI(100) / 4, 100), BigDecimal("1e-100"))
-    assert_fixed_point_precision {|n| cos(BigDecimal("1"), n) }
-    assert_fixed_point_precision {|n| cos(BigDecimal(PI(50) / 2), n) }
-    assert_fixed_point_precision {|n| cos(BigDecimal(PI(50) * 201 / 2), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| cos(BigDecimal("1"), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| cos(BigDecimal(PI(50) / 2), n) }
+    assert_fixed_point_precision(extra_digits: EXTRA_DIGITS) {|n| cos(BigDecimal(PI(50) * 201 / 2), n) }
   end
 
   def test_atan
@@ -82,9 +87,11 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(PI(100) / 3, atan(SQRT3, 100), BigDecimal("1e-100"))
     assert_equal(BigDecimal("0.823840753418636291769355073102514088959345624027952954058347023122539489"),
                  atan(BigDecimal("1.08"), 72).round(72), '[ruby-dev:41257]')
-    assert_relative_precision {|n| atan(BigDecimal("2"), n)}
-    assert_relative_precision {|n| atan(BigDecimal("1e-30"), n)}
-    assert_relative_precision {|n| atan(BigDecimal("1e30"), n)}
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| atan(BigDecimal("2"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| atan(BigDecimal("0.8"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| atan(BigDecimal("3"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| atan(BigDecimal("1e-30"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| atan(BigDecimal("1e30"), n) }
   end
 
   def test_log
@@ -92,10 +99,10 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_epsilon(Math.log(10)*1000, BigMath.log(BigDecimal("1e1000"), 10))
     assert_in_epsilon(BigDecimal("2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862"),
                       BigMath.log(BigDecimal("10"), 100), BigDecimal("1e-100"))
-    assert_relative_precision {|n| BigMath.log(BigDecimal("2"), n) }
-    assert_relative_precision {|n| BigMath.log(BigDecimal("1e-30") + 1, n) }
-    assert_relative_precision {|n| BigMath.log(BigDecimal("1e-30"), n) }
-    assert_relative_precision {|n| BigMath.log(BigDecimal("1e30"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| BigMath.log(BigDecimal("2"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| BigMath.log(BigDecimal("1e-30") + 1, n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| BigMath.log(BigDecimal("1e-30"), n) }
+    assert_relative_precision(extra_digits: EXTRA_DIGITS) {|n| BigMath.log(BigDecimal("1e30"), n) }
     assert_raise(Math::DomainError) {BigMath.log(BigDecimal("0"), 10)}
     assert_raise(Math::DomainError) {BigMath.log(BigDecimal("-1"), 10)}
     assert_separately(%w[-rbigdecimal], <<-SRC)
