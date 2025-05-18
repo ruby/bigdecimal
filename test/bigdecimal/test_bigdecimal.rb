@@ -1357,6 +1357,10 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(0, BigDecimal("-0").sqrt(1))
     assert_equal(1, BigDecimal("1").sqrt(1))
     assert_positive_infinite(BigDecimal("Infinity").sqrt(1))
+
+    assert_equal(BigDecimal('11.1'), BigDecimal('123.21').sqrt(100))
+    assert_equal(BigDecimal('11e20'), BigDecimal('121e40').sqrt(100))
+    assert_in_epsilon(Math.sqrt(121e41), BigDecimal('121e41').sqrt(100))
   end
 
   def test_sqrt_5266
