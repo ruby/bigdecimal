@@ -2829,6 +2829,64 @@ BigDecimal_inspect(VALUE self)
     return str;
 }
 
+/* Returns self * 10**v without changing the precision.
+ *   This method is currently for internal use.
+ *
+ *   BigDecimal("0.123e10")._decimal_shift(20) #=> "0.123e30"
+ *   BigDecimal("0.123e10")._decimal_shift(-20) #=> "0.123e-10"
+ */
+static VALUE
+BigDecimal_decimal_shift(VALUE self, VALUE v)
+{
+    ENTER(5);
+    BDVALUE a, c;
+
+    v = rb_to_int(v);
+    if (!FIXNUM_P(v)) {
+        rb_raise(rb_eTypeError, "invalid shift width");
+    }
+    long shift = FIX2LONG(v);
+    if (shift == 0) return self;
+
+    GUARD_OBJ(a, GetBDValueMust(self));
+    if (VpIsZero(a.real) || VpIsNaN(a.real) || VpIsInf(a.real)) return self;
+
+    long exponentShift = shift > 0 ? shift / BASE_FIG : (shift + 1) / BASE_FIG - 1;
+    shift -= exponentShift * BASE_FIG;
+    DECDIG ex = 1;
+    for (int i = 0; i < shift; i++) ex *= 10;
+    bool shiftDown = a.real->frac[0] * (DECDIG_DBL)ex >= BASE;
+    DECDIG iex = BASE / ex;
+
+    size_t prec = a.real->Prec + shiftDown;
+    size_t mx = prec * (VpBaseFig() + 1);
+    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
+    if (shift == 0) {
+        VpAsgn(c.real, a.real, 1);
+    } else if (shiftDown) {
+        exponentShift++;
+        DECDIG carry = 0;
+        for (size_t i = 0; i < a.real->Prec; i++) {
+            DECDIG v = a.real->frac[i];
+            c.real->frac[i] = carry * ex + v / iex;
+            carry = v % iex;
+        }
+        c.real->frac[a.real->Prec] = carry * ex;
+    } else {
+        DECDIG carry = 0;
+        for (ssize_t i = a.real->Prec - 1; i >= 0; i--) {
+            DECDIG v = a.real->frac[i];
+            c.real->frac[i] = v % iex * ex + carry;
+            carry = v / iex;
+        }
+    }
+    while (c.real->frac[prec - 1] == 0) prec--;
+    c.real->Prec = prec;
+    c.real->exponent = a.real->exponent + exponentShift;
+    c.real->sign = a.real->sign;
+    return CheckGetValue(c);
+}
+
 static VALUE BigMath_s_exp(VALUE, VALUE, VALUE);
 static VALUE BigMath_s_log(VALUE, VALUE, VALUE);
 
@@ -4582,6 +4640,7 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "infinite?", BigDecimal_IsInfinite, 0);
     rb_define_method(rb_cBigDecimal, "finite?",   BigDecimal_IsFinite, 0);
     rb_define_method(rb_cBigDecimal, "truncate",  BigDecimal_truncate, -1);
+    rb_define_method(rb_cBigDecimal, "_decimal_shift",  BigDecimal_decimal_shift, 1);
     rb_define_method(rb_cBigDecimal, "_dump", BigDecimal_dump, -1);
 
     rb_mBigMath = rb_define_module("BigMath");
