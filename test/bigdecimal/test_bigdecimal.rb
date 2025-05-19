@@ -1361,6 +1361,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal('11.1'), BigDecimal('123.21').sqrt(100))
     assert_equal(BigDecimal('11e20'), BigDecimal('121e40').sqrt(100))
     assert_in_epsilon(Math.sqrt(121e41), BigDecimal('121e41').sqrt(100))
+    assert_in_epsilon(Math.sqrt(2e100), BigDecimal('2e100').sqrt(10))
   end
 
   def test_sqrt_5266

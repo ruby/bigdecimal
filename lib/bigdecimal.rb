@@ -20,21 +20,19 @@ class BigDecimal
     raise FloatDomainError, 'sqrt of negative value' if self < 0
     raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
 
-    ten = BigDecimal(10)
     n_digits = n_significant_digits
     prec = [prec, n_digits].max
 
     if n_digits < prec / 2
       # Fast path for sqrt(16e100) => 4e50
-      base = ten ** ((n_digits + 1) / 2 - exponent / 2)
-      n = self * base * base
+      ex = (n_digits + 1) / 2 - exponent / 2
+      n = (self * BigDecimal("1e#{2 * ex}")).to_i
       sqrt = Integer.sqrt(n)
-      return BigDecimal(sqrt).div(base, prec) if sqrt * sqrt == n
+      return BigDecimal(sqrt) * BigDecimal("1e#{-ex}") if sqrt * sqrt == n
     end
 
     ex = prec + BigDecimal.double_fig - exponent / 2
-    base = ten ** ex
-    sqrt = Integer.sqrt(self * base * base)
-    BigDecimal(sqrt).div(base, prec + BigDecimal.double_fig)
+    sqrt = Integer.sqrt(self * BigDecimal("1e#{2 * ex}"))
+    BigDecimal(sqrt) * BigDecimal("1e#{-ex}")
   end
 end
