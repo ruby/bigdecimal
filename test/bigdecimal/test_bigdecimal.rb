@@ -1420,6 +1420,23 @@ class TestBigDecimal < Test::Unit::TestCase
                  x.sqrt(109).to_s(109).split(' ')[0])
   end
 
+  def test_internal_use_decimal_shift
+    assert_positive_infinite_calculation { BigDecimal::INFINITY._decimal_shift(10) }
+    assert_negative_infinite_calculation { NEGATIVE_INFINITY._decimal_shift(10) }
+    assert_nan_calculation { BigDecimal::NAN._decimal_shift(10) }
+    assert_equal(BigDecimal(0), BigDecimal(0)._decimal_shift(10))
+    [
+      BigDecimal('-1234.56789'),
+      BigDecimal('123456789.012345678987654321'),
+      BigDecimal('123456789012345.678987654321')
+    ].each do |num|
+      (0..20).each do |shift|
+        assert_equal(num * 10**shift, num._decimal_shift(shift))
+        assert_equal(num / 10**shift, num._decimal_shift(-shift))
+      end
+    end
+  end
+
   def test_fix
     x = BigDecimal("1.1")
     assert_equal(1, x.fix)
