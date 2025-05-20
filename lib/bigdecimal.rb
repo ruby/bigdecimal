@@ -25,7 +25,7 @@ class BigDecimal
 
     if n_digits < prec / 2
       # Fast path for sqrt(16e100) => 4e50
-      ex = (n_digits + 1) / 2 - exponent / 2
+      ex = (n_digits - exponent + 1) / 2
       n = (self * BigDecimal("1e#{2 * ex}")).to_i
       sqrt = Integer.sqrt(n)
       return BigDecimal(sqrt) * BigDecimal("1e#{-ex}") if sqrt * sqrt == n
