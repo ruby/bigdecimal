@@ -986,6 +986,20 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(c, x / y, "[GH-220]")
   end
 
+  def test_div_gh222
+    # Prevent exponential precision growth
+
+    high_prec = BigDecimal("1.0")
+    10.times { high_prec /= BigDecimal("1.000001") } # Accumulate precision
+
+    result = high_prec / BigDecimal("1.03")
+
+    # Test that we don't get exponential precision growth
+    assert(result.precision < 2 * high_prec.precision,
+           "Division precision should not grow exponentially. " \
+           "Got #{result.precision}, expected < #{2 * high_prec.precision} [GH-222]")
+  end
+
   def test_div_precision
     bug13754 = '[ruby-core:82107] [Bug #13754]'
     a = BigDecimal('101')
