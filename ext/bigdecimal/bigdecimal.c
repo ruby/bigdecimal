@@ -116,6 +116,9 @@ static struct {
 #define BIGDECIMAL_POSITIVE_P(bd) ((bd)->sign > 0)
 #define BIGDECIMAL_NEGATIVE_P(bd) ((bd)->sign < 0)
 
+/* Maximum precision to add in division, to ensure at most linear growth */
+#define BIGDECIMAL_MAX_DIVISION_PRECISION_GROWTH 100
+
 /*
  * ================== Memory allocation ============================
  */
@@ -1822,10 +1825,10 @@ static VALUE
 BigDecimal_divide(VALUE self, VALUE r, Real **c, Real **res, Real **div)
 /* For c = self.div(r): with round operation */
 {
-    ENTER(5);
+    ENTER(7);
     Real *a, *b;
     ssize_t a_prec, b_prec;
-    size_t mx;
+    size_t mx, double_mx, max_mx;
 
     TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
     SAVE(a);
@@ -1855,7 +1858,13 @@ BigDecimal_divide(VALUE self, VALUE r, Real **c, Real **res, Real **div)
     BigDecimal_count_precision_and_scale(self, &a_prec, NULL);
     BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
     mx = (a_prec > b_prec) ? a_prec : b_prec;
-    mx *= 2;
+
+    /* Try a reasonable precision for division, but prevent exponential growth */
+    double_mx = mx * 2;
+
+    max_mx = mx + BIGDECIMAL_MAX_DIVISION_PRECISION_GROWTH;
+
+    mx = (double_mx < max_mx) ? double_mx : max_mx;
 
     if (2*BIGDECIMAL_DOUBLE_FIGURES > mx)
         mx = 2*BIGDECIMAL_DOUBLE_FIGURES;
@@ -1946,11 +1955,11 @@ BigDecimal_quo(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
 {
-    ENTER(8);
+    ENTER(10);
     Real *c=NULL, *d=NULL, *res=NULL;
     Real *a, *b;
     ssize_t a_prec, b_prec;
-    size_t mx;
+    size_t mx, double_mx, max_mx;
 
     TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
     SAVE(a);
@@ -2011,7 +2020,13 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
     BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
 
     mx = (a_prec > b_prec) ? a_prec : b_prec;
-    mx *= 2;
+
+    /* Try a reasonable precision for division, but prevent exponential growth */
+    double_mx = mx * 2;
+
+    max_mx = mx + BIGDECIMAL_MAX_DIVISION_PRECISION_GROWTH;
+
+    mx = (double_mx < max_mx) ? double_mx : max_mx;
 
     if (2*BIGDECIMAL_DOUBLE_FIGURES > mx)
         mx = 2*BIGDECIMAL_DOUBLE_FIGURES;
