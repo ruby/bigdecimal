@@ -1825,7 +1825,7 @@ BigDecimal_divide(VALUE self, VALUE r, Real **c, Real **res, Real **div)
     ENTER(5);
     Real *a, *b;
     ssize_t a_prec, b_prec;
-    size_t mx;
+    size_t mx, res_maxprec;
 
     TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
     SAVE(a);
@@ -1854,14 +1854,15 @@ BigDecimal_divide(VALUE self, VALUE r, Real **c, Real **res, Real **div)
 
     BigDecimal_count_precision_and_scale(self, &a_prec, NULL);
     BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
-    mx = (a_prec > b_prec) ? a_prec : b_prec;
-    mx *= 2;
+    mx = ((a_prec > b_prec) ? a_prec : b_prec) + BIGDECIMAL_DOUBLE_FIGURES;
 
     if (2*BIGDECIMAL_DOUBLE_FIGURES > mx)
         mx = 2*BIGDECIMAL_DOUBLE_FIGURES;
 
     GUARD_OBJ((*c), NewZeroWrapNolimit(1, mx + 2*BASE_FIG));
-    GUARD_OBJ((*res), NewZeroWrapNolimit(1, (mx + 1)*2 + 2*BASE_FIG));
+    res_maxprec = b->Prec + (*c)->MaxPrec - 1;
+    if (res_maxprec <= a->Prec) res_maxprec = a->Prec + 1;
+    GUARD_OBJ((*res), NewZeroWrapNolimit(1, res_maxprec * BASE_FIG));
     VpDivd(*c, *res, a, b);
 
     return Qnil;
@@ -6164,7 +6165,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     word_c = c->MaxPrec;
     word_r = r->MaxPrec;
 
-    if (word_a >= word_r) goto space_error;
+    if (word_a >= word_r || word_b + word_c - 2 >= word_r) goto space_error;
 
     ind_r = 1;
     r->frac[0] = 0;

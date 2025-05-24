@@ -982,7 +982,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_div_gh220
     x = BigDecimal("1.0")
     y = BigDecimal("3672577333.6608990499165058135986328125")
-    c = BigDecimal("0.272288343892592687909520102748926752911779209181321744700032723729015151607289998e-9")
+    c = BigDecimal("0.272288343892592687909520102748926752911779209181321745e-9")
     assert_equal(c, x / y, "[GH-220]")
   end
 
@@ -993,6 +993,23 @@ class TestBigDecimal < Test::Unit::TestCase
     c = a/b
     assert(c.precision > b.precision,
            "(101/0.9163472602589686).precision >= (0.9163472602589686).precision #{bug13754}")
+  end
+
+  def test_div_various_precisions
+    a_precs = [5, 20, 70]
+    b_precs = [*5..80]
+    b_exponents = [0, 5]
+    a_precs.product(b_precs, b_exponents).each do |prec_a, prec_b, exponent|
+      a = BigDecimal('7.' + '1' * (prec_a - 1))
+      b = BigDecimal('3.' + '1' * (prec_b - 1) + "e#{exponent}")
+      c = a / b
+      max = [prec_a, prec_b].max
+      # Calculate at least max + double_fig precision
+      precision_min = max + BigDecimal.double_fig - 1
+      # Don't calculate unnecessarily high precision
+      precision_max = max + 2 * BigDecimal.double_fig
+      assert_includes(precision_min..precision_max, c.precision)
+    end
   end
 
   def test_div_with_float
