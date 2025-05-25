@@ -1011,6 +1011,20 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_div2_various_precisions
+    a_precs = [5, 20, 70, 100]
+    b_precs = [5, 20, 70, 100]
+    c_precs = [5, 20, 30, 70, 100, 200]
+    exponents = [0, 5]
+    a_precs.product(exponents, b_precs, exponents, c_precs).each do |prec_a, ex_a, prec_b, ex_b, prec_c|
+      a = BigDecimal('7.' + '1' * (prec_a - 1) + "e#{ex_a}")
+      b = BigDecimal('3.' + '1' * (prec_b - 1) + "e#{ex_b}")
+      c = a.div(b, prec_c)
+      assert_in_delta(prec_c, c.n_significant_digits, 2)
+      assert_in_delta(a, c * b, a * 10**(1 - prec_c))
+    end
+  end
+
   def test_div_with_float
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.5)
     assert_equal(BigDecimal("0.5"), BigDecimal(1) / 2.0)

@@ -2219,9 +2219,9 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
             b_prec = BIGDECIMAL_DOUBLE_FIGURES;
         }
         GUARD_OBJ(bv, GetVpValueWithPrec(b, b_prec, 1));
-        mx = av->Prec + bv->Prec + 2;
-        if (mx <= cv->MaxPrec) mx = cv->MaxPrec + 1;
-        GUARD_OBJ(res, NewZeroWrapNolimit(1, (mx * 2  + 2)*VpBaseFig()));
+        mx = bv->Prec + cv->MaxPrec - 1;
+        if (mx <= av->Prec) mx = av->Prec + 1;
+        GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
         VpDivd(cv, res, av, bv);
         VpSetPrecLimit(pl);
         VpLeftRound(cv, VpGetRoundMode(), ix);
