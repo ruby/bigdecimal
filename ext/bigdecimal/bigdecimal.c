@@ -2180,6 +2180,15 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
     VpDivd(cv, res, av, bv);
     VpSetPrecLimit(pl);
+    if (!VpIsZero(res)) {
+        // Remainder value affects rounding result.
+        // ROUND_UP cv = 0.1e0 with ix=10 will be:
+        // 0.1e0 if remainder == 0
+        // 0.1000000001e0 if remainder != 0
+        size_t idx = roomof(ix, BASE_FIG);
+        while (cv->Prec <= idx) cv->frac[cv->Prec++] = 0;
+        if (cv->frac[idx] == 0 || cv->frac[idx] == HALF_BASE) cv->frac[idx]++;
+    }
     VpLeftRound(cv, VpGetRoundMode(), ix);
     return VpCheckGetValue(cv);
 }

@@ -1012,6 +1012,30 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_div_rounding_with_small_remainder
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_UP)
+    assert_equal(BigDecimal('0.12e1'), BigDecimal('1.25').div(BigDecimal("1.#{'0' * 30}1"), 2))
+
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_DOWN)
+    assert_equal(BigDecimal('0.500000002e0'), BigDecimal('1.000000005').div(2, 9))
+    assert_equal(BigDecimal('0.500000003e0'), BigDecimal('1.0000000050000000000001').div(2, 9))
+    assert_equal(BigDecimal('0.3333333333e0'), BigDecimal(1).div(3, 10))
+    assert_equal(BigDecimal('0.3333333333333333333333333333333333333333e0'), BigDecimal(1).div(3, 40))
+    assert_equal(BigDecimal("0.5000000000000000000000000000000000000002e0"), BigDecimal("1.#{'0' * 39}5").div(2, 40))
+    assert_equal(BigDecimal("0.5000000000000000000000000000000000000003e0"), BigDecimal("1.#{'0' * 39}5#{'0' * 40}1").div(2, 40))
+    assert_equal(BigDecimal("0.5000000000000000000000000000000000000000e0"), BigDecimal("1.#{'0' * 39}1").div(2, 40))
+    assert_equal(BigDecimal("0.5000000000000000000000000000000000000001e0"), BigDecimal("1.#{'0' * 39}1#{'0' * 40}1").div(2, 40))
+
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_UP)
+    assert_equal(BigDecimal('0.3333333334e0'), BigDecimal(1).div(3, 10))
+    assert_equal(BigDecimal('0.3333333333333333333333333333333333333334e0'), BigDecimal(1).div(3, 40))
+    assert_equal(BigDecimal("0.1000000000000000000000000000000000000001e1"), BigDecimal("3.#{'0' * 40}1").div(3, 40))
+    assert_equal(BigDecimal("0.1000000000000000000000000000000000000001e1"), BigDecimal("3.#{'0' * 60}1").div(3, 40))
+    assert_equal(BigDecimal("0.100000000000000000000000000001e1"), BigDecimal("3.#{'0' * 40}1").div(3, 30))
+    assert_equal(BigDecimal("0.10000000000000000001e1"), BigDecimal("3.#{'0' * 40}1").div(3, 20))
+    assert_equal(BigDecimal("0.10000000000000000001e6"), BigDecimal("3.#{'0' * 40}1e5").div(3, 20))
+  end
+
   def test_div_with_float
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.5)
     assert_equal(BigDecimal("0.5"), BigDecimal(1) / 2.0)
