@@ -2166,7 +2166,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
         ssize_t a_prec, b_prec;
         BigDecimal_count_precision_and_scale(av->obj, &a_prec, NULL);
         BigDecimal_count_precision_and_scale(bv->obj, &b_prec, NULL);
-        ix = 2 * ((a_prec > b_prec) ? a_prec : b_prec);
+        ix = ((a_prec > b_prec) ? a_prec : b_prec) + BIGDECIMAL_DOUBLE_FIGURES;
         if (2 * BIGDECIMAL_DOUBLE_FIGURES > ix)
             ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
     }
