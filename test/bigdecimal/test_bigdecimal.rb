@@ -510,10 +510,10 @@ class TestBigDecimal < Test::Unit::TestCase
 
     BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_DOWN)
     assert_operator(n4, :>, n4 / 9 * 9)
-    assert_operator(n5, :>, n5 / 9 * 9)
+    assert_operator(n5, :<, n5 / 9 * 9)
     assert_operator(n6, :<, n6 / 9 * 9)
     assert_operator(m4, :<, m4 / 9 * 9)
-    assert_operator(m5, :<, m5 / 9 * 9)
+    assert_operator(m5, :>, m5 / 9 * 9)
     assert_operator(m6, :>, m6 / 9 * 9)
     assert_equal(2, n2h.round)
     assert_equal(3, n3h.round)
@@ -982,7 +982,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_div_gh220
     x = BigDecimal("1.0")
     y = BigDecimal("3672577333.6608990499165058135986328125")
-    c = BigDecimal("0.272288343892592687909520102748926752911779209181321744700032723729015151607289998e-9")
+    c = BigDecimal("0.272288343892592687909520102748926752911779209181321745e-9")
     assert_equal(c, x / y, "[GH-220]")
   end
 
@@ -993,6 +993,23 @@ class TestBigDecimal < Test::Unit::TestCase
     c = a/b
     assert(c.precision > b.precision,
            "(101/0.9163472602589686).precision >= (0.9163472602589686).precision #{bug13754}")
+  end
+
+  def test_div_various_precisions
+    a_precs = [5, 20, 70]
+    b_precs = [*5..80]
+    exponents = [-5, 0, 5]
+    a_precs.product(exponents, b_precs, exponents).each do |prec_a, ex_a, prec_b, ex_b|
+      a = BigDecimal('7.' + '1' * (prec_a - 1) + "e#{ex_a}")
+      b = BigDecimal('3.' + '1' * (prec_b - 1) + "e#{ex_b}")
+      c = a / b
+      max = [prec_a, prec_b, BigDecimal.double_fig].max
+      # Precision must be enough and not too large
+      precision_min = max + BigDecimal.double_fig / 2
+      precision_max = max + 2 * BigDecimal.double_fig
+      assert_includes(precision_min..precision_max, c.n_significant_digits)
+      assert_in_delta(a, c * b, a * 10**(1 - precision_min))
+    end
   end
 
   def test_div_with_float
@@ -1119,7 +1136,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_quo_without_prec
     x = BigDecimal(5)
     y = BigDecimal(229)
-    assert_equal(BigDecimal("0.021834061135371179039301310043668122"), x.quo(y))
+    assert_equal(BigDecimal("0.021834061135371179039301310043668"), x.quo(y))
   end
 
   def test_quo_with_prec
@@ -1129,7 +1146,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
       x = BigDecimal(5)
       y = BigDecimal(229)
-      assert_equal(BigDecimal("0.021834061135371179039301310043668122"), x.quo(y, 0))
+      assert_equal(BigDecimal("0.021834061135371179039301310043668"), x.quo(y, 0))
       assert_equal(BigDecimal("0.022"), x.quo(y, 2))
       assert_equal(BigDecimal("0.0218"), x.quo(y, 3))
       assert_equal(BigDecimal("0.0218341"), x.quo(y, 6))

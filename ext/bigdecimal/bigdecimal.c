@@ -1819,55 +1819,6 @@ BigDecimal_mult(VALUE self, VALUE r)
     return VpCheckGetValue(c);
 }
 
-static VALUE
-BigDecimal_divide(VALUE self, VALUE r, Real **c, Real **res, Real **div)
-/* For c = self.div(r): with round operation */
-{
-    ENTER(5);
-    Real *a, *b;
-    ssize_t a_prec, b_prec;
-    size_t mx;
-
-    TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
-    SAVE(a);
-
-    VALUE rr = r;
-    if (is_kind_of_BigDecimal(rr)) {
-        /* do nothing */
-    }
-    else if (RB_INTEGER_TYPE_P(r)) {
-        rr = rb_inum_convert_to_BigDecimal(r, 0, true);
-    }
-    else if (RB_TYPE_P(r, T_FLOAT)) {
-        rr = rb_float_convert_to_BigDecimal(r, 0, true);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-        rr = rb_rational_convert_to_BigDecimal(r, a->Prec*BASE_FIG, true);
-    }
-
-    if (!is_kind_of_BigDecimal(rr)) {
-        return DoSomeOne(self, r, '/');
-    }
-
-    TypedData_Get_Struct(rr, Real, &BigDecimal_data_type, b);
-    SAVE(b);
-    *div = b;
-
-    BigDecimal_count_precision_and_scale(self, &a_prec, NULL);
-    BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
-    mx = (a_prec > b_prec) ? a_prec : b_prec;
-    mx *= 2;
-
-    if (2*BIGDECIMAL_DOUBLE_FIGURES > mx)
-        mx = 2*BIGDECIMAL_DOUBLE_FIGURES;
-
-    GUARD_OBJ((*c), NewZeroWrapNolimit(1, mx + 2*BASE_FIG));
-    GUARD_OBJ((*res), NewZeroWrapNolimit(1, (mx + 1)*2 + 2*BASE_FIG));
-    VpDivd(*c, *res, a, b);
-
-    return Qnil;
-}
-
 static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod);
 
 /* call-seq:
@@ -1885,20 +1836,15 @@ static VALUE
 BigDecimal_div(VALUE self, VALUE r)
 /* For c = self/r: with round operation */
 {
-    ENTER(5);
-    Real *c=NULL, *res=NULL, *div = NULL;
-    r = BigDecimal_divide(self, r, &c, &res, &div);
-    if (!NIL_P(r)) return r; /* coerced by other */
-    SAVE(c); SAVE(res); SAVE(div);
-    /* a/b = c + r/b */
-    /* c xxxxx
-       r 00000yyyyy  ==> (y/b)*BASE >= HALF_BASE
-     */
-    /* Round */
-    if (VpHasVal(div)) { /* frac[0] must be zero for NaN,INF,Zero */
-        VpInternalRound(c, 0, c->frac[c->Prec-1], (DECDIG)(VpBaseVal() * (DECDIG_DBL)res->frac[0] / div->frac[0]));
+    if (
+        !is_kind_of_BigDecimal(r) &&
+        !RB_INTEGER_TYPE_P(r) &&
+        !RB_TYPE_P(r, T_FLOAT) &&
+        !RB_TYPE_P(r, T_RATIONAL)
+    ) {
+        return DoSomeOne(self, r, '/');
     }
-    return VpCheckGetValue(c);
+    return BigDecimal_div2(self, r, INT2FIX(0));
 }
 
 static VALUE BigDecimal_round(int argc, VALUE *argv, VALUE self);
@@ -2188,6 +2134,9 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 {
     ENTER(5);
     SIGNED_VALUE ix;
+    Real *res = NULL;
+    Real *av = NULL, *bv = NULL, *cv = NULL;
+    size_t mx, pl;
 
     if (NIL_P(n)) { /* div in Float sense */
         Real *div = NULL;
@@ -2200,33 +2149,39 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 
     /* div in BigDecimal sense */
     ix = check_int_precision(n);
-    if (ix == 0) {
-        return BigDecimal_div(self, b);
-    }
-    else {
-        Real *res = NULL;
-        Real *av = NULL, *bv = NULL, *cv = NULL;
-        size_t mx = ix + VpBaseFig()*2;
-        size_t b_prec = ix;
-        size_t pl = VpSetPrecLimit(0);
 
-        GUARD_OBJ(cv, NewZeroWrapLimited(1, mx + VpBaseFig()));
-        GUARD_OBJ(av, GetVpValue(self, 1));
+    pl = VpSetPrecLimit(0);
+
+    GUARD_OBJ(av, GetVpValue(self, 1));
+    if (RB_FLOAT_TYPE_P(b) && ix > BIGDECIMAL_DOUBLE_FIGURES) {
         /* TODO: I want to refactor this precision control for a float value later
          *       by introducing an implicit conversion function instead of
          *       GetVpValueWithPrec.  */
-        if (RB_FLOAT_TYPE_P(b) && b_prec > BIGDECIMAL_DOUBLE_FIGURES) {
-            b_prec = BIGDECIMAL_DOUBLE_FIGURES;
-        }
-        GUARD_OBJ(bv, GetVpValueWithPrec(b, b_prec, 1));
-        mx = av->Prec + bv->Prec + 2;
-        if (mx <= cv->MaxPrec) mx = cv->MaxPrec + 1;
-        GUARD_OBJ(res, NewZeroWrapNolimit(1, (mx * 2  + 2)*VpBaseFig()));
-        VpDivd(cv, res, av, bv);
-        VpSetPrecLimit(pl);
-        VpLeftRound(cv, VpGetRoundMode(), ix);
-        return VpCheckGetValue(cv);
+        GUARD_OBJ(bv, GetVpValueWithPrec(b, BIGDECIMAL_DOUBLE_FIGURES, 1));
     }
+    else {
+        GUARD_OBJ(bv, GetVpValueWithPrec(b, ix, 1));
+    }
+
+    if (ix == 0) {
+        ssize_t a_prec, b_prec;
+        BigDecimal_count_precision_and_scale(av->obj, &a_prec, NULL);
+        BigDecimal_count_precision_and_scale(bv->obj, &b_prec, NULL);
+        ix = ((a_prec > b_prec) ? a_prec : b_prec) + BIGDECIMAL_DOUBLE_FIGURES;
+        if (2 * BIGDECIMAL_DOUBLE_FIGURES > ix)
+            ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
+    }
+
+    // VpDivd needs 2 extra DECDIGs. One more is needed for rounding.
+    GUARD_OBJ(cv, NewZeroWrapLimited(1, ix + 3 * VpBaseFig()));
+
+    mx = bv->Prec + cv->MaxPrec - 1;
+    if (mx <= av->Prec) mx = av->Prec + 1;
+    GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
+    VpDivd(cv, res, av, bv);
+    VpSetPrecLimit(pl);
+    VpLeftRound(cv, VpGetRoundMode(), ix);
+    return VpCheckGetValue(cv);
 }
 
  /*
@@ -6166,7 +6121,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     word_c = c->MaxPrec;
     word_r = r->MaxPrec;
 
-    if (word_a >= word_r) goto space_error;
+    if (word_a >= word_r || word_b + word_c - 2 >= word_r) goto space_error;
 
     ind_r = 1;
     r->frac[0] = 0;
