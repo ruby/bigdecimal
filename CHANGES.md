@@ -1,5 +1,15 @@
 # CHANGES
 
+## 3.2.0
+
+* Fix division rounding. [GH-330] [GH-328]
+
+  **@tompng**
+
+* Fix exponential precision growth in division. [GH-329] [GH-220] [GH-222] [GH-272]
+
+  **@tompng**
+
 ## 3.1.9
 
 * Accept no digits in the fractional part (#302)
