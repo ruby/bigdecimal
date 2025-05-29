@@ -86,6 +86,27 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| sqrt(BigDecimal("2e50"), n) }
   end
 
+  def test_cbrt
+    assert_equal(1234, cbrt(BigDecimal(1234**3), N))
+    assert_equal(-12345, cbrt(BigDecimal(-12345**3), N))
+    assert_equal(12345678987654321, cbrt(BigDecimal(12345678987654321) ** 3, N))
+    assert_equal(0, cbrt(BigDecimal("0"), N))
+    assert_equal(0, cbrt(BigDecimal("-0"), N))
+    assert_positive_infinite_calculation { cbrt(PINF, N) }
+    assert_negative_infinite_calculation { cbrt(MINF, N) }
+
+    assert_in_exact_precision(SQRT2, cbrt(SQRT2 ** 3, 100), 100)
+    assert_in_exact_precision(SQRT3, cbrt(SQRT3 ** 3, 100), 100)
+    assert_equal(BigDecimal("3e50"), cbrt(BigDecimal("27e150"), N))
+    assert_equal(BigDecimal("-4e50"), cbrt(BigDecimal("-64e150"), N))
+    assert_in_epsilon(Math.cbrt(28e150), cbrt(BigDecimal("28e150"), N))
+    assert_in_epsilon(Math.cbrt(27e151), cbrt(BigDecimal("27e151"), N))
+    assert_converge_in_precision {|n| cbrt(BigDecimal("2"), n) }
+    assert_converge_in_precision {|n| cbrt(BigDecimal("2e-50"), n) }
+    assert_converge_in_precision {|n| cbrt(SQRT2, n) }
+    assert_converge_in_precision {|n| cbrt(BigDecimal("2e50"), n) }
+  end
+
   def test_hypot
     assert_in_exact_precision(SQRT2, hypot(BigDecimal("1"), BigDecimal("1"), 100), 100)
     assert_in_exact_precision(SQRT5, hypot(SQRT2, SQRT3, 100), 100)

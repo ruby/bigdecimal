@@ -5,6 +5,7 @@ require 'bigdecimal'
 #--
 # Contents:
 #   sqrt(x, prec)
+#   cbrt(x, prec)
 #   hypot(x, y, prec)
 #   sin (x, prec)
 #   cos (x, prec)
@@ -73,6 +74,34 @@ module BigMath
         return [div % 2 == 0 ? 1 : -1, mod.mult(1, prec)]
       end
     end
+  end
+
+  # call-seq:
+  #   cbrt(decimal, numeric) -> BigDecimal
+  #
+  # Computes the cube root of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.cbrt(BigDecimal('2'), 32).to_s
+  #   #=> "0.12599210498948731647672106072782e1"
+  #
+  def cbrt(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :cbrt)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cbrt)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result * x.infinite? if x.infinite?
+    return BigDecimal(0) if x.zero?
+
+    x = -x if neg = x < 0
+    ex = x.exponent / 3
+    x = x._decimal_shift(-3 * ex)
+    y = BigDecimal(Math.cbrt(x.to_f))
+    precs = [prec + BigDecimal.double_fig]
+    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
+    precs.reverse_each do |p|
+      y = (2 * y + x.div(y, p).div(y, p)).div(3, p)
+    end
+    y._decimal_shift(ex).mult(neg ? -1 : 1, prec)
   end
 
   # call-seq:
