@@ -5,6 +5,7 @@ require 'bigdecimal'
 #--
 # Contents:
 #   sqrt(x, prec)
+#   cbrt(x, prec)
 #   hypot(x, y, prec)
 #   sin (x, prec)
 #   cos (x, prec)
@@ -44,6 +45,31 @@ module BigMath
   #
   def sqrt(x, prec)
     x.sqrt(prec)
+  end
+
+  # call-seq:
+  #   cbrt(decimal, numeric) -> BigDecimal
+  #
+  # Computes the cube root of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.cbrt(BigDecimal('2'), 16).to_s
+  #   #=> "0.125992104989487316476721060727822e1"
+  #
+  def cbrt(x, prec)
+    raise ArgumentError, "Zero or negative precision for cbrt" if prec <= 0
+    return x if x.zero? || x.infinite? || x.nan?
+    return -cbrt(-x, prec) if x < 0
+
+    ex = x.exponent / 3
+    x *= BigDecimal("1e#{-ex * 3}")
+    y = BigDecimal(Math.cbrt(x.to_f))
+    precs = [prec + BigDecimal.double_fig]
+    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
+    precs.reverse_each do |p|
+      y = (2 * y + x.div(y, p).div(y, p)).div(3, p)
+    end
+    y * BigDecimal("1e#{ex}")
   end
 
   # call-seq:

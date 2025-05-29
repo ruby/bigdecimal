@@ -34,6 +34,26 @@ class TestBigMath < Test::Unit::TestCase
     assert_relative_precision {|n| sqrt(BigDecimal("2e50"), n) }
   end
 
+  def test_cbrt
+    assert_equal(1234, cbrt(BigDecimal(1234**3), N))
+    assert_equal(-12345, cbrt(BigDecimal(-12345**3), N))
+    assert_equal(12345678987654321, cbrt(BigDecimal(12345678987654321) ** 3, N))
+    assert_equal(0, cbrt(BigDecimal("0"), N))
+    assert_equal(0, cbrt(BigDecimal("-0"), N))
+    assert_equal(PINF, cbrt(PINF, N))
+    assert_equal(MINF, cbrt(MINF, N))
+
+    assert_in_delta(SQRT2, cbrt(SQRT2 ** 3, 100), BigDecimal("1e-100"))
+    assert_in_delta(SQRT3, cbrt(SQRT3 ** 3, 100), BigDecimal("1e-100"))
+    assert_equal(BigDecimal("3e50"), cbrt(BigDecimal("27e150"), N))
+    assert_equal(BigDecimal("-4e50"), cbrt(BigDecimal("-64e150"), N))
+    assert_in_epsilon(Math.cbrt(28e150), cbrt(BigDecimal("28e150"), N))
+    assert_in_epsilon(Math.cbrt(27e151), cbrt(BigDecimal("27e151"), N))
+    assert_relative_precision {|n| cbrt(BigDecimal("2"), n) }
+    assert_relative_precision {|n| cbrt(BigDecimal("2e-50"), n) }
+    assert_relative_precision {|n| cbrt(BigDecimal("2e50"), n) }
+  end
+
   def test_hypot
     assert_in_delta(SQRT2, hypot(BigDecimal("1"), BigDecimal("1"), 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT5, hypot(SQRT2, SQRT3, 100), BigDecimal("1e-100"))
