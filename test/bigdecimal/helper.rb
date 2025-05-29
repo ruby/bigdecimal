@@ -40,15 +40,15 @@ module TestBigDecimalBase
   # Asserts that the calculation of the given block converges to some value
   # with precision specified by block parameter.
 
-  def assert_fixed_point_precision(&block)
-    _assert_precision(:fixed_point, &block)
+  def assert_fixed_point_precision(extra_digits: 0, &block)
+    _assert_precision(:fixed_point, extra_digits: extra_digits, &block)
   end
 
-  def assert_relative_precision(&block)
-    _assert_precision(:relative, &block)
+  def assert_relative_precision(extra_digits: 0, &block)
+    _assert_precision(:relative, extra_digits: extra_digits, &block)
   end
 
-  def _assert_precision(mode)
+  def _assert_precision(mode, extra_digits:)
     expected = yield(200)
     [50, 100, 150].each do |n|
       value = yield(n)
@@ -60,7 +60,7 @@ module TestBigDecimalBase
         raise ArgumentError, "Unknown mode: #{mode}"
       end
       assert(value != expected, "Unable to estimate precision for exact value")
-      assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
+      assert(precision >= n + extra_digits, "Precision is not enough: #{precision} < #{n} + #{extra_digits}")
     end
   end
 end
