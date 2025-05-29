@@ -1485,7 +1485,8 @@ BigDecimal_add(VALUE self, VALUE r)
     return VpCheckGetValue(c);
 }
 
- /*  call-seq:
+ /*
+  *  call-seq:
   *    self - value -> bigdecimal
   *
   *  Returns the \BigDecimal difference of +self+ and +value+:
@@ -2053,8 +2054,8 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
 }
 
 /* call-seq:
- * a % b
- * a.modulo(b)
+ *   a % b
+ *   a.modulo(b)
  *
  * Returns the modulus from dividing by b.
  *
@@ -2127,7 +2128,7 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 }
 
 /* call-seq:
- * remainder(value)
+ *   remainder(value)
  *
  * Returns the remainder from dividing by the value.
  *
@@ -2144,7 +2145,7 @@ BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
 }
 
 /* call-seq:
- * divmod(value)
+ *   divmod(value)
  *
  * Divides by the specified value, and returns the quotient and modulus
  * as BigDecimal numbers. The quotient is rounded towards negative infinity.
@@ -2316,7 +2317,7 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 }
 
 /* call-seq:
- * sub(value, digits)  -> bigdecimal
+ *   sub(value, digits)  -> bigdecimal
  *
  * Subtract the specified value.
  *
@@ -2415,7 +2416,7 @@ BigDecimal_abs(VALUE self)
 }
 
 /* call-seq:
- * sqrt(n)
+ *   sqrt(n)
  *
  * Returns the square root of the value.
  *
@@ -2456,7 +2457,7 @@ BigDecimal_fix(VALUE self)
 }
 
 /* call-seq:
- * round(n, mode)
+ *   round(n, mode)
  *
  * Round to the nearest integer (by default), returning the result as a
  * BigDecimal if n is specified and positive, or as an Integer if it isn't.
@@ -2534,7 +2535,7 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 }
 
 /* call-seq:
- * truncate(n)
+ *   truncate(n)
  *
  * Truncate to the nearest integer (by default), returning the result as a
  * BigDecimal.
@@ -2596,7 +2597,7 @@ BigDecimal_frac(VALUE self)
 }
 
 /* call-seq:
- * floor(n)
+ *   floor(n)
  *
  * Return the largest integer less than or equal to the value, as a BigDecimal.
  *
@@ -2643,7 +2644,7 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 }
 
 /* call-seq:
- * ceil(n)
+ *   ceil(n)
  *
  * Return the smallest integer greater than or equal to the value, as a BigDecimal.
  *
@@ -2686,7 +2687,7 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 }
 
 /* call-seq:
- * to_s(s)
+ *   to_s(s)
  *
  * Converts the value to a string.
  *
@@ -2996,8 +2997,8 @@ bigdecimal_power_by_bigdecimal(Real const* x, Real const* exp, ssize_t const n)
 }
 
 /* call-seq:
- * power(n)
- * power(n, prec)
+ *   power(n)
+ *   power(n, prec)
  *
  * Returns the value raised to the power of n.
  *
@@ -3788,8 +3789,9 @@ BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
         return VpCheckGetValue(vp);
 }
 
- /* call-seq:
-  * BigDecimal.limit(digits)
+ /*
+  * call-seq:
+  *   BigDecimal.limit(digits)
   *
   * Limit the number of significant digits in newly created BigDecimal
   * numbers to the specified value. Rounding is performed as necessary,
@@ -3923,7 +3925,7 @@ BigDecimal_save_limit(VALUE self)
 }
 
 /* call-seq:
- * BigMath.exp(decimal, numeric)    -> BigDecimal
+ *   BigMath.exp(decimal, numeric)    -> BigDecimal
  *
  * Computes the value of e (the base of natural logarithms) raised to the
  * power of +decimal+, to the specified number of digits of precision.
@@ -4054,7 +4056,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
 }
 
 /* call-seq:
- * BigMath.log(decimal, numeric)    -> BigDecimal
+ *   BigMath.log(decimal, numeric)    -> BigDecimal
  *
  * Computes the natural logarithm of +decimal+ to the specified number of
  * digits of precision, +numeric+.
