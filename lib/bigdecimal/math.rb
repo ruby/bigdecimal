@@ -5,6 +5,7 @@ require 'bigdecimal'
 #--
 # Contents:
 #   sqrt(x, prec)
+#   cbrt(x, prec)
 #   hypot(x, y, prec)
 #   sin (x, prec)
 #   cos (x, prec)
@@ -44,6 +45,61 @@ module BigMath
   #
   def sqrt(x, prec)
     x.sqrt(prec)
+  end
+
+  # call-seq:
+  #   cbrt(decimal, numeric) -> BigDecimal
+  #
+  # Computes the cube root of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.cbrt(BigDecimal('2'), 16).to_s
+  #   #=> "0.125992104989487316476721060727822e1"
+  #
+  def cbrt(x, prec)
+    raise ArgumentError, "Zero or negative precision for cbrt" if prec <= 0
+    return x if x.zero? || x.infinite? || x.nan?
+    return -cbrt(-x, prec) if x < 0
+
+    n_digits = x.n_significant_digits
+    prec = [prec, n_digits].max
+
+    if n_digits < prec / 2
+      # Fast path for cbrt(8e150) => 2e50
+      ex = (n_digits - x.exponent + 2) / 3
+      n = (x * BigDecimal("1e#{3 * ex}")).to_i
+      cbrt = _int_cbrt(n)
+      return BigDecimal(cbrt) * BigDecimal("1e#{-ex}") if cbrt**3 == n
+    end
+
+    ex = prec + BigDecimal.double_fig - x.exponent / 3
+    cbrt = _int_cbrt(x * BigDecimal("1e#{3 * ex}"))
+    BigDecimal(cbrt) * BigDecimal("1e#{-ex}")
+  end
+
+  # Private method used internally by `cbrt`.
+  # Cube root version of `Intger.sqrt(n)`
+  # Returns the largest integer whose cube is less than or equal to n if n is positive.
+  private_class_method def _int_cbrt(n)
+    n = n.to_i
+    return -_int_cbrt(-n) if n < 0
+
+    if n <= 0xffffffff
+      v = Math.cbrt(n).floor
+    else
+      shift = (n.bit_length - 1) / 6
+      v = _int_cbrt(n >> (3 * shift)) << shift
+    end
+
+    v = (2 * v + n / v / v) / 3
+    v2 = v * v
+    v3 = v2 * v
+    while v3 > n
+      v3 -= 3 * v2 - 3 * v + 1
+      v2 -= 2 * v - 1
+      v -= 1
+    end
+    v
   end
 
   # call-seq:
