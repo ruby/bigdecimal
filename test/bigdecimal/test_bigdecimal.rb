@@ -1725,6 +1725,24 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_arithmetic_operation_with_limit
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(BigDecimal('0.889'), (BigDecimal('0.8888') + BigDecimal('0')))
+      assert_equal(BigDecimal('0.889'), (BigDecimal('0.8888') - BigDecimal('0')))
+      assert_equal(BigDecimal('2.66'), (BigDecimal('0.888') * BigDecimal('3')))
+      assert_equal(BigDecimal('0.296'), (BigDecimal('0.8888') / BigDecimal('3')))
+      assert_equal(BigDecimal('0.889'), BigDecimal('0.8888').add(BigDecimal('0'), 0))
+      assert_equal(BigDecimal('0.889'), BigDecimal('0.8888').sub(BigDecimal('0'), 0))
+      assert_equal(BigDecimal('2.66'), BigDecimal('0.888').mult(BigDecimal('3'), 0))
+      assert_equal(BigDecimal('0.296'), BigDecimal('0.8888').div(BigDecimal('3'), 0))
+      assert_equal(BigDecimal('0.8888'), BigDecimal('0.8888').add(BigDecimal('0'), 5))
+      assert_equal(BigDecimal('0.8888'), BigDecimal('0.8888').sub(BigDecimal('0'), 5))
+      assert_equal(BigDecimal('2.664'), BigDecimal('0.888').mult(BigDecimal('3'), 5))
+      assert_equal(BigDecimal('0.29627'), BigDecimal('0.8888').div(BigDecimal('3'), 5))
+    end
+  end
+
   def test_sign
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
