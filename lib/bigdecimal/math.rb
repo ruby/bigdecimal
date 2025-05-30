@@ -10,6 +10,8 @@ require 'bigdecimal'
 #   sin (x, prec)
 #   cos (x, prec)
 #   tan (x, prec)
+#   asin(x, prec)
+#   acos(x, prec)
 #   atan(x, prec)
 #   atan2(y, x, prec)
 #   PI  (prec)
@@ -247,6 +249,55 @@ module BigMath
   end
 
   # call-seq:
+  #   asin(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arcsine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asin(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.52359877559829887307710723054659e0"
+  #
+  def asin(x, prec)
+    raise ArgumentError, "Zero or negative precision for asin" if prec <= 0
+    raise Math::DomainError, "Out of domain argument for asin" if x < -1 || x > 1
+    return BigDecimal::NAN if x.nan?
+    prec2 = prec + BigDecimal.double_fig
+    cos = (1 - x**2).sqrt(prec2)
+    if cos.zero?
+      pi = PI(prec)
+      x > 0 ? pi / 2 : -pi / 2
+    else
+      atan(x.div(cos, prec2), prec)
+    end
+  end
+
+  # call-seq:
+  #   acos(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arccosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acos(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.10471975511965977461542144610932e1"
+  #
+  def acos(x, prec)
+    raise ArgumentError, "Zero or negative precision for acos" if prec <= 0
+    raise Math::DomainError, "Out of domain argument for acos" if x < -1 || x > 1
+
+    return PI(prec) / 2 - asin(x, prec) if x < 0
+    return PI(prec) / 2 if x.zero?
+    return BigDecimal::NAN if x.nan?
+
+    prec2 = prec + BigDecimal.double_fig
+    sin = (1 - x**2).sqrt(prec2)
+    atan(sin.div(x, prec2), prec)
+  end
+
+  # call-seq:
   #   atan(decimal, numeric) -> BigDecimal
   #
   # Computes the arctangent of +decimal+ to the specified number of digits of
@@ -282,7 +333,7 @@ module BigMath
     y *= 2 if dbl
     y = pi / 2 - y if inv
     y = -y if neg
-    y
+    y.mult(1, n)
   end
 
   # call-seq:
