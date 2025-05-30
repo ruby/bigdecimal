@@ -181,6 +181,41 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| tan(BigMath::PI(50), n) }
   end
 
+  def test_asin
+    ["-1", "-0.9", "-0.1", "0", "0.1", "0.9", "1"].each do |x|
+      assert_in_delta(Math.asin(x.to_f), asin(BigDecimal(x), N))
+    end
+    assert_raise(Math::DomainError) { BigMath.asin(BigDecimal("1.1"), N) }
+    assert_raise(Math::DomainError) { BigMath.asin(BigDecimal("-1.1"), N) }
+    assert_in_exact_precision(PI(100) / 6, asin(BigDecimal("0.5"), 100), 100)
+    assert_converge_in_precision {|n| asin(BigDecimal("-0.4"), n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("0.3"), n) }
+    assert_converge_in_precision {|n| asin(SQRT2 / 2, n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("0.9"), n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("0.#{"9" * 50}"), n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("0.#{"9" * 100}"), n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("0.#{"9" * 195}"), n) }
+    assert_converge_in_precision {|n| asin(BigDecimal("1e-30"), n) }
+  end
+
+  def test_acos
+    ["-1", "-0.9", "-0.1", "0", "0.1", "0.9", "1"].each do |x|
+      assert_in_delta(Math.acos(x.to_f), acos(BigDecimal(x), N))
+    end
+    assert_raise(Math::DomainError) { BigMath.acos(BigDecimal("1.1"), N) }
+    assert_raise(Math::DomainError) { BigMath.acos(BigDecimal("-1.1"), N) }
+    assert_equal(0, acos(BigDecimal("1.0"), N))
+    assert_in_exact_precision(PI(100) / 3, acos(BigDecimal("0.5"), 100), 100)
+    assert_converge_in_precision {|n| acos(BigDecimal("-0.4"), n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("0.3"), n) }
+    assert_converge_in_precision {|n| acos(SQRT2 / 2, n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("0.9"), n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("0.#{"9" * 50}"), n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("0.#{"9" * 100}"), n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("0.#{"9" * 195}"), n) }
+    assert_converge_in_precision {|n| acos(BigDecimal("1e-30"), n) }
+  end
+
   def test_atan
     assert_equal(0.0, atan(BigDecimal("0.0"), N))
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))

@@ -10,6 +10,8 @@ require 'bigdecimal'
 #   sin (x, prec)
 #   cos (x, prec)
 #   tan (x, prec)
+#   asin(x, prec)
+#   acos(x, prec)
 #   atan(x, prec)
 #   atan2(y, x, prec)
 #   PI  (prec)
@@ -196,6 +198,57 @@ module BigMath
   def tan(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :tan)
     sin(x, prec + BigDecimal.double_fig).div(cos(x, prec + BigDecimal.double_fig), prec)
+  end
+
+  # call-seq:
+  #   asin(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arcsine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asin(BigDecimal('0.5'), 32).to_s
+  #   #=> "0.52359877559829887307710723054658e0"
+  #
+  def asin(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :asin)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :asin)
+    raise Math::DomainError, "Out of domain argument for asin" if x < -1 || x > 1
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+
+    prec2 = prec + BigDecimal.double_fig
+    cos = (1 - x**2).sqrt(prec2)
+    if cos.zero?
+      PI(prec2).div(x > 0 ? 2 : -2, prec)
+    else
+      atan(x.div(cos, prec2), prec)
+    end
+  end
+
+  # call-seq:
+  #   acos(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arccosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acos(BigDecimal('0.5'), 32).to_s
+  #   #=> "0.10471975511965977461542144610932e1"
+  #
+  def acos(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :acos)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :acos)
+    raise Math::DomainError, "Out of domain argument for acos" if x < -1 || x > 1
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+
+    prec2 = prec + BigDecimal.double_fig
+    return (PI(prec2) / 2).sub(asin(x, prec2), prec) if x < 0
+    return PI(prec2).div(2, prec) if x.zero?
+
+    sin = (1 - x**2).sqrt(prec2)
+    atan(sin.div(x, prec2), prec)
   end
 
   # call-seq:
