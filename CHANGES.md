@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.2.1
+
+* Fix division precision limit. [GH-335]
+
+  **@tompng**
+
 ## 3.2.0
 
 * Fix division rounding. [GH-330] [GH-328]
