@@ -368,4 +368,44 @@ class TestBigMath < Test::Unit::TestCase
     end
     SRC
   end
+
+  def test_log2
+    assert_raise(Math::DomainError) { log2(BigDecimal("-0.01"), N) }
+    assert_raise(Math::DomainError) { log2(MINF, N) }
+    assert_positive_infinite_calculation { log2(PINF, N) }
+    assert_in_exact_precision(
+      BigDecimal("1.5849625007211561814537389439478165087598144076924810604557526545410982277943585625222804749180882420909806624750592"),
+      log2(BigDecimal("3"), 100),
+      100
+    )
+    assert_converge_in_precision {|n| log2(SQRT2, n) }
+    assert_converge_in_precision {|n| log2(BigDecimal("3e20"), n) }
+    assert_converge_in_precision {|n| log2(BigDecimal("1e-20") + 1, n) }
+    [BigDecimal::ROUND_UP, BigDecimal::ROUND_DOWN].each do |round_mode|
+      BigDecimal.mode(BigDecimal::ROUND_MODE, round_mode)
+      [0, 1, 2, 11, 123].each do |n|
+        assert_equal(n, log2(BigDecimal(2**n), N))
+      end
+    end
+  end
+
+  def test_log10
+    assert_raise(Math::DomainError) { log10(BigDecimal("-0.01"), N) }
+    assert_raise(Math::DomainError) { log10(MINF, N) }
+    assert_positive_infinite_calculation { log10(PINF, N) }
+    assert_in_exact_precision(
+      BigDecimal("0.4771212547196624372950279032551153092001288641906958648298656403052291527836611230429683556476163015104646927682520"),
+      log10(BigDecimal("3"), 100),
+      100
+    )
+    assert_converge_in_precision {|n| log10(SQRT2, n) }
+    assert_converge_in_precision {|n| log10(BigDecimal("3e20"), n) }
+    assert_converge_in_precision {|n| log10(BigDecimal("1e-20") + 1, n) }
+    [BigDecimal::ROUND_UP, BigDecimal::ROUND_DOWN].each do |round_mode|
+      BigDecimal.mode(BigDecimal::ROUND_MODE, round_mode)
+      [0, 1, 2, 11, 123].each do |n|
+        assert_equal(n, log10(BigDecimal(10**n), N))
+      end
+    end
+  end
 end

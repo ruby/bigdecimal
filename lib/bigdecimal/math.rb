@@ -20,6 +20,8 @@ require 'bigdecimal'
 #   asinh(x, prec)
 #   acosh(x, prec)
 #   atanh(x, prec)
+#   log2 (x, prec)
+#   log10(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -464,6 +466,62 @@ module BigMath
 
     prec2 = prec + BigDecimal.double_fig
     (BigMath.log(x + 1, prec2) - BigMath.log(1 - x, prec2)).div(2, prec)
+  end
+
+  # call-seq:
+  #   BigMath.log2(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 2 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log2(BigDecimal('3'), 32).to_s
+  #   #=> "0.15849625007211561814537389439478e1"
+  #
+  def log2(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :log2)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log2)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(2), prec2), prec2)
+    # Perform half-up rounding to calculate log2(2**n)==n correctly in every rounding mode
+    v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+    v.mult(1, prec)
+  end
+
+  # call-seq:
+  #   BigMath.log10(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 10 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log10(BigDecimal('3'), 32).to_s
+  #   #=> "0.47712125471966243729502790325512e0"
+  #
+  def log10(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :log10)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log10)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(10), prec2), prec2)
+    # Perform half-up rounding to calculate log10(10**n)==n correctly in every rounding mode
+    v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+    v.mult(1, prec)
   end
 
   # call-seq:
