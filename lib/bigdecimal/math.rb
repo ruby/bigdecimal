@@ -14,6 +14,9 @@ require 'bigdecimal'
 #   acos(x, prec)
 #   atan(x, prec)
 #   atan2(y, x, prec)
+#   sinh (x, prec)
+#   cosh (x, prec)
+#   tanh (x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -324,6 +327,74 @@ module BigMath
       v = xlarge ? PI(prec2) - atan(-y.div(x, prec2), prec2) : PI(prec2) / 2 + atan(x.div(-y, prec2), prec2)
     end
     v.mult(neg ? -1 : 1, prec)
+  end
+
+  # call-seq:
+  #   sinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.sinh(BigDecimal('1'), 32).to_s
+  #   #=> "0.11752011936438014568823818505956e1"
+  #
+  def sinh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :sinh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sinh)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result * x.infinite? if x.infinite?
+
+    prec2 = prec + BigDecimal.double_fig
+    prec2 -= x.exponent if x.exponent < 0
+    e = BigMath.exp(x, prec2)
+    (e - BigDecimal(1).div(e, prec2)).div(2, prec)
+  end
+
+  # call-seq:
+  #   cosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.cosh(BigDecimal('1'), 32).to_s
+  #   #=> "0.15430806348152437784779056207571e1"
+  #
+  def cosh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :cosh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cosh)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result if x.infinite?
+
+    prec2 = prec + BigDecimal.double_fig
+    e = BigMath.exp(x, prec2)
+    (e + BigDecimal(1).div(e, prec2)).div(2, prec)
+  end
+
+  # call-seq:
+  #   tanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.tanh(BigDecimal('1'), 32).to_s
+  #   #=> "0.76159415595576488811945828260479e0"
+  #
+  def tanh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :tanh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :tanh)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal(x.infinite?) if x.infinite?
+
+    prec2 = prec + BigDecimal.double_fig + [-x.exponent, 0].max
+    e = BigMath.exp(x, prec2)
+    einv = BigDecimal(1).div(e, prec2)
+    (e - einv).div(e + einv, prec)
   end
 
   # call-seq:
