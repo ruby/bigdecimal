@@ -199,6 +199,33 @@ class TestBigMath < Test::Unit::TestCase
     end
   end
 
+  def test_hyperbolic
+    [-1, 0, 0.5, 1, 10].each do |x|
+      assert_in_delta(Math.sinh(x), sinh(BigDecimal(x.to_s), N))
+      assert_in_delta(Math.cosh(x), cosh(BigDecimal(x.to_s), N))
+      assert_in_delta(Math.tanh(x), tanh(BigDecimal(x.to_s), N))
+    end
+    [MINF, BigDecimal(0), PINF].each do |x|
+      assert_equal(Math.sinh(x.to_f), sinh(x, N).to_f)
+      assert_equal(Math.cosh(x.to_f), cosh(x, N).to_f)
+      assert_equal(Math.tanh(x.to_f), tanh(x, N).to_f)
+    end
+
+    x = BigDecimal("0.3")
+    assert_in_delta(tanh(x, 100), sinh(x, 100) / cosh(x, 100), BigDecimal("1e-100"))
+
+    e = E(116)
+    assert_in_delta((e - 1 / e) / 2, sinh(BigDecimal(1), 100), BigDecimal("1e-100"))
+    assert_in_delta((e + 1 / e) / 2, cosh(BigDecimal(1), 100), BigDecimal("1e-100"))
+    assert_in_delta((e - 1 / e) / (e + 1 / e), tanh(BigDecimal(1), 100), BigDecimal("1e-100"))
+
+    ["1e-30", "0.2", "10", "100"].each do |x|
+      assert_relative_precision {|n| sinh(BigDecimal(x), n)}
+      assert_relative_precision {|n| cosh(BigDecimal(x), n)}
+      assert_relative_precision {|n| tanh(BigDecimal(x), n)}
+    end
+  end
+
   def test_log
     assert_equal(0, BigMath.log(BigDecimal("1.0"), 10))
     assert_in_epsilon(Math.log(10)*1000, BigMath.log(BigDecimal("1e1000"), 10))
