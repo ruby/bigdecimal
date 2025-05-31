@@ -14,6 +14,9 @@ require 'bigdecimal'
 #   acos(x, prec)
 #   atan(x, prec)
 #   atan2(y, x, prec)
+#   sinh (x, prec)
+#   cosh (x, prec)
+#   tanh (x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -334,6 +337,72 @@ module BigMath
       v = xlarge ? PI(prec) - atan(-y.div(x, divprec), prec) : PI(prec) / 2 + atan(x.div(-y, divprec), prec)
     end
     neg ? -v : v
+  end
+
+  # call-seq:
+  #   sinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.sinh(BigDecimal('1'), 16).to_s
+  #   #=> "0.11752011936438014568823818505956e1"
+  #
+  def sinh(x, prec)
+    raise ArgumentError, "Zero or negative precision for sinh" if prec <= 0
+    return BigDecimal::NAN if x.nan?
+    return x if x.infinite?
+
+    prec += BigDecimal.double_fig
+    prec -= x.exponent if x.exponent < 0
+    e = BigMath.exp(x, prec)
+    (e - BigDecimal(1).div(e, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   cosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.cosh(BigDecimal('1'), 16).to_s
+  #   #=> "0.15430806348152437784779056207571e1"
+  #
+  def cosh(x, prec)
+    raise ArgumentError, "Zero or negative precision for cosh" if prec <= 0
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite?
+
+    prec += BigDecimal.double_fig
+    e = BigMath.exp(x, prec)
+    (e + BigDecimal(1).div(e, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   tanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.tanh(BigDecimal('1'), 16).to_s
+  #   #=> "0.7615941559557648881194582826048e0"
+  #
+  def tanh(x, prec)
+    raise ArgumentError, "Zero or negative precision for tanh" if prec <= 0
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal(x.infinite?) if x.infinite?
+
+    prec += BigDecimal.double_fig
+    prec2 = prec + [-x.exponent, 0].max
+    e = BigMath.exp(x, prec2)
+    einv = BigDecimal(1).div(e, prec2)
+    (e - einv).div(e + einv, prec)
   end
 
   # call-seq:
