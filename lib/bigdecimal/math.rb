@@ -17,6 +17,9 @@ require 'bigdecimal'
 #   sinh (x, prec)
 #   cosh (x, prec)
 #   tanh (x, prec)
+#   asinh(x, prec)
+#   acosh(x, prec)
+#   atanh(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -395,6 +398,72 @@ module BigMath
     e = BigMath.exp(x, prec2)
     einv = BigDecimal(1).div(e, prec2)
     (e - einv).div(e + einv, prec)
+  end
+
+  # call-seq:
+  #   asinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asinh(BigDecimal('1'), 32).to_s
+  #   #=> "0.88137358701954302523260932497979e0"
+  #
+  def asinh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :asinh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :asinh)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result * x.infinite? if x.infinite?
+    return -asinh(-x, prec) if x < 0
+
+    sqrt_prec = prec + [-x.exponent, 0].max + BigDecimal.double_fig
+    BigMath.log(x + sqrt(x**2 + 1, sqrt_prec), prec)
+  end
+
+  # call-seq:
+  #   acosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acosh(BigDecimal('2'), 32).to_s
+  #   #=> "0.1316957896924816708625046347308e1"
+  #
+  def acosh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :acosh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :acosh)
+    raise Math::DomainError, "Out of domain argument for acosh" if x < 1
+    return BigDecimal::Internal.infinity_computation_result if x.infinite?
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+
+    BigMath.log(x + sqrt(x**2 - 1, prec + BigDecimal.double_fig), prec)
+  end
+
+  # call-seq:
+  #   atanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.atanh(BigDecimal('0.5'), 32).to_s
+  #   #=> "0.54930614433405484569762261846126e0"
+  #
+  def atanh(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :atanh)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atanh)
+    raise Math::DomainError, "Out of domain argument for atanh" if x < -1 || x > 1
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return BigDecimal::Internal.infinity_computation_result if x == 1
+    return -BigDecimal::Internal.infinity_computation_result if x == -1
+
+    prec2 = prec + BigDecimal.double_fig
+    (BigMath.log(x + 1, prec2) - BigMath.log(1 - x, prec2)).div(2, prec)
   end
 
   # call-seq:
