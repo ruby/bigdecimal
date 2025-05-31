@@ -279,6 +279,53 @@ class TestBigMath < Test::Unit::TestCase
     end
   end
 
+  def test_asinh
+    [-3, 0.5, 10].each do |x|
+      assert_in_delta(Math.asinh(x), asinh(BigDecimal(x.to_s), N))
+    end
+    assert_equal(0, asinh(BigDecimal(0), N))
+    assert_positive_infinite_calculation { asinh(PINF, N) }
+    assert_negative_infinite_calculation { asinh(MINF, N) }
+
+    x = SQRT2 / 2
+    assert_in_exact_precision(x, asinh(sinh(x, 120), 100), 100)
+
+    ["1e-30", "0.2", "10", "100"].each do |x|
+      assert_converge_in_precision {|n| asinh(BigDecimal(x), n)}
+    end
+  end
+
+  def test_acosh
+    [1.5, 2, 10].each do |x|
+      assert_in_delta(Math.acosh(x), acosh(BigDecimal(x.to_s), N))
+    end
+    assert_equal(0, acosh(BigDecimal(1), N))
+    assert_positive_infinite_calculation { acosh(PINF, N) }
+
+    x = SQRT2
+    assert_in_exact_precision(x, acosh(cosh(x, 120), 100), 100)
+
+    ["1." + "0" * 30 + "1", "1.5", "2", "100"].each do |x|
+      assert_converge_in_precision {|n| acosh(BigDecimal(x), n)}
+    end
+  end
+
+  def test_atanh
+    [-0.5, 0.1, 0.9].each do |x|
+      assert_in_delta(Math.atanh(x), atanh(BigDecimal(x.to_s), N))
+    end
+    assert_equal(0, atanh(BigDecimal(0), N))
+    assert_positive_infinite_calculation { atanh(BigDecimal(1), N) }
+    assert_negative_infinite_calculation { atanh(BigDecimal(-1), N) }
+
+    x = SQRT2 / 2
+    assert_in_exact_precision(x, atanh(tanh(x, 120), 100), 100)
+
+    ["1e-30", "0.5", "0.9" + "9" * 30].each do |x|
+      assert_converge_in_precision {|n| atanh(BigDecimal(x), n)}
+    end
+  end
+
   def test_exp
     [-100, -2, 0.5, 10, 100].each do |x|
       assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))
