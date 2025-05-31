@@ -249,6 +249,36 @@ class TestBigMath < Test::Unit::TestCase
     end
   end
 
+  def test_hyperbolic
+    [-1, 0, 0.5, 1, 10].each do |x|
+      assert_in_delta(Math.sinh(x), sinh(BigDecimal(x.to_s), N))
+      assert_in_delta(Math.cosh(x), cosh(BigDecimal(x.to_s), N))
+      assert_in_delta(Math.tanh(x), tanh(BigDecimal(x.to_s), N))
+    end
+    assert_negative_infinite_calculation { sinh(MINF, N) }
+    assert_positive_infinite_calculation { sinh(PINF, N) }
+    assert_positive_infinite_calculation { cosh(MINF, N) }
+    assert_positive_infinite_calculation { cosh(PINF, N) }
+    assert_equal(-1, tanh(MINF, N))
+    assert_equal(+1, tanh(PINF, N))
+
+    x = BigDecimal("0.3")
+    assert_in_exact_precision(sinh(x, 120) / cosh(x, 120), tanh(x, 100), 100)
+    assert_in_exact_precision(tanh(x, 120) * cosh(x, 120), sinh(x, 100), 100)
+    assert_in_exact_precision(sinh(x, 120) / tanh(x, 120), cosh(x, 100), 100)
+
+    e = E(120)
+    assert_in_exact_precision((e - 1 / e) / 2, sinh(BigDecimal(1), 100), 100)
+    assert_in_exact_precision((e + 1 / e) / 2, cosh(BigDecimal(1), 100), 100)
+    assert_in_exact_precision((e - 1 / e) / (e + 1 / e), tanh(BigDecimal(1), 100), 100)
+
+    ["1e-30", "0.2", SQRT2, "10", "100"].each do |x|
+      assert_converge_in_precision {|n| sinh(BigDecimal(x), n)}
+      assert_converge_in_precision {|n| cosh(BigDecimal(x), n)}
+      assert_converge_in_precision {|n| tanh(BigDecimal(x), n)}
+    end
+  end
+
   def test_exp
     [-100, -2, 0.5, 10, 100].each do |x|
       assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))
