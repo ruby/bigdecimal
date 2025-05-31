@@ -17,6 +17,9 @@ require 'bigdecimal'
 #   sinh (x, prec)
 #   cosh (x, prec)
 #   tanh (x, prec)
+#   asinh(x, prec)
+#   acosh(x, prec)
+#   atanh(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -419,6 +422,67 @@ module BigMath
     e = BigMath.exp(x, prec2)
     einv = BigDecimal(1).div(e, prec2)
     (e - einv).div(e + einv, prec)
+  end
+
+  # call-seq:
+  #   asinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asinh(BigDecimal('1'), 16).to_s
+  #   #=> "0.881373587019543025232609324892919887466177636058e0"
+  #
+  def asinh(x, prec)
+    raise ArgumentError, "Zero or negative precision for tanh" if prec <= 0
+    return x if x.nan? || x.infinite?
+    return -asinh(-x, prec) if x < 0
+    BigMath.log(x + sqrt(x ** 2 + 1, prec), prec)
+  end
+
+  # call-seq:
+  #   acosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acosh(BigDecimal('2'), 16).to_s
+  #   #=> "0.1316957896924816708625046347239934461496535769096e1"
+  #
+  def acosh(x, prec)
+    raise ArgumentError, "Zero or negative precision for tanh" if prec <= 0
+    raise Math::DomainError, "Out of domain argument for acosh" if x < 1
+    return BigDecimal::INFINITY if x.infinite?
+    return BigDecimal::NAN if x.nan?
+
+    BigMath.log(x + sqrt(x ** 2 - 1, prec), prec)
+  end
+
+  # call-seq:
+  #   atanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.atanh(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.549306144334054845697622618461262852323745278910789847469990412e0"
+  #
+  def atanh(x, prec)
+    raise ArgumentError, "Zero or negative precision for tanh" if prec <= 0
+    raise Math::DomainError, "Out of domain argument for atanh" if x < -1 || x > 1
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x == 1
+    return -BigDecimal::INFINITY if x == -1
+
+    prec += BigDecimal.double_fig
+    prec -= x.exponent if x.exponent < 0
+    (BigMath.log(x + 1, prec) - BigMath.log(1 - x, prec)) / 2
   end
 
   # call-seq:
