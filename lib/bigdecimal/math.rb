@@ -20,6 +20,8 @@ require 'bigdecimal'
 #   asinh(x, prec)
 #   acosh(x, prec)
 #   atanh(x, prec)
+#   log2 (x, prec)
+#   log10(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -498,6 +500,56 @@ module BigMath
 
     prec += BigDecimal.double_fig
     (BigMath.log(x + 1, prec) - BigMath.log(1 - x, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   BigMath.log2(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 2 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log2(BigDecimal('3'), 16).to_s
+  #   #=> "0.158496250072115618145373894394782e1"
+  #
+  def log2(x, prec)
+    raise ArgumentError, "Zero or negative precision for log2" if prec <= 0
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(2), prec2), prec2)
+    v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+  end
+
+  # call-seq:
+  #   BigMath.log10(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 10 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log10(BigDecimal('3'), 16).to_s
+  #   #=> "0.47712125471966243729502790325512e0"
+  #
+  def log10(x, prec)
+    raise ArgumentError, "Zero or negative precision for log10" if prec <= 0
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(10), prec2), prec2)
+    v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
   end
 
   # call-seq:
