@@ -160,6 +160,26 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| atan(BigDecimal("1e30"), n)}
   end
 
+  def test_atan2
+    zero = BigDecimal(0)
+    one = BigDecimal(1)
+    assert_equal(0, atan2(zero, zero, N))
+    assert_equal(0, atan2(zero, one, N))
+    [MINF, -one, -zero, zero, one, PINF].repeated_permutation(2) do |y, x|
+      assert_in_delta(Math::atan2(y.to_f, x.to_f), atan2(y, x, N))
+    end
+    assert_in_exact_precision(PI(100), atan2(zero, -one, 100), 100)
+    assert_in_exact_precision(PI(100) / 2, atan2(one, zero, 100), 100)
+    assert_in_exact_precision(-PI(100) / 2, atan2(-one, zero, 100), 100)
+    assert_in_exact_precision(PI(100) / 3, atan2(BigDecimal(3), SQRT3, 100), 100)
+    assert_in_exact_precision(PI(100) / 6, atan2(SQRT3, BigDecimal(3), 100), 100)
+    assert_converge_in_precision {|n| atan2(SQRT2, SQRT3, n) }
+    ['-1e20', '-2', '-1e-30', '1e-30', '2', '1e20'].repeated_permutation(2) do |y, x|
+      assert_in_delta(Math.atan2(y.to_f, x.to_f), atan2(BigDecimal(y), BigDecimal(x), N))
+      assert_converge_in_precision {|n| atan2(BigDecimal(y), BigDecimal(x), n) }
+    end
+  end
+
   def test_exp
     [-100, -2, 0.5, 10, 100].each do |x|
       assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))

@@ -9,11 +9,12 @@ require 'bigdecimal'
 #   cos (x, prec)
 #   tan (x, prec)
 #   atan(x, prec)
+#   atan2(y, x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
 # where:
-#   x    ... BigDecimal number to be computed.
+#   x, y ... BigDecimal number to be computed.
 #   prec ... Number of digits to be obtained.
 #++
 #
@@ -186,6 +187,41 @@ module BigMath
     y = pi / 2 - y if inv
     y = -y if neg
     y.mult(1, prec)
+  end
+
+  # call-seq:
+  #   atan2(decimal, decimal, numeric) -> BigDecimal
+  #
+  # Computes the arctangent of y and x to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.atan2(BigDecimal('-1'), BigDecimal('1'), 32).to_s
+  #   #=> "-0.78539816339744830961566084581988e0"
+  #
+  def atan2(y, x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :atan2)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan2)
+    y = BigDecimal::Internal.coerce_to_bigdecimal(y, prec, :atan2)
+    return BigDecimal::Internal.nan_computation_result if x.nan? || y.nan?
+
+    if x.infinite? || y.infinite?
+      one = BigDecimal(1)
+      zero = BigDecimal(0)
+      x = x.infinite? ? (x > 0 ? one : -one) : zero
+      y = y.infinite? ? (y > 0 ? one : -one) : y.sign * zero
+    end
+
+    return x.sign >= 0 ? BigDecimal(0) : y.sign * PI(prec) if y.zero?
+
+    y = -y if neg = y < 0
+    xlarge = y.abs < x.abs
+    prec2 = prec + BigDecimal.double_fig
+    if x > 0
+      v = xlarge ? atan(y.div(x, prec2), prec) : PI(prec2) / 2 - atan(x.div(y, prec2), prec2)
+    else
+      v = xlarge ? PI(prec2) - atan(-y.div(x, prec2), prec2) : PI(prec2) / 2 + atan(x.div(-y, prec2), prec2)
+    end
+    v.mult(neg ? -1 : 1, prec)
   end
 
   # call-seq:
