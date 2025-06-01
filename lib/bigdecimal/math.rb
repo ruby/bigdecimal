@@ -5,6 +5,7 @@ require 'bigdecimal'
 #--
 # Contents:
 #   sqrt(x, prec)
+#   hypot(x, y, prec)
 #   sin (x, prec)
 #   cos (x, prec)
 #   tan (x, prec)
@@ -72,6 +73,25 @@ module BigMath
         return [div % 2 == 0 ? 1 : -1, mod.mult(1, prec)]
       end
     end
+  end
+
+  # call-seq:
+  #   hypot(x, y, numeric) -> BigDecimal
+  #
+  # Returns sqrt(x**2 + y**2) to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.hypot(BigDecimal('1'), BigDecimal('2'), 32).to_s
+  #   #=> "0.22360679774997896964091736687313e1"
+  #
+  def hypot(x, y, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :hypot)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :hypot)
+    y = BigDecimal::Internal.coerce_to_bigdecimal(y, prec, :hypot)
+    return BigDecimal::Internal.nan_computation_result if x.nan? || y.nan?
+    return BigDecimal::Internal.infinity_computation_result if x.infinite? || y.infinite?
+    prec2 = prec + BigDecimal.double_fig
+    sqrt(x.mult(x, prec2) + y.mult(y, prec2), prec)
   end
 
   # call-seq:
