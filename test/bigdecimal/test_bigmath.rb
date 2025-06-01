@@ -9,6 +9,7 @@ class TestBigMath < Test::Unit::TestCase
   # SQRT in 116 (= 100 + double_fig) digits
   SQRT2 = BigDecimal("1.4142135623730950488016887242096980785696718753769480731766797379907324784621070388503875343276415727350138462309123")
   SQRT3 = BigDecimal("1.7320508075688772935274463415058723669428052538103806280558069794519330169088000370811461867572485756756261414154067")
+  SQRT5 = BigDecimal("2.2360679774997896964091736687312762354406183596115257242708972454105209256378048994144144083787822749695081761507738")
   PINF = BigDecimal("+Infinity")
   MINF = BigDecimal("-Infinity")
   NAN = BigDecimal("NaN")
@@ -83,6 +84,18 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| sqrt(BigDecimal("2"), n) }
     assert_converge_in_precision {|n| sqrt(BigDecimal("2e-50"), n) }
     assert_converge_in_precision {|n| sqrt(BigDecimal("2e50"), n) }
+  end
+
+  def test_hypot
+    assert_in_exact_precision(SQRT2, hypot(BigDecimal("1"), BigDecimal("1"), 100), 100)
+    assert_in_exact_precision(SQRT5, hypot(SQRT2, SQRT3, 100), 100)
+    assert_equal(0, hypot(BigDecimal(0), BigDecimal(0), N))
+    assert_positive_infinite_calculation { hypot(PINF, SQRT3, N) }
+    assert_positive_infinite_calculation { hypot(SQRT3, MINF, N) }
+    assert_converge_in_precision {|n| hypot(BigDecimal("1e-30"), BigDecimal("2e-30"), n) }
+    assert_converge_in_precision {|n| hypot(BigDecimal("1.23"), BigDecimal("4.56"), n) }
+    assert_converge_in_precision {|n| hypot(SQRT2 - 1, SQRT3 - 1, n) }
+    assert_converge_in_precision {|n| hypot(BigDecimal("2e30"), BigDecimal("1e30"), n) }
   end
 
   def test_sin
