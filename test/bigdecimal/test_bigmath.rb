@@ -130,4 +130,45 @@ class TestBigMath < Test::Unit::TestCase
     end
     SRC
   end
+
+  def test_erf
+    [-0.5, 0.1, 0.3, 2.1, 3.3].each do |x|
+      assert_in_epsilon(Math.erf(x), BigMath.erf(BigDecimal(x.to_s), N))
+    end
+    assert_equal(1, BigMath.erf(BigDecimal(1000), 100))
+    assert_equal(-1, BigMath.erf(BigDecimal(-1000), 100))
+    assert_not_equal(1, BigMath.erf(BigDecimal(10), 45))
+    assert_not_equal(1, BigMath.erf(BigDecimal(15), 100))
+    assert_in_epsilon(
+      BigDecimal("0.995322265018952734162069256367252928610891797040060076738352326200437280719995177367629008019680680487939328715594755785"),
+      BigMath.erf(BigDecimal("2"), 100),
+      BigDecimal("1e-100")
+    )
+    assert_relative_precision {|n| BigMath.erf(BigDecimal("1e-30"), n) }
+    assert_relative_precision {|n| BigMath.erf(BigDecimal("0.3"), n) }
+    assert_relative_precision {|n| BigMath.erf(BigDecimal("1.2"), n) }
+  end
+
+  def test_erfc
+    [-0.5, 0.1, 0.3, 2.1, 3.3].each do |x|
+      assert_in_epsilon(Math.erfc(x), BigMath.erfc(BigDecimal(x.to_s), N))
+    end
+    # erfc with taylor series
+    assert_in_epsilon(
+      BigDecimal("2.08848758376254475700078629495778861156081811932116372701221371393817469583344029061076638428572355398152593923652403986e-45"),
+      BigMath.erfc(BigDecimal("10"), 100),
+      BigDecimal("1e-100")
+    )
+    assert_relative_precision {|n| BigMath.erfc(BigDecimal("0.3"), n) }
+    assert_relative_precision {|n| BigMath.erfc(BigDecimal("1.2"), n) }
+    assert_relative_precision {|n| BigMath.erfc(BigDecimal("30"), n) }
+    # erfc with asymptotic expansion
+    assert_in_epsilon(
+      BigDecimal("1.89696105996627650926827825971341543493690756392918618346283475290041180520511188660525669077676004136530598303468056210e-697"),
+      BigMath.erfc(BigDecimal("40"), 100),
+      BigDecimal("1e-100")
+    )
+    assert_relative_precision {|n| BigMath.erfc(BigDecimal("30"), n) }
+    assert_relative_precision {|n| BigMath.erfc(BigDecimal("50"), n) }
+  end
 end
