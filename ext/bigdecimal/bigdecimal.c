@@ -7015,7 +7015,8 @@ VpVtoD(double *d, SIGNED_VALUE *e, Real *m)
 	goto Exit;
     }
     /* Normal number */
-    fig = roomof(BIGDECIMAL_DOUBLE_FIGURES, BASE_FIG);
+    // If frac[0] is small, one more DECDIG is needed to get enough precision.
+    fig = roomof(BIGDECIMAL_DOUBLE_FIGURES, BASE_FIG) + 1;
     ind_m = 0;
     mm = Min(fig, m->Prec);
     *d = 0.0;
@@ -7171,6 +7172,46 @@ Exit:
 #endif
 
 /*
+ * Calculate sqrt for the required digits
+ */
+static void
+VpSqrtNewton(Real *f, Real *r, Real *x, Real *y, size_t digits)
+{
+    size_t y_maxprec;
+    if (digits < VpDblFig() - 1) {
+        double val;
+        SIGNED_VALUE e, n;
+        VpVtoD(&val, &e, x);  /* val <- x  */
+        e /= (SIGNED_VALUE)BASE_FIG;
+        n = e / 2;
+        if (e - n * 2 != 0) {
+            val /= BASE;
+            n = (e + 1) / 2;
+        }
+        VpDtoV(y, sqrt(val)); /* y <- sqrt(val) */
+        y->exponent += n;
+        return;
+    }
+
+    // y0 = (1 ± ε) * √x
+    // y = (y0 + x/y0) / 2 ≒ (1 ± ε**2 / 2) * √x
+    // Requirements: ε**2 / 2 < 10**(-digits)
+    // ε = 10**(-(digits+1)/2) is enough
+    // Required digits for y0 should be at least (digits+1)/2+1
+    // Adding some safe margin because it does not affect performance
+    VpSqrtNewton(f, r, x, y, 3 + digits / 2);
+
+    /* Perform: y_{n+1} = (y_n - x/y_n) / 2  */
+    y_maxprec = y->MaxPrec;
+    y->MaxPrec = Min(roomof(digits, BASE_FIG) + 2, y_maxprec);
+    f->MaxPrec = y->MaxPrec + 1;
+    VpDivd(f, r, x, y);        /* f = x / y  */
+    y->MaxPrec = y_maxprec;
+    VpAddSub(r, f, y, +1);     /* r = f + y  */
+    VpMult(y, VpConstPt5, r);  /* y = 0.5*r  */
+}
+
+/*
  * y = SQRT(x),  y*y - x =>0
  */
 VP_EXPORT int
@@ -7179,9 +7220,7 @@ VpSqrt(Real *y, Real *x)
     Real *f = NULL;
     Real *r = NULL;
     size_t y_prec;
-    SIGNED_VALUE n, e;
-    ssize_t nr;
-    double val;
+    SIGNED_VALUE n;
 
     /* Zero or +Infinity ? */
     if (VpIsZero(x) || VpIsPosInf(x)) {
@@ -7215,59 +7254,11 @@ VpSqrt(Real *y, Real *x)
     f = NewOneNolimit(1, y->MaxPrec * (BASE_FIG + 2));
     r = NewOneNolimit(1, (n + n) * (BASE_FIG + 2));
 
-    nr = 0;
     y_prec = y->MaxPrec;
-
-    VpVtoD(&val, &e, x);    /* val <- x  */
-    e /= (SIGNED_VALUE)BASE_FIG;
-    n = e / 2;
-    if (e - n * 2 != 0) {
-	val /= BASE;
-	n = (e + 1) / 2;
-    }
-    VpDtoV(y, sqrt(val));    /* y <- sqrt(val) */
-    y->exponent += n;
     n = (SIGNED_VALUE)roomof(BIGDECIMAL_DOUBLE_FIGURES, BASE_FIG);
-    y->MaxPrec = Min((size_t)n , y_prec);
-    f->MaxPrec = y->MaxPrec + 1;
-    n = (SIGNED_VALUE)(y_prec * BASE_FIG);
-    if (n > (SIGNED_VALUE)maxnr) n = (SIGNED_VALUE)maxnr;
 
-    /*
-     * Perform: y_{n+1} = (y_n - x/y_n) / 2
-     */
-    do {
-        y->MaxPrec *= 2;
-        if (y->MaxPrec > y_prec) y->MaxPrec = y_prec;
-        f->MaxPrec = y->MaxPrec;
-        VpDivd(f, r, x, y);        /* f = x/y    */
-        VpAddSub(r, f, y, -1);     /* r = f - y  */
-        VpMult(f, VpConstPt5, r);  /* f = 0.5*r  */
-        if (y_prec == y->MaxPrec && VpIsZero(f))
-            goto converge;
-        VpAddSub(r, f, y, 1);      /* r = y + f  */
-        VpAsgn(y, r, 1);           /* y = r      */
-    } while (++nr < n);
+    VpSqrtNewton(f, r, x, y, y->MaxPrec * BASE_FIG);
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	printf("ERROR(VpSqrt): did not converge within %ld iterations.\n", nr);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-    y->MaxPrec = y_prec;
-
-converge:
-    VpChangeSign(y, 1);
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VpMult(r, y, y);
-	VpAddSub(f, x, r, -1);
-	printf("VpSqrt: iterations = %"PRIdSIZE"\n", nr);
-	VPrint(stdout, "  y =% \n", y);
-	VPrint(stdout, "  x =% \n", x);
-	VPrint(stdout, "  x-y*y = % \n", f);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     y->MaxPrec = y_prec;
 
 Exit:

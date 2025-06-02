@@ -29,8 +29,12 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(SQRT2, sqrt(BigDecimal("2"), 100), BigDecimal("1e-100"))
     assert_in_delta(SQRT3, sqrt(BigDecimal("3"), 100), BigDecimal("1e-100"))
     assert_relative_precision {|n| sqrt(BigDecimal("2"), n) }
+    assert_relative_precision {|n| sqrt(BigDecimal("1.01"), n) }
+    assert_relative_precision {|n| sqrt(BigDecimal("0.99"), n) }
     assert_relative_precision {|n| sqrt(BigDecimal("2e-50"), n) }
     assert_relative_precision {|n| sqrt(BigDecimal("2e50"), n) }
+    assert_relative_precision {|n| sqrt(1 - BigDecimal("1e-30"), n) }
+    assert_relative_precision {|n| sqrt(1 + BigDecimal("1e-30"), n) }
   end
 
   def test_sin
