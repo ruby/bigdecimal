@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.2.2
+
+* Make precision calculation in bigdecimal.div(value, 0) gc-compaction safe. [GH-340]
+
+  **@tompng**
+
 ## 3.2.1
 
 * Fix division precision limit. [GH-335]
