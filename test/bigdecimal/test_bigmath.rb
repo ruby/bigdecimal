@@ -93,6 +93,20 @@ class TestBigMath < Test::Unit::TestCase
     assert_relative_precision {|n| atan(BigDecimal("1e30"), n)}
   end
 
+  def test_exp
+    [-100, -2, 0.5, 10, 100].each do |x|
+      assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))
+    end
+    assert_equal(1, BigMath.exp(BigDecimal("0"), N))
+    assert_in_epsilon(BigDecimal("4.48168907033806482260205546011927581900574986836966705677265008278593667446671377298105383138245339138861635065183019577"),
+                      BigMath.exp(BigDecimal("1.5"), 100), BigDecimal("1e-100"))
+    assert_relative_precision {|n| BigMath.exp(BigDecimal("1"), n) }
+    assert_relative_precision {|n| BigMath.exp(BigDecimal("-2"), n) }
+    assert_relative_precision {|n| BigMath.exp(BigDecimal("-34"), n) }
+    assert_relative_precision {|n| BigMath.exp(BigDecimal("567"), n) }
+    assert_relative_precision {|n| BigMath.exp(SQRT2, n) }
+  end
+
   def test_log
     assert_equal(0, BigMath.log(BigDecimal("1.0"), 10))
     assert_in_epsilon(Math.log(10)*1000, BigMath.log(BigDecimal("1e1000"), 10))
@@ -102,6 +116,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_relative_precision {|n| BigMath.log(BigDecimal("1e-30") + 1, n) }
     assert_relative_precision {|n| BigMath.log(BigDecimal("1e-30"), n) }
     assert_relative_precision {|n| BigMath.log(BigDecimal("1e30"), n) }
+    assert_relative_precision {|n| BigMath.log(SQRT2, n) }
     assert_raise(Math::DomainError) {BigMath.log(BigDecimal("0"), 10)}
     assert_raise(Math::DomainError) {BigMath.log(BigDecimal("-1"), 10)}
     assert_separately(%w[-rbigdecimal], <<-SRC)

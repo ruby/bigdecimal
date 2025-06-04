@@ -1664,6 +1664,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_power_with_Bignum
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+      BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
       assert_equal(0, BigDecimal(0) ** (2**100))
 
       assert_positive_infinite(BigDecimal(0) ** -(2**100))
@@ -1693,6 +1694,11 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_power_with_intger_infinite_precision
+    assert_equal(1234 ** 100, (BigDecimal("12.34") ** 100) * BigDecimal("1e200"))
+    assert_in_delta(1234 ** 100, 1 / (BigDecimal("12.34") ** -100) * BigDecimal("1e200"), 1)
+  end
+
   def test_power_with_BigDecimal
     assert_nothing_raised do
       assert_in_delta(3 ** 3, BigDecimal(3) ** BigDecimal(3))
@@ -1720,12 +1726,9 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_power_of_three
-    pend 'precision of power is buggy' if BASE_FIG == 4
-
     x = BigDecimal(3)
     assert_equal(81, x ** 4)
-    assert_equal(1.quo(81), x ** -4)
-    assert_in_delta(1.0/81, x ** -4)
+    assert_in_delta(1.quo(81), x ** -4, 1e-32)
   end
 
   def test_power_of_zero
@@ -1817,18 +1820,38 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
-  def test_power_without_prec
-    pend 'precision of power is buggy' if BASE_FIG == 4
+  def test_infinite_power
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+      assert_positive_infinite(BigDecimal::INFINITY ** BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal::INFINITY ** -BigDecimal::INFINITY)
+      assert_positive_infinite(BigDecimal(3) ** BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal(3) ** -BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal("0.5") ** BigDecimal::INFINITY)
+      assert_positive_infinite(BigDecimal("0.5") ** -BigDecimal::INFINITY)
+      assert_equal(1, BigDecimal(1) ** BigDecimal::INFINITY)
+      assert_equal(1, BigDecimal(1) ** -BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal(0) ** BigDecimal::INFINITY)
+      assert_positive_infinite(BigDecimal(0) ** -BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal(-0) ** BigDecimal::INFINITY)
+      assert_positive_infinite(BigDecimal(-0) ** -BigDecimal::INFINITY)
+      assert_raise(Math::DomainError) { BigDecimal(-3) ** BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { BigDecimal(-3) ** -BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { (-BigDecimal::INFINITY) ** BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { (-BigDecimal::INFINITY) ** -BigDecimal::INFINITY }
+    end
+  end
 
+  def test_power_without_prec
     pi  = BigDecimal("3.14159265358979323846264338327950288419716939937511")
     e   = BigDecimal("2.71828182845904523536028747135266249775724709369996")
-    pow = BigDecimal("0.2245915771836104547342715220454373502758931513399678438732330680117143493477164265678321738086407229773690574073268002736527e2")
+    pow = BigDecimal("0.2245915771836104547342715220454373502758931513399678438732330680117e2")
     assert_equal(pow, pi.power(e))
 
     n = BigDecimal("2222")
-    assert_equal(BigDecimal("0.5171353084572525892492416e12"), (n ** 3.5))
-    assert_equal(BigDecimal("0.517135308457252592e12"), (n ** 3.5r))
-    assert_equal(BigDecimal("0.517135308457252589249241582e12"), (n ** BigDecimal("3.5",15)))
+    assert_equal(BigDecimal("0.51713530845725258924924158304123e12"), (n ** 3.5))
+    assert_equal(BigDecimal("0.51713530845725258924924158304123e12"), (n ** 3.5r))
+    assert_equal(BigDecimal("0.51713530845725258924924158304123e12"), (n ** BigDecimal("3.5", 100)))
   end
 
   def test_power_with_prec
@@ -1838,15 +1861,38 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(pow, pi.power(e, 20))
 
     b = BigDecimal('1.034482758620689655172413793103448275862068965517241379310344827586206896551724')
-    assert_equal(BigDecimal('0.114523E1'), b.power(4, 5), '[Bug #8818] [ruby-core:56802]')
+    assert_equal(BigDecimal('0.11452E1'), b.power(4, 5), '[Bug #8818] [ruby-core:56802]')
+
+    assert_equal(BigDecimal('0.5394221232e-7'), BigDecimal('0.12345').power(8, 10))
+  end
+
+  def test_power_precision
+    x = BigDecimal("1.41421356237309504880168872420969807856967187537695")
+    y = BigDecimal("3.14159265358979323846264338327950288419716939937511")
+    small = x * BigDecimal("1e-30")
+    large = y * BigDecimal("1e+30")
+    assert_relative_precision {|n| small.power(small, n) }
+    assert_relative_precision {|n| large.power(small, n) }
+    assert_relative_precision {|n| x.power(small, n) }
+    assert_relative_precision {|n| small.power(y, n) }
+    assert_relative_precision {|n| small.power(small + 1, n) }
+    assert_relative_precision {|n| x.power(small + 1, n) }
+    assert_relative_precision {|n| (small + 1).power(small, n) }
+    assert_relative_precision {|n| (small + 1).power(large, n) }
+    assert_relative_precision {|n| (small + 1).power(y, n) }
+    assert_relative_precision {|n| x.power(y, n) }
+    assert_relative_precision {|n| x.power(-y, n) }
+    assert_relative_precision {|n| x.power(123, n) }
+    assert_relative_precision {|n| x.power(-456, n) }
+    assert_relative_precision {|n| (x + 12).power(y + 34, n) }
+    assert_relative_precision {|n| (x + 56).power(y - 78, n) }
   end
 
   def test_limit
     BigDecimal.save_limit do
       BigDecimal.limit(1)
       x = BigDecimal("3")
-      assert_equal(90, x ** 4) # OK? must it be 80?
-      # 3 * 3 * 3 * 3 = 10 * 3 * 3 = 30 * 3 = 90 ???
+      assert_equal(80, x ** 4)
       assert_raise(ArgumentError) { BigDecimal.limit(-1) }
 
       bug7458 = '[ruby-core:50269] [#7458]'
