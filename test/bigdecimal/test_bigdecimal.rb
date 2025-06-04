@@ -1534,22 +1534,25 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_negative_infinite((-BigDecimal(0)) ** -(2**100 + 1))
 
       assert_equal(1, BigDecimal(1) ** (2**100))
+      assert_equal(1, BigDecimal(-1) ** (2**100))
+      assert_equal(1, BigDecimal(1) ** (2**100 + 1))
+      assert_equal(-1, BigDecimal(-1) ** (2**100 + 1))
 
       assert_positive_infinite(BigDecimal(3) ** (2**100))
       assert_positive_zero(BigDecimal(3) ** (-2**100))
 
-      assert_negative_infinite(BigDecimal(-3) ** (2**100))
-      assert_positive_infinite(BigDecimal(-3) ** (2**100 + 1))
-      assert_negative_zero(BigDecimal(-3) ** (-2**100))
-      assert_positive_zero(BigDecimal(-3) ** (-2**100 - 1))
+      assert_positive_infinite(BigDecimal(-3) ** (2**100))
+      assert_negative_infinite(BigDecimal(-3) ** (2**100 + 1))
+      assert_positive_zero(BigDecimal(-3) ** (-2**100))
+      assert_negative_zero(BigDecimal(-3) ** (-2**100 - 1))
 
       assert_positive_zero(BigDecimal(0.5, Float::DIG) ** (2**100))
       assert_positive_infinite(BigDecimal(0.5, Float::DIG) ** (-2**100))
 
-      assert_negative_zero(BigDecimal(-0.5, Float::DIG) ** (2**100))
-      assert_positive_zero(BigDecimal(-0.5, Float::DIG) ** (2**100 - 1))
-      assert_negative_infinite(BigDecimal(-0.5, Float::DIG) ** (-2**100))
-      assert_positive_infinite(BigDecimal(-0.5, Float::DIG) ** (-2**100 - 1))
+      assert_positive_zero(BigDecimal(-0.5, Float::DIG) ** (2**100))
+      assert_negative_zero(BigDecimal(-0.5, Float::DIG) ** (2**100 - 1))
+      assert_positive_infinite(BigDecimal(-0.5, Float::DIG) ** (-2**100))
+      assert_negative_infinite(BigDecimal(-0.5, Float::DIG) ** (-2**100 - 1))
     end
   end
 

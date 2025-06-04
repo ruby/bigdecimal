@@ -3155,15 +3155,15 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     else if (RB_TYPE_P(vexp, T_BIGNUM)) {
         VALUE abs_value = BigDecimal_abs(self);
         if (is_one(abs_value)) {
-            return VpCheckGetValue(NewOneWrapLimited(1, n));
+            return VpCheckGetValue(NewOneWrapLimited(is_even(vexp) ? 1 : VpGetSign(x), n));
         }
         else if (RTEST(rb_funcall(abs_value, '<', 1, INT2FIX(1)))) {
             if (is_negative(vexp)) {
                 y = NewZeroWrapLimited(1, n);
-                VpSetInf(y, (is_even(vexp) ? 1 : -1) * VpGetSign(x));
+                VpSetInf(y, is_even(vexp) ? 1 : VpGetSign(x));
                 return VpCheckGetValue(y);
             }
-            else if (BIGDECIMAL_NEGATIVE_P(x) && is_even(vexp)) {
+            else if (BIGDECIMAL_NEGATIVE_P(x) && !is_even(vexp)) {
                 return VpCheckGetValue(NewZeroWrapLimited(-1, n));
             }
             else {
@@ -3173,10 +3173,10 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
         else {
             if (is_positive(vexp)) {
                 y = NewZeroWrapLimited(1, n);
-                VpSetInf(y, (is_even(vexp) ? 1 : -1) * VpGetSign(x));
+                VpSetInf(y, is_even(vexp) ? 1 : VpGetSign(x));
                 return VpCheckGetValue(y);
             }
-            else if (BIGDECIMAL_NEGATIVE_P(x) && is_even(vexp)) {
+            else if (BIGDECIMAL_NEGATIVE_P(x) && !is_even(vexp)) {
                 return VpCheckGetValue(NewZeroWrapLimited(-1, n));
             }
             else {
