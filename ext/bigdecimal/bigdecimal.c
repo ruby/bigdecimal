@@ -3199,7 +3199,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     }
     VpPowerByInt(y, x, int_exp);
     if (!NIL_P(prec) && VpIsDef(y)) {
-        VpMidRound(y, VpGetRoundMode(), n);
+        VpMidRound(y, VpGetRoundMode(), n - VpExponent10(y));
     }
     return VpCheckGetValue(y);
 }
