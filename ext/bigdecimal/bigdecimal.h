@@ -167,7 +167,6 @@ enum rbd_rounding_mode {
  *  r = 0.xxxxxxxxx *BASE**exponent
  */
 typedef struct {
-    VALUE  obj;     /* Back pointer(VALUE) for Ruby object.     */
     size_t MaxPrec; /* Maximum precision size                   */
                     /* This is the actual size of frac[]        */
                     /*(frac[0] to frac[MaxPrec] are available). */
@@ -194,10 +193,6 @@ typedef struct {
  *   EXPORTables.
  *  ------------------
  */
-
-VP_EXPORT Real *VpNewRbClass(size_t mx, char const *str, VALUE klass, bool strict_p, bool raise_exception);
-
-VP_EXPORT Real *VpCreateRbObject(size_t mx, const char *str, bool raise_exception);
 
 #define VpBaseFig() BIGDECIMAL_COMPONENT_FIGURES
 #define VpDblFig() BIGDECIMAL_DOUBLE_FIGURES
