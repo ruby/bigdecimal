@@ -72,7 +72,7 @@ static struct {
 #ifdef RBIMPL_ATTR_MAYBE_UNUSED
 #define ENTER(n) RBIMPL_ATTR_MAYBE_UNUSED() volatile VALUE vStack[n];int iStack=0
 #else
-#define ENTER(n) volatile VALUE RB_UNUSED_VAR(vStack[n]);int iStack=0
+#define ENTER(n) volatile VALUE vStack[n];int iStack=0
 #endif
 #define PUSH(x)  (vStack[iStack++] = (VALUE)(x))
 #define SAVE(p)  PUSH((p)->obj)
