@@ -61,7 +61,8 @@ module BigMath
     one  = BigDecimal("1")
     two  = BigDecimal("2")
     x = -x if neg = x < 0
-    if x > (twopi = two * BigMath.PI(prec))
+    if x > 6
+      twopi = two * BigMath.PI(prec + x.exponent)
       if x > 30
         x %= twopi
       else
@@ -105,7 +106,8 @@ module BigMath
     one  = BigDecimal("1")
     two  = BigDecimal("2")
     x = -x if x < 0
-    if x > (twopi = two * BigMath.PI(prec))
+    if x > 6
+      twopi = two * BigMath.PI(prec + x.exponent)
       if x > 30
         x %= twopi
       else
