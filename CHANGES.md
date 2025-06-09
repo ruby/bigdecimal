@@ -1,5 +1,27 @@
 # CHANGES
 
+## 3.2.2
+
+* Make precision calculation in bigdecimal.div(value, 0) gc-compaction safe. [GH-340]
+
+  **@tompng**
+
+## 3.2.1
+
+* Fix division precision limit. [GH-335]
+
+  **@tompng**
+
+## 3.2.0
+
+* Fix division rounding. [GH-330] [GH-328]
+
+  **@tompng**
+
+* Fix exponential precision growth in division. [GH-329] [GH-220] [GH-222] [GH-272]
+
+  **@tompng**
+
 ## 3.1.9
 
 * Accept no digits in the fractional part (#302)
