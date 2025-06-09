@@ -7,13 +7,12 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
-#   atan(x, prec)  Note: |x|<1, x=0.9999 may not converge.
+#   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
 # where:
 #   x    ... BigDecimal number to be computed.
-#            |x| must be small enough to get convergence.
 #   prec ... Number of digits to be obtained.
 #++
 #
@@ -150,9 +149,9 @@ module BigMath
     x = -x if neg = x < 0
     return pi.div(neg ? -2 : 2, prec) if x.infinite?
     return pi / (neg ? -4 : 4) if x.round(prec) == 1
-    x = BigDecimal("1").div(x, prec) if inv = x > 1
-    x = (-1 + sqrt(1 + x**2, prec))/x if dbl = x > 0.5
-    n    = prec + BigDecimal.double_fig
+    n = prec + BigDecimal.double_fig
+    x = BigDecimal("1").div(x, n) if inv = x > 1
+    x = (-1 + sqrt(1 + x.mult(x, n), n)).div(x, n) if dbl = x > 0.5
     y = x
     d = y
     t = x
