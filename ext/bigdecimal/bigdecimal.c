@@ -664,8 +664,8 @@ BigDecimal_precision(VALUE self)
  *    BigDecimal("1").scale         # => 0
  *    BigDecimal("1.1").scale       # => 1
  *    BigDecimal("3.1415").scale    # => 4
- *    BigDecimal("-1e20").precision # => 0
- *    BigDecimal("1e-20").precision # => 20
+ *    BigDecimal("-1e20").scale     # => 0
+ *    BigDecimal("1e-20").scale     # => 20
  *    BigDecimal("Infinity").scale  # => 0
  *    BigDecimal("-Infinity").scale # => 0
  *    BigDecimal("NaN").scale       # => 0
