@@ -168,6 +168,8 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal("0.01"), BigDecimal(0.01, Float::DIG + 1))
     assert_nothing_raised { BigDecimal(4.2) }
     assert_equal(BigDecimal(4.2), BigDecimal('4.2'))
+    assert_equal(BigDecimal("0.12345"), BigDecimal(0.12345, 0))
+    assert_equal(BigDecimal("0.12345"), BigDecimal(0.12345))
     assert_raise(ArgumentError) { BigDecimal(0.1, Float::DIG + 2) }
     assert_nothing_raised { BigDecimal(0.1, Float::DIG + 1) }
 
