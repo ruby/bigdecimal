@@ -145,6 +145,9 @@ bdvalue_nullable(BDVALUE v)
 #define BIGDECIMAL_POSITIVE_P(bd) ((bd)->sign > 0)
 #define BIGDECIMAL_NEGATIVE_P(bd) ((bd)->sign < 0)
 
+#define MULT_BY_RB_INTEGER_THRESHOLD 150
+#define DIV_BY_RB_INTEGER_THRESHOLD 300
+
 /*
  * ================== Memory allocation ============================
  */
@@ -5873,6 +5876,32 @@ VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos,
     return word_shift;
 }
 
+static int
+VpMultWithRubyInteger(Real *c, Real *a, Real *b)
+{
+    Real *ap, *bp;
+    VALUE a2, b2, ab;
+    BDVALUE c2;
+    ap = VpCopy(NULL, a);
+    bp = VpCopy(NULL, b);
+    ap->exponent = a->Prec;
+    bp->exponent = b->Prec;
+    a2 = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
+    b2 = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
+    BigDecimal_wrap_struct(a2, ap);
+    BigDecimal_wrap_struct(b2, bp);
+    ab = rb_funcall(BigDecimal_to_i(a2), '*', 1, BigDecimal_to_i(b2));
+
+    c2 = GetBDValueMust(ab);
+    VpAsgn(c, c2.real, 1);
+    if (!AddExponent(c, a->exponent)) return 0;
+    if (!AddExponent(c, b->exponent)) return 0;
+    if (!AddExponent(c, -a->Prec)) return 0;
+    if (!AddExponent(c, -b->Prec)) return 0;
+    RB_GC_GUARD(c2.bigdecimal);
+    return 1;
+}
+
 /*
  * Return number of significant digits
  *       c = a * b , Where a = a0a1a2 ... an
@@ -5925,6 +5954,11 @@ VpMult(Real *c, Real *a, Real *b)
     MxIndB = b->Prec - 1;
     MxIndC = c->MaxPrec - 1;
     MxIndAB = a->Prec + b->Prec - 1;
+
+    if (a->Prec >= MULT_BY_RB_INTEGER_THRESHOLD && b->Prec >= MULT_BY_RB_INTEGER_THRESHOLD) {
+        if (!VpMultWithRubyInteger(c, a, b)) return 0;
+        goto Exit;
+    }
 
     if (MxIndC < MxIndAB) {    /* The Max. prec. of c < Prec(a)+Prec(b) */
 	w = c;
@@ -6000,6 +6034,46 @@ Exit:
     return c->Prec*BASE_FIG;
 }
 
+static void
+VpDivdWithRubyInteger(Real *c, Real *r, Real *a, Real *b)
+{
+    Real *ap, *bp;
+    BDVALUE c2, r2;
+    VALUE a2, b2, divmod, div, mod;
+    size_t div_prec = c->MaxPrec - 1;
+    size_t base_prec = b->Prec;
+
+    ap = VpCopy(NULL, a);
+    bp = VpCopy(NULL, b);
+    VpSetSign(ap, 1);
+    VpSetSign(bp, 1);
+    ap->exponent = base_prec + div_prec;
+    bp->exponent = base_prec;
+    a2 = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
+    b2 = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
+    BigDecimal_wrap_struct(a2, ap);
+    BigDecimal_wrap_struct(b2, bp);
+    divmod = rb_funcall(BigDecimal_to_i(a2), rb_intern("divmod"), 1, BigDecimal_to_i(b2));
+    if (RB_TYPE_P(divmod, T_ARRAY) && RARRAY_LEN(divmod) == 2) {
+        div = RARRAY_AREF(divmod, 0);
+        mod = RARRAY_AREF(divmod, 1);
+    } else {
+        div = mod = Qnil;
+    }
+
+    c2 = GetBDValueMust(div);
+    r2 = GetBDValueMust(mod);
+    VpAsgn(c, c2.real, VpGetSign(a) * VpGetSign(b));
+    VpAsgn(r, r2.real, VpGetSign(a));
+    RB_GC_GUARD(c2.bigdecimal);
+    RB_GC_GUARD(r2.bigdecimal);
+    AddExponent(c, a->exponent);
+    AddExponent(c, -b->exponent);
+    AddExponent(c, -div_prec);
+    AddExponent(r, a->exponent);
+    AddExponent(r, -base_prec - div_prec);
+}
+
 /*
  *   c = a / b,  remainder = r
  *   XXXX_YYYY_ZZZZ / 0001 = XXXX_YYYY_ZZZZ
@@ -6040,6 +6114,11 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     word_r = r->MaxPrec;
 
     if (word_a > word_r || word_b + word_c - 2 >= word_r) goto space_error;
+
+    if (word_c >= DIV_BY_RB_INTEGER_THRESHOLD && word_b >= DIV_BY_RB_INTEGER_THRESHOLD) {
+	VpDivdWithRubyInteger(c, r, a, b);
+	goto Exit;
+    }
 
     for (i = 0; i < word_a; ++i) r->frac[i] = a->frac[i];
     for (i = word_a; i < word_r; ++i) r->frac[i] = 0;
