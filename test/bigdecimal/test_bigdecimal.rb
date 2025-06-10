@@ -1089,6 +1089,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_kind_of(BigDecimal, BigDecimal("3").remainder(1.quo(3)))
   end
 
+  def test_remainder_coerce
+    o = Object.new
+    def o.coerce(x); [x, BigDecimal("3")]; end
+    assert_equal(BigDecimal("1.1"), BigDecimal("7.1").remainder(o))
+  end
+
   def test_divmod
     x = BigDecimal((2**100).to_s)
     assert_equal([(x / 3).floor, 1], x.divmod(3))

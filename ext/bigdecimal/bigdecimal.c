@@ -2043,14 +2043,14 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 	b = GetVpValue(r, 0);
     }
 
-    if (!b) return DoSomeOne(self, r, rb_intern("remainder"));
+    if (!b) return Qfalse;
     SAVE(b);
 
     if (VpIsPosInf(b) || VpIsNegInf(b)) {
        GUARD_OBJ(*dv, NewZeroWrapLimited(1, 1));
        VpSetZero(*dv, 1);
        *rv = a;
-       return Qnil;
+       return Qtrue;
     }
 
     mx = (a->MaxPrec + b->MaxPrec) *VpBaseFig();
@@ -2074,7 +2074,7 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 
     *dv = d;
     *rv = ff;
-    return Qnil;
+    return Qtrue;
 }
 
 /* call-seq:
@@ -2087,11 +2087,11 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 static VALUE
 BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
 {
-    VALUE  f;
     Real  *d, *rv = 0;
-    f = BigDecimal_divremain(self, r, &d, &rv);
-    if (!NIL_P(f)) return f;
-    return VpCheckGetValue(rv);
+    if (BigDecimal_divremain(self, r, &d, &rv)) {
+        return VpCheckGetValue(rv);
+    }
+    return DoSomeOne(self, r, rb_intern("remainder"));
 }
 
 /* call-seq:
