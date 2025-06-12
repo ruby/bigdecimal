@@ -85,6 +85,7 @@ module BigMath
       d   = sign * x1.div(z,m)
       y  += d
     end
+    y = BigDecimal("1") if y > 1
     neg ? -y : y
   end
 
@@ -130,7 +131,7 @@ module BigMath
       d   = sign * x1.div(z,m)
       y  += d
     end
-    y
+    y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
   end
 
   # call-seq:
