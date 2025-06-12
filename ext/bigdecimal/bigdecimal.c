@@ -7261,7 +7261,7 @@ VpSqrt(Real *y, Real *x)
         VpDivd(f, r, x, y);        /* f = x/y    */
         VpAddSub(r, f, y, -1);     /* r = f - y  */
         VpMult(f, VpConstPt5, r);  /* f = 0.5*r  */
-        if (VpIsZero(f))
+        if (y_prec == y->MaxPrec && VpIsZero(f))
             goto converge;
         VpAddSub(r, f, y, 1);      /* r = y + f  */
         VpAsgn(y, r, 1);           /* y = r      */
