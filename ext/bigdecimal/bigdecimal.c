@@ -68,6 +68,29 @@ static struct {
     uint8_t mode;
 } rbd_rounding_modes[RBD_NUM_ROUNDING_MODES];
 
+typedef struct {
+    VALUE bigdecimal;
+    Real *real;
+} BDVALUE;
+
+typedef struct {
+    VALUE bigdecimal_or_nil;
+    Real *real_or_null;
+} NULLABLE_BDVALUE;
+
+static inline BDVALUE
+bdvalue_nonnullable(NULLABLE_BDVALUE v)
+{
+    assert(v.real_or_null != NULL);
+    return (BDVALUE){ v.bigdecimal_or_nil, v.real_or_null };
+}
+
+static inline NULLABLE_BDVALUE
+bdvalue_nullable(BDVALUE v)
+{
+    return (NULLABLE_BDVALUE){ v.bigdecimal, v.real };
+}
+
 /* MACRO's to guard objects from GC by keeping them in stack */
 #ifdef RBIMPL_ATTR_MAYBE_UNUSED
 #define ENTER(n) RBIMPL_ATTR_MAYBE_UNUSED() volatile VALUE vStack[n];int iStack=0
@@ -75,8 +98,13 @@ static struct {
 #define ENTER(n) volatile VALUE RB_UNUSED_VAR(vStack[n]);int iStack=0
 #endif
 #define PUSH(x)  (vStack[iStack++] = (VALUE)(x))
-#define SAVE(p)  PUSH((p)->obj)
-#define GUARD_OBJ(p,y) ((p)=(y), SAVE(p))
+#define GUARD_OBJ(p, y) ((p)=(y), PUSH((p).bigdecimal))
+#define GUARD_OBJ_OR_NIL(p, y) ((p)=(y), PUSH((p).bigdecimal_or_nil))
+
+// These two macros are deprecated, danger and should be removed in the future.
+// Only used from BigMath_s_exp, BigMath_s_log and BigDecimal_power.
+#define GUARD_OBJ_THROUGH_REAL(p,y) ((p)=(y), PUSH((p)->obj))
+#define USE_OBJ_THROUGH_REAL(p) (((Real*)(DATA_PTR(p)))->obj = (p))
 
 #define BASE_FIG  BIGDECIMAL_COMPONENT_FIGURES
 #define BASE      BIGDECIMAL_BASE
@@ -145,6 +173,9 @@ check_allocation_count_nonzero(void)
 #   define check_allocation_count_nonzero() /* nothing */
 #endif /* BIGDECIMAL_DEBUG */
 
+static NULLABLE_BDVALUE
+CreateFromString(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception);
+
 PUREFUNC(static inline size_t rbd_struct_size(size_t const));
 
 static inline size_t
@@ -190,18 +221,15 @@ rbd_allocate_struct_decimal_digits(size_t const decimal_digits, bool limit_preci
 
 static VALUE BigDecimal_wrap_struct(VALUE obj, Real *vp);
 
-static Real *
-rbd_reallocate_struct(Real *real, size_t const internal_digits)
+static BDVALUE
+rbd_reallocate_struct(BDVALUE value, size_t const internal_digits)
 {
     size_t const size = rbd_struct_size(internal_digits);
-    VALUE obj = real ? real->obj : 0;
-    Real *new_real = (Real *)ruby_xrealloc(real, size);
+    Real *new_real = (Real *)ruby_xrealloc(value.real, size);
     new_real->MaxPrec = internal_digits;
-    if (obj) {
-        new_real->obj = 0;
-        BigDecimal_wrap_struct(obj, new_real);
-    }
-    return new_real;
+    new_real->obj = 0;
+    BigDecimal_wrap_struct(value.bigdecimal, new_real);
+    return (BDVALUE){ value.bigdecimal, new_real };
 }
 
 static void
@@ -277,7 +305,8 @@ rbd_allocate_struct_one_nolimit(int sign, size_t const digits)
 static unsigned short VpGetException(void);
 static void  VpSetException(unsigned short f);
 static void VpCheckException(Real *p, bool always);
-static VALUE VpCheckGetValue(Real *p);
+static VALUE CheckGetValue(BDVALUE v);
+static VALUE VpCheckGetValueWithLegacyRealObj(Real *p);
 static void  VpInternalRound(Real *c, size_t ixDigit, DECDIG vPrev, DECDIG v);
 static int   VpLimitRound(Real *c, size_t ixDigit);
 static Real *VpCopy(Real *pv, Real const* const x);
@@ -319,58 +348,69 @@ static const rb_data_type_t BigDecimal_data_type = {
 #endif
 };
 
-static Real *
+static NULLABLE_BDVALUE
 rbd_allocate_struct_zero_wrap_klass(VALUE klass, int sign, size_t const digits, bool limit_precision)
 {
     Real *real = rbd_allocate_struct_zero(sign, digits, limit_precision);
     if (real != NULL) {
         VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
         BigDecimal_wrap_struct(obj, real);
+        return (NULLABLE_BDVALUE) { obj, real };
     }
-    return real;
+    return (NULLABLE_BDVALUE) { Qnil, NULL };
 }
 
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_limited_wrap(int sign, size_t const digits));
-#define NewZeroWrapLimited rbd_allocate_struct_zero_limited_wrap
+MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_limited_wrap_legacy_real(int sign, size_t const digits));
+#define NewZeroWrapLimitedLegacyReal rbd_allocate_struct_zero_limited_wrap_legacy_real
+
 static inline Real *
-rbd_allocate_struct_zero_limited_wrap(int sign, size_t const digits)
+rbd_allocate_struct_zero_limited_wrap_legacy_real(int sign, size_t const digits)
 {
-    return rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, true);
+    BDVALUE v = bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, true));
+    USE_OBJ_THROUGH_REAL(v.bigdecimal);
+    return v.real;
 }
 
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_nolimit_wrap(int sign, size_t const digits));
-#define NewZeroWrapNolimit rbd_allocate_struct_zero_nolimit_wrap
+MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_nolimit_wrap_legacy_real(int sign, size_t const digits));
+#define NewZeroWrapNolimitLegacyReal rbd_allocate_struct_zero_nolimit_wrap_legacy_real
 static inline Real *
-rbd_allocate_struct_zero_nolimit_wrap(int sign, size_t const digits)
+rbd_allocate_struct_zero_nolimit_wrap_legacy_real(int sign, size_t const digits)
 {
-    return rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, false);
+    BDVALUE v = bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, false));
+    USE_OBJ_THROUGH_REAL(v.bigdecimal);
+    return v.real;
 }
 
-static Real *
+static inline BDVALUE
+NewZeroWrapLimited(int sign, size_t const digits)
+{
+    return bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, true));
+}
+
+static inline BDVALUE
+NewZeroWrapNolimit(int sign, size_t const digits)
+{
+    return bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, false));
+}
+
+static inline NULLABLE_BDVALUE
 rbd_allocate_struct_one_wrap_klass(VALUE klass, int sign, size_t const digits, bool limit_precision)
 {
     Real *real = rbd_allocate_struct_one(sign, digits, limit_precision);
-    if (real != NULL) {
-        VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-        BigDecimal_wrap_struct(obj, real);
-    }
-    return real;
+    if (real == NULL) return (NULLABLE_BDVALUE) { Qnil, NULL };
+    VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
+    BigDecimal_wrap_struct(obj, real);
+    return (NULLABLE_BDVALUE) { obj, real };
 }
 
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_limited_wrap(int sign, size_t const digits));
-#define NewOneWrapLimited rbd_allocate_struct_one_limited_wrap
+MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_limited_wrap_legacy_real(int sign, size_t const digits));
+#define NewOneWrapLimitedLegacyReal rbd_allocate_struct_one_limited_wrap_legacy_real
 static inline Real *
-rbd_allocate_struct_one_limited_wrap(int sign, size_t const digits)
+rbd_allocate_struct_one_limited_wrap_legacy_real(int sign, size_t const digits)
 {
-    return rbd_allocate_struct_one_wrap_klass(rb_cBigDecimal, sign, digits, true);
-}
-
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_nolimit_wrap(int sign, size_t const digits));
-#define NewOneWrapNolimit rbd_allocate_struct_one_nolimit_wrap
-static inline Real *
-rbd_allocate_struct_one_nolimit_wrap(int sign, size_t const digits)
-{
-    return rbd_allocate_struct_one_wrap_klass(rb_cBigDecimal, sign, digits, false);
+    BDVALUE v = bdvalue_nonnullable(rbd_allocate_struct_one_wrap_klass(rb_cBigDecimal, sign, digits, true));
+    USE_OBJ_THROUGH_REAL(v.bigdecimal);
+    return v.real;
 }
 
 static inline int
@@ -404,8 +444,8 @@ static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise
 static VALUE rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exception);
 static VALUE rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
-static Real*
-GetVpValueWithPrec(VALUE v, long prec, int must)
+static NULLABLE_BDVALUE
+GetBDValueWithPrec(VALUE v, long prec, int must)
 {
     const size_t digs = prec < 0 ? SIZE_MAX : (size_t)prec;
 
@@ -452,19 +492,52 @@ GetVpValueWithPrec(VALUE v, long prec, int must)
 
     Real *vp;
     TypedData_Get_Struct(v, Real, &BigDecimal_data_type, vp);
-    return vp;
+    return (NULLABLE_BDVALUE) { v, vp };
 
 SomeOneMayDoIt:
     if (must) {
 	cannot_be_coerced_into_BigDecimal(rb_eTypeError, v);
     }
-    return NULL; /* NULL means to coerce */
+    return (NULLABLE_BDVALUE){ Qnil, NULL }; /* NULL means to coerce */
+}
+
+static BDVALUE
+GetBDValueWithPrecMust(VALUE v, long prec)
+{
+    NULLABLE_BDVALUE bv = GetBDValueWithPrec(v, prec, 1);
+    return (BDVALUE){ bv.bigdecimal_or_nil, bv.real_or_null };
+}
+
+static Real*
+GetVpValueWithPrecWithLegacyRealObj(VALUE v, long prec, int must)
+{
+    NULLABLE_BDVALUE bd = GetBDValueWithPrec(v, prec, must);
+    if (bd.bigdecimal_or_nil != Qnil) USE_OBJ_THROUGH_REAL(bd.bigdecimal_or_nil);
+    return bd.real_or_null;
 }
 
 static inline Real*
 GetVpValue(VALUE v, int must)
 {
-    return GetVpValueWithPrec(v, -1, must);
+    return GetBDValueWithPrec(v, -1, must).real_or_null;
+}
+
+static Real*
+GetVpValueWithLegacyRealObj(VALUE v, int must)
+{
+    return GetVpValueWithPrecWithLegacyRealObj(v, -1, must);
+}
+
+static inline NULLABLE_BDVALUE
+GetBDValue(VALUE v, int must)
+{
+    return GetBDValueWithPrec(v, -1, must);
+}
+
+static inline BDVALUE
+GetBDValueMust(VALUE v)
+{
+    return GetBDValueWithPrecMust(v, -1);
 }
 
 /* call-seq:
@@ -499,16 +572,16 @@ static VALUE
 BigDecimal_prec(VALUE self)
 {
     ENTER(1);
-    Real *p;
+    BDVALUE v;
     VALUE obj;
 
     rb_category_warn(RB_WARN_CATEGORY_DEPRECATED,
                      "BigDecimal#precs is deprecated and will be removed in the future; "
                      "use BigDecimal#precision instead.");
 
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    obj = rb_assoc_new(SIZET2NUM(p->Prec*VpBaseFig()),
-		       SIZET2NUM(p->MaxPrec*VpBaseFig()));
+    GUARD_OBJ(v, GetBDValueMust(self));
+    obj = rb_assoc_new(SIZET2NUM(v.real->Prec*VpBaseFig()),
+		       SIZET2NUM(v.real->MaxPrec*VpBaseFig()));
     return obj;
 }
 
@@ -624,9 +697,9 @@ static void
 BigDecimal_count_precision_and_scale(VALUE self, ssize_t *out_precision, ssize_t *out_scale)
 {
     ENTER(1);
-    Real *p;
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    VpCountPrecisionAndScale(p, out_precision, out_scale);
+    BDVALUE v;
+    GUARD_OBJ(v, GetBDValueMust(self));
+    VpCountPrecisionAndScale(v.real, out_precision, out_scale);
 }
 
 /*
@@ -716,23 +789,22 @@ static VALUE
 BigDecimal_n_significant_digits(VALUE self)
 {
     ENTER(1);
-
-    Real *p;
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    if (VpIsZero(p) || !VpIsDef(p)) {
+    BDVALUE v;
+    GUARD_OBJ(v, GetBDValueMust(self));
+    if (VpIsZero(v.real) || !VpIsDef(v.real)) {
         return INT2FIX(0);
     }
 
-    ssize_t n = p->Prec;  /* The length of frac without trailing zeros. */
-    for (n = p->Prec; n > 0 && p->frac[n-1] == 0; --n);
+    ssize_t n = v.real->Prec;  /* The length of frac without trailing zeros. */
+    for (n = v.real->Prec; n > 0 && v.real->frac[n-1] == 0; --n);
     if (n == 0) return INT2FIX(0);
 
     DECDIG x;
     int nlz = BASE_FIG;
-    for (x = p->frac[0]; x > 0; x /= 10) --nlz;
+    for (x = v.real->frac[0]; x > 0; x /= 10) --nlz;
 
     int ntz = 0;
-    for (x = p->frac[n-1]; x > 0 && x % 10 == 0; x /= 10) ++ntz;
+    for (x = v.real->frac[n-1]; x > 0 && x % 10 == 0; x /= 10) ++ntz;
 
     ssize_t n_significant_digits = BASE_FIG*n - nlz - ntz;
     return SSIZET2NUM(n_significant_digits);
@@ -756,15 +828,15 @@ static VALUE
 BigDecimal_hash(VALUE self)
 {
     ENTER(1);
-    Real *p;
+    BDVALUE v;
     st_index_t hash;
 
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    hash = (st_index_t)p->sign;
+    GUARD_OBJ(v, GetBDValueMust(self));
+    hash = (st_index_t)v.real->sign;
     /* hash!=2: the case for 0(1),NaN(0) or +-Infinity(3) is sign itself */
     if(hash == 2 || hash == (st_index_t)-2) {
-        hash ^= rb_memhash(p->frac, sizeof(DECDIG)*p->Prec);
-        hash += p->exponent;
+        hash ^= rb_memhash(v.real->frac, sizeof(DECDIG)*v.real->Prec);
+        hash += v.real->exponent;
     }
     return ST2FIX(hash);
 }
@@ -784,20 +856,20 @@ BigDecimal_hash(VALUE self)
 static VALUE
 BigDecimal_dump(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    Real *vp;
+    ENTER(1);
+    BDVALUE v;
     char *psz;
     VALUE dummy;
     volatile VALUE dump;
     size_t len;
 
     rb_scan_args(argc, argv, "01", &dummy);
-    GUARD_OBJ(vp,GetVpValue(self, 1));
-    dump = rb_str_new(0, VpNumOfChars(vp, "E")+50);
+    GUARD_OBJ(v, GetBDValueMust(self));
+    dump = rb_str_new(0, VpNumOfChars(v.real, "E")+50);
     psz = RSTRING_PTR(dump);
-    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", VpMaxPrec(vp)*VpBaseFig());
+    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", VpMaxPrec(v.real)*VpBaseFig());
     len = strlen(psz);
-    VpToString(vp, psz+len, RSTRING_LEN(dump)-len, 0, 0);
+    VpToString(v.real, psz+len, RSTRING_LEN(dump)-len, 0, 0);
     rb_str_resize(dump, strlen(psz));
     return dump;
 }
@@ -808,8 +880,7 @@ BigDecimal_dump(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_load(VALUE self, VALUE str)
 {
-    ENTER(2);
-    Real *pv;
+    BDVALUE v;
     unsigned char *pch;
     unsigned char ch;
     unsigned long m=0;
@@ -823,12 +894,12 @@ BigDecimal_load(VALUE self, VALUE str)
         m = m*10 + (unsigned long)(ch-'0');
     }
     if (m > VpBaseFig()) m -= VpBaseFig();
-    GUARD_OBJ(pv, VpNewRbClass(m, (char *)pch, self, true, true));
+    v = bdvalue_nonnullable(CreateFromString(m, (char *)pch, self, true, true));
     m /= VpBaseFig();
-    if (m && pv->MaxPrec > m) {
-	pv->MaxPrec = m+1;
+    if (m && v.real->MaxPrec > m) {
+        v.real->MaxPrec = m+1;
     }
-    return VpCheckGetValue(pv);
+    return CheckGetValue(v);
 }
 
 static unsigned short
@@ -1174,17 +1245,27 @@ BigDecimal_wrap_struct(VALUE obj, Real *vp)
     return obj;
 }
 
+static NULLABLE_BDVALUE
+CreateFromString(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception)
+{
+    VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
+    Real *vp = VpAlloc(mx, str, strict_p, raise_exception);
+    if (!vp)
+        return (NULLABLE_BDVALUE){ Qnil, NULL };
+    BigDecimal_wrap_struct(obj, vp);
+    return (NULLABLE_BDVALUE){ obj, vp };
+}
+
+// Use CreateFromString instead of this function
 VP_EXPORT Real *
 VpNewRbClass(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception)
 {
-    VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-    Real *pv = VpAlloc(mx, str, strict_p, raise_exception);
-    if (!pv)
-        return NULL;
-    BigDecimal_wrap_struct(obj, pv);
-    return pv;
+    NULLABLE_BDVALUE v = CreateFromString(mx, str, klass, strict_p, raise_exception);
+    if (v.bigdecimal_or_nil != Qnil) USE_OBJ_THROUGH_REAL(v.bigdecimal_or_nil);
+    return v.real_or_null;
 }
 
+// Use CreateFromString instead of this function
 VP_EXPORT Real *
 VpCreateRbObject(size_t mx, const char *str, bool raise_exception)
 {
@@ -1196,7 +1277,8 @@ VpCopy(Real *pv, Real const* const x)
 {
     assert(x != NULL);
 
-    pv = rbd_reallocate_struct(pv, x->MaxPrec);
+    pv = (Real *)ruby_xrealloc(pv, rbd_struct_size(x->MaxPrec));
+    pv->obj = 0;
     pv->MaxPrec = x->MaxPrec;
     pv->Prec = x->Prec;
     pv->exponent = x->exponent;
@@ -1253,18 +1335,18 @@ static VALUE BigDecimal_split(VALUE self);
 static VALUE
 BigDecimal_to_i(VALUE self)
 {
-    ENTER(5);
+    ENTER(1);
     ssize_t e, nf;
-    Real *p;
+    BDVALUE v;
 
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    BigDecimal_check_num(p);
+    GUARD_OBJ(v, GetBDValueMust(self));
+    BigDecimal_check_num(v.real);
 
-    e = VpExponent10(p);
+    e = VpExponent10(v.real);
     if (e <= 0) return INT2FIX(0);
     nf = VpBaseFig();
     if (e <= nf) {
-        return LONG2NUM((long)(VpGetSign(p) * (DECDIG_DBL_SIGNED)p->frac[0]));
+        return LONG2NUM((long)(VpGetSign(v.real) * (DECDIG_DBL_SIGNED)v.real->frac[0]));
     }
     else {
 	VALUE a = BigDecimal_split(self);
@@ -1273,7 +1355,7 @@ BigDecimal_to_i(VALUE self)
 	VALUE ret;
 	ssize_t dpower = e - (ssize_t)RSTRING_LEN(digits);
 
-	if (BIGDECIMAL_NEGATIVE_P(p)) {
+	if (BIGDECIMAL_NEGATIVE_P(v.real)) {
 	    numerator = rb_funcall(numerator, '*', 1, INT2FIX(-1));
 	}
 	if (dpower < 0) {
@@ -1301,23 +1383,23 @@ static VALUE
 BigDecimal_to_f(VALUE self)
 {
     ENTER(1);
-    Real *p;
+    BDVALUE v;
     double d;
     SIGNED_VALUE e;
     char *buf;
     volatile VALUE str;
 
-    GUARD_OBJ(p, GetVpValue(self, 1));
-    if (VpVtoD(&d, &e, p) != 1)
+    GUARD_OBJ(v,GetBDValueMust(self));
+    if (VpVtoD(&d, &e, v.real) != 1)
 	return rb_float_new(d);
     if (e > (SIGNED_VALUE)(DBL_MAX_10_EXP+BASE_FIG))
 	goto overflow;
     if (e < (SIGNED_VALUE)(DBL_MIN_10_EXP-BASE_FIG))
 	goto underflow;
 
-    str = rb_str_new(0, VpNumOfChars(p, "E"));
+    str = rb_str_new(0, VpNumOfChars(v.real, "E"));
     buf = RSTRING_PTR(str);
-    VpToString(p, buf, RSTRING_LEN(str), 0, 0);
+    VpToString(v.real, buf, RSTRING_LEN(str), 0, 0);
     errno = 0;
     d = strtod(buf, 0);
     if (errno == ERANGE) {
@@ -1328,14 +1410,14 @@ BigDecimal_to_f(VALUE self)
 
 overflow:
     VpException(VP_EXCEPTION_OVERFLOW, "BigDecimal to Float conversion", 0);
-    if (BIGDECIMAL_NEGATIVE_P(p))
+    if (BIGDECIMAL_NEGATIVE_P(v.real))
 	return rb_float_new(VpGetDoubleNegInf());
     else
 	return rb_float_new(VpGetDoublePosInf());
 
 underflow:
     VpException(VP_EXCEPTION_UNDERFLOW, "BigDecimal to Float conversion", 0);
-    if (BIGDECIMAL_NEGATIVE_P(p))
+    if (BIGDECIMAL_NEGATIVE_P(v.real))
 	return rb_float_new(-0.0);
     else
 	return rb_float_new(0.0);
@@ -1347,15 +1429,16 @@ underflow:
 static VALUE
 BigDecimal_to_r(VALUE self)
 {
-    Real *p;
+    ENTER(1);
+    BDVALUE v;
     ssize_t sign, power, denomi_power;
     VALUE a, digits, numerator;
 
-    p = GetVpValue(self, 1);
-    BigDecimal_check_num(p);
+    GUARD_OBJ(v, GetBDValueMust(self));
+    BigDecimal_check_num(v.real);
 
-    sign = VpGetSign(p);
-    power = VpExponent10(p);
+    sign = VpGetSign(v.real);
+    power = VpExponent10(v.real);
     a = BigDecimal_split(self);
     digits = RARRAY_AREF(a, 1);
     denomi_power = power - RSTRING_LEN(digits);
@@ -1393,23 +1476,23 @@ BigDecimal_to_r(VALUE self)
 static VALUE
 BigDecimal_coerce(VALUE self, VALUE other)
 {
-    ENTER(2);
+    ENTER(1);
     VALUE obj;
-    Real *b;
+    BDVALUE b;
 
     if (RB_TYPE_P(other, T_FLOAT)) {
-	GUARD_OBJ(b, GetVpValueWithPrec(other, 0, 1));
-        obj = rb_assoc_new(VpCheckGetValue(b), self);
+	GUARD_OBJ(b, GetBDValueWithPrecMust(other, 0));
+	obj = rb_assoc_new(CheckGetValue(b), self);
     }
     else {
 	if (RB_TYPE_P(other, T_RATIONAL)) {
 	    Real* pv = DATA_PTR(self);
-	    GUARD_OBJ(b, GetVpValueWithPrec(other, pv->Prec*VpBaseFig(), 1));
+	    GUARD_OBJ(b, GetBDValueWithPrecMust(other, pv->Prec*VpBaseFig()));
 	}
 	else {
-	    GUARD_OBJ(b, GetVpValue(other, 1));
+	    GUARD_OBJ(b, GetBDValueMust(other));
 	}
-	obj = rb_assoc_new(b->obj, self);
+	obj = rb_assoc_new(b.bigdecimal, self);
     }
 
     return obj;
@@ -1451,42 +1534,42 @@ BigDecimal_uplus(VALUE self)
 static VALUE
 BigDecimal_add(VALUE self, VALUE r)
 {
-    ENTER(5);
-    Real *c, *a, *b;
+    ENTER(3);
+    BDVALUE a, b, c;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
+    GUARD_OBJ(a, GetBDValueMust(self));
     if (RB_TYPE_P(r, T_FLOAT)) {
-	b = GetVpValueWithPrec(r, 0, 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-	b = GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
     }
     else {
-	b = GetVpValue(r, 0);
+        NULLABLE_BDVALUE b2;
+        GUARD_OBJ_OR_NIL(b2, GetBDValue(r, 0));
+        if (!b2.real_or_null) return DoSomeOne(self, r, '+');
+        b = bdvalue_nonnullable(b2);
     }
 
-    if (!b) return DoSomeOne(self,r,'+');
-    SAVE(b);
+    if (VpIsNaN(b.real)) return b.bigdecimal;
+    if (VpIsNaN(a.real)) return a.bigdecimal;
 
-    if (VpIsNaN(b)) return b->obj;
-    if (VpIsNaN(a)) return a->obj;
-
-    mx = GetAddSubPrec(a, b);
+    mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
         GUARD_OBJ(c, NewZeroWrapLimited(1, VpBaseFig() + 1));
-        VpAddSub(c, a, b, 1);
+        VpAddSub(c.real, a.real, b.real, 1);
     }
     else {
         GUARD_OBJ(c, NewZeroWrapLimited(1, mx * (VpBaseFig() + 1)));
         if (!mx) {
-            VpSetInf(c, VpGetSign(a));
+            VpSetInf(c.real, VpGetSign(a.real));
         }
         else {
-            VpAddSub(c, a, b, 1);
+            VpAddSub(c.real, a.real, b.real, 1);
         }
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
  /*
@@ -1507,51 +1590,52 @@ BigDecimal_add(VALUE self, VALUE r)
 static VALUE
 BigDecimal_sub(VALUE self, VALUE r)
 {
-    ENTER(5);
-    Real *c, *a, *b;
+    ENTER(3);
+    BDVALUE a, b, c;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self,1));
+    GUARD_OBJ(a, GetBDValueMust(self));
     if (RB_TYPE_P(r, T_FLOAT)) {
-	b = GetVpValueWithPrec(r, 0, 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-	b = GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
     }
     else {
-	b = GetVpValue(r,0);
+        NULLABLE_BDVALUE b2;
+        GUARD_OBJ_OR_NIL(b2, GetBDValue(r, 0));
+        if (!b2.real_or_null) return DoSomeOne(self, r, '-');
+        b = bdvalue_nonnullable(b2);
     }
 
-    if (!b) return DoSomeOne(self,r,'-');
-    SAVE(b);
+    if (VpIsNaN(b.real)) return b.bigdecimal;
+    if (VpIsNaN(a.real)) return a.bigdecimal;
 
-    if (VpIsNaN(b)) return b->obj;
-    if (VpIsNaN(a)) return a->obj;
-
-    mx = GetAddSubPrec(a,b);
+    mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
         GUARD_OBJ(c, NewZeroWrapLimited(1, VpBaseFig() + 1));
-        VpAddSub(c, a, b, -1);
+        VpAddSub(c.real, a.real, b.real, -1);
     }
     else {
         GUARD_OBJ(c, NewZeroWrapLimited(1, mx *(VpBaseFig() + 1)));
         if (!mx) {
-            VpSetInf(c,VpGetSign(a));
+            VpSetInf(c.real, VpGetSign(a.real));
         }
         else {
-            VpAddSub(c, a, b, -1);
+            VpAddSub(c.real, a.real, b.real, -1);
         }
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
 static VALUE
 BigDecimalCmp(VALUE self, VALUE r,char op)
 {
-    ENTER(5);
+    ENTER(2);
     SIGNED_VALUE e;
-    Real *a, *b=0;
-    GUARD_OBJ(a, GetVpValue(self, 1));
+    BDVALUE a;
+    NULLABLE_BDVALUE b = { Qnil, NULL };
+    GUARD_OBJ(a, GetBDValueMust(self));
     switch (TYPE(r)) {
     case T_DATA:
 	if (!is_kind_of_BigDecimal(r)) break;
@@ -1559,21 +1643,21 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
     case T_FIXNUM:
 	/* fall through */
     case T_BIGNUM:
-	GUARD_OBJ(b, GetVpValue(r, 0));
+	GUARD_OBJ_OR_NIL(b, GetBDValue(r, 0));
 	break;
 
     case T_FLOAT:
-	GUARD_OBJ(b, GetVpValueWithPrec(r, 0, 0));
+	GUARD_OBJ_OR_NIL(b, GetBDValueWithPrec(r, 0, 0));
 	break;
 
     case T_RATIONAL:
-	GUARD_OBJ(b, GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 0));
+	GUARD_OBJ_OR_NIL(b, GetBDValueWithPrec(r, a.real->Prec*VpBaseFig(), 0));
 	break;
 
     default:
 	break;
     }
-    if (b == NULL) {
+    if (b.real_or_null == NULL) {
 	ID f = 0;
 
 	switch (op) {
@@ -1602,8 +1686,7 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
 	}
 	return rb_num_coerce_relop(self, r, f);
     }
-    SAVE(b);
-    e = VpComp(a, b);
+    e = VpComp(a.real, b.real_or_null);
     if (e == 999)
 	return (op == '*') ? Qnil : Qfalse;
     switch (op) {
@@ -1777,12 +1860,12 @@ BigDecimal_ge(VALUE self, VALUE r)
 static VALUE
 BigDecimal_neg(VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    GUARD_OBJ(c, NewZeroWrapLimited(1, a->Prec *(VpBaseFig() + 1)));
-    VpAsgn(c, a, -1);
-    return VpCheckGetValue(c);
+    ENTER(2);
+    BDVALUE c, a;
+    GUARD_OBJ(a, GetBDValueMust(self));
+    GUARD_OBJ(c, NewZeroWrapLimited(1, a.real->Prec *(VpBaseFig() + 1)));
+    VpAsgn(c.real, a.real, -1);
+    return CheckGetValue(c);
 }
 
 /*
@@ -1799,31 +1882,31 @@ BigDecimal_neg(VALUE self)
 static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
-    ENTER(5);
-    Real *c, *a, *b;
+    ENTER(3);
+    BDVALUE a, b, c;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
+    GUARD_OBJ(a, GetBDValueMust(self));
     if (RB_TYPE_P(r, T_FLOAT)) {
-        b = GetVpValueWithPrec(r, 0, 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-	b = GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
     }
     else {
-	b = GetVpValue(r,0);
+        NULLABLE_BDVALUE b2;
+        GUARD_OBJ_OR_NIL(b2, GetBDValue(r,0));
+        if (!b2.real_or_null) return DoSomeOne(self, r, '*');
+        b = bdvalue_nonnullable(b2);
     }
 
-    if (!b) return DoSomeOne(self, r, '*');
-    SAVE(b);
-
-    mx = a->Prec + b->Prec;
+    mx = a.real->Prec + b.real->Prec;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx * (VpBaseFig() + 1)));
-    VpMult(c, a, b);
-    return VpCheckGetValue(c);
+    VpMult(c.real, a.real, b.real);
+    return CheckGetValue(c);
 }
 
-static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod);
+static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod);
 
 /* call-seq:
  *   a / b   -> bigdecimal
@@ -1895,16 +1978,14 @@ BigDecimal_quo(int argc, VALUE *argv, VALUE self)
  * div = (a.to_f/b).floor
  */
 static VALUE
-BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
+BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod)
 {
-    ENTER(8);
-    Real *c=NULL, *d=NULL, *res=NULL;
-    Real *a, *b;
+    ENTER(6);
+    BDVALUE a, b, c, d, e, res;
     ssize_t a_prec, b_prec;
     size_t mx;
 
-    TypedData_Get_Struct(self, Real, &BigDecimal_data_type, a);
-    SAVE(a);
+    GUARD_OBJ(a, GetBDValueMust(self));
 
     VALUE rr = r;
     if (is_kind_of_BigDecimal(rr)) {
@@ -1917,44 +1998,42 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
         rr = rb_float_convert_to_BigDecimal(r, 0, true);
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-        rr = rb_rational_convert_to_BigDecimal(r, a->Prec*BASE_FIG, true);
+        rr = rb_rational_convert_to_BigDecimal(r, a.real->Prec*BASE_FIG, true);
     }
 
     if (!is_kind_of_BigDecimal(rr)) {
         return Qfalse;
     }
 
-    TypedData_Get_Struct(rr, Real, &BigDecimal_data_type, b);
-    SAVE(b);
+    GUARD_OBJ(b, GetBDValueMust(rr));
 
-    if (VpIsNaN(a) || VpIsNaN(b)) goto NaN;
-    if (VpIsInf(a) && VpIsInf(b)) goto NaN;
-    if (VpIsZero(b)) {
+    if (VpIsNaN(a.real) || VpIsNaN(b.real)) goto NaN;
+    if (VpIsInf(a.real) && VpIsInf(b.real)) goto NaN;
+    if (VpIsZero(b.real)) {
         rb_raise(rb_eZeroDivError, "divided by 0");
     }
-    if (VpIsInf(a)) {
-        if (VpGetSign(a) == VpGetSign(b)) {
+    if (VpIsInf(a.real)) {
+        if (VpGetSign(a.real) == VpGetSign(b.real)) {
             VALUE inf = BigDecimal_positive_infinity();
-            TypedData_Get_Struct(inf, Real, &BigDecimal_data_type, *div);
+            *div = (NULLABLE_BDVALUE) { inf, DATA_PTR(inf) };
         }
         else {
             VALUE inf = BigDecimal_negative_infinity();
-            TypedData_Get_Struct(inf, Real, &BigDecimal_data_type, *div);
+            *div = (NULLABLE_BDVALUE) { inf, DATA_PTR(inf) };
         }
         VALUE nan = BigDecimal_nan();
-        TypedData_Get_Struct(nan, Real, &BigDecimal_data_type, *mod);
+        *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
         return Qtrue;
     }
-    if (VpIsInf(b)) {
+    if (VpIsInf(b.real)) {
         VALUE zero = BigDecimal_positive_zero();
-        TypedData_Get_Struct(zero, Real, &BigDecimal_data_type, *div);
-        *mod = a;
+        *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+        *mod = bdvalue_nullable(a);
         return Qtrue;
     }
-    if (VpIsZero(a)) {
+    if (VpIsZero(a.real)) {
         VALUE zero = BigDecimal_positive_zero();
-        TypedData_Get_Struct(zero, Real, &BigDecimal_data_type, *div);
-        TypedData_Get_Struct(zero, Real, &BigDecimal_data_type, *mod);
+        *div = *mod = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
         return Qtrue;
     }
 
@@ -1969,36 +2048,35 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
 
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx + 2*BASE_FIG));
     GUARD_OBJ(res, NewZeroWrapNolimit(1, mx*2 + 2*BASE_FIG));
-    VpDivd(c, res, a, b);
+    VpDivd(c.real, res.real, a.real, b.real);
 
-    mx = c->Prec * BASE_FIG;
+    mx = c.real->Prec * BASE_FIG;
     GUARD_OBJ(d, NewZeroWrapLimited(1, mx));
-    VpActiveRound(d, c, VP_ROUND_DOWN, 0);
+    VpActiveRound(d.real, c.real, VP_ROUND_DOWN, 0);
 
-    VpMult(res, d, b);
-    VpAddSub(c, a, res, -1);
+    VpMult(res.real, d.real, b.real);
+    VpAddSub(c.real, a.real, res.real, -1);
 
-    if (!VpIsZero(c) && (VpGetSign(a) * VpGetSign(b) < 0)) {
+    if (!VpIsZero(c.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
         /* result adjustment for negative case */
-        res = rbd_reallocate_struct(res, d->MaxPrec);
-        res->MaxPrec = d->MaxPrec;
-        VpAddSub(res, d, VpOne(), -1);
-        GUARD_OBJ(d, NewZeroWrapLimited(1, GetAddSubPrec(c, b) * 2*BASE_FIG));
-        VpAddSub(d, c, b, 1);
-        *div = res;
-        *mod = d;
+        res = rbd_reallocate_struct(res, d.real->MaxPrec);
+        res.real->MaxPrec = d.real->MaxPrec;
+        VpAddSub(res.real, d.real, VpOne(), -1);
+        GUARD_OBJ(e, NewZeroWrapLimited(1, GetAddSubPrec(c.real, b.real) * 2*BASE_FIG));
+        VpAddSub(e.real, c.real, b.real, 1);
+        *div = bdvalue_nullable(res);
+        *mod = bdvalue_nullable(e);
     }
     else {
-        *div = d;
-        *mod = c;
+        *div = bdvalue_nullable(d);
+        *mod = bdvalue_nullable(c);
     }
     return Qtrue;
 
   NaN:
     {
         VALUE nan = BigDecimal_nan();
-        TypedData_Get_Struct(nan, Real, &BigDecimal_data_type, *div);
-        TypedData_Get_Struct(nan, Real, &BigDecimal_data_type, *mod);
+        *div = *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
     }
     return Qtrue;
 }
@@ -2014,66 +2092,64 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
 static VALUE
 BigDecimal_mod(VALUE self, VALUE r) /* %: a%b = a - (a.to_f/b).floor * b */
 {
-    ENTER(3);
-    Real *div = NULL, *mod = NULL;
+    NULLABLE_BDVALUE div, mod;
 
     if (BigDecimal_DoDivmod(self, r, &div, &mod)) {
-	SAVE(div); SAVE(mod);
-        return VpCheckGetValue(mod);
+        return CheckGetValue(bdvalue_nonnullable(mod));
     }
     return DoSomeOne(self, r, '%');
 }
 
 static VALUE
-BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
+BigDecimal_divremain(VALUE self, VALUE r, NULLABLE_BDVALUE *dv, NULLABLE_BDVALUE *rv)
 {
-    ENTER(10);
+    ENTER(8);
     size_t mx;
-    Real *a = NULL, *b = NULL, *c = NULL, *res = NULL, *d = NULL, *rr = NULL, *ff = NULL;
-    Real *f = NULL;
+    BDVALUE a, b, c, d, f, ff, res, rr;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
+    GUARD_OBJ(a, GetBDValueMust(self));
     if (RB_TYPE_P(r, T_FLOAT)) {
-	b = GetVpValueWithPrec(r, 0, 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-	b = GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 1);
+        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
     }
     else {
-	b = GetVpValue(r, 0);
+        NULLABLE_BDVALUE b2;
+        GUARD_OBJ_OR_NIL(b2, GetBDValue(r, 0));
+        if (!b2.real_or_null) return Qfalse;
+        b = bdvalue_nonnullable(b2);
     }
 
-    if (!b) return Qfalse;
-    SAVE(b);
-
-    if (VpIsPosInf(b) || VpIsNegInf(b)) {
-       GUARD_OBJ(*dv, NewZeroWrapLimited(1, 1));
-       VpSetZero(*dv, 1);
-       *rv = a;
-       return Qtrue;
+    if (VpIsPosInf(b.real) || VpIsNegInf(b.real)) {
+        GUARD_OBJ(d, NewZeroWrapLimited(1, 1));
+        VpSetZero(d.real, 1);
+        *dv = bdvalue_nullable(d);
+        *rv = bdvalue_nullable(a);
+        return Qtrue;
     }
 
-    mx = (a->MaxPrec + b->MaxPrec) *VpBaseFig();
-    GUARD_OBJ(c,   NewZeroWrapLimited(1, mx));
+    mx = (a.real->MaxPrec + b.real->MaxPrec) *VpBaseFig();
+    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     GUARD_OBJ(res, NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
-    GUARD_OBJ(rr,  NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
-    GUARD_OBJ(ff,  NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
+    GUARD_OBJ(rr, NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
+    GUARD_OBJ(ff, NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
 
-    VpDivd(c, res, a, b);
+    VpDivd(c.real, res.real, a.real, b.real);
 
-    mx = c->Prec *(VpBaseFig() + 1);
+    mx = c.real->Prec *(VpBaseFig() + 1);
 
     GUARD_OBJ(d, NewZeroWrapLimited(1, mx));
     GUARD_OBJ(f, NewZeroWrapLimited(1, mx));
 
-    VpActiveRound(d, c, VP_ROUND_DOWN, 0); /* 0: round off */
+    VpActiveRound(d.real, c.real, VP_ROUND_DOWN, 0); /* 0: round off */
 
-    VpFrac(f, c);
-    VpMult(rr, f, b);
-    VpAddSub(ff, res, rr, 1);
+    VpFrac(f.real, c.real);
+    VpMult(rr.real, f.real, b.real);
+    VpAddSub(ff.real, res.real, rr.real, 1);
 
-    *dv = d;
-    *rv = ff;
+    *dv = bdvalue_nullable(d);
+    *rv = bdvalue_nullable(ff);
     return Qtrue;
 }
 
@@ -2087,9 +2163,9 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 static VALUE
 BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
 {
-    Real  *d, *rv = 0;
+    NULLABLE_BDVALUE d, rv = { Qnil, NULL };
     if (BigDecimal_divremain(self, r, &d, &rv)) {
-        return VpCheckGetValue(rv);
+        return CheckGetValue(bdvalue_nonnullable(rv));
     }
     return DoSomeOne(self, r, rb_intern("remainder"));
 }
@@ -2119,12 +2195,10 @@ BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
 static VALUE
 BigDecimal_divmod(VALUE self, VALUE r)
 {
-    ENTER(5);
-    Real *div = NULL, *mod = NULL;
+    NULLABLE_BDVALUE div, mod;
 
     if (BigDecimal_DoDivmod(self, r, &div, &mod)) {
-	SAVE(div); SAVE(mod);
-        return rb_assoc_new(VpCheckGetValue(div), VpCheckGetValue(mod));
+        return rb_assoc_new(CheckGetValue(bdvalue_nonnullable(div)), CheckGetValue(bdvalue_nonnullable(mod)));
     }
     return DoSomeOne(self,r,rb_intern("divmod"));
 }
@@ -2136,17 +2210,16 @@ BigDecimal_divmod(VALUE self, VALUE r)
 static inline VALUE
 BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 {
-    ENTER(5);
+    ENTER(4);
     SIGNED_VALUE ix;
-    Real *res = NULL;
-    Real *av = NULL, *bv = NULL, *cv = NULL;
+    BDVALUE av, bv, cv, res;
     size_t mx, pl;
 
     if (NIL_P(n)) { /* div in Float sense */
-        Real *div = NULL;
-        Real *mod;
+        NULLABLE_BDVALUE div;
+        NULLABLE_BDVALUE mod;
         if (BigDecimal_DoDivmod(self, b, &div, &mod)) {
-            return BigDecimal_to_i(VpCheckGetValue(div));
+            return BigDecimal_to_i(CheckGetValue(bdvalue_nonnullable(div)));
         }
         return DoSomeOne(self, b, rb_intern("div"));
     }
@@ -2157,21 +2230,21 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     pl = VpSetPrecLimit(0);
     if (ix == 0) ix = pl;
 
-    GUARD_OBJ(av, GetVpValue(self, 1));
+    GUARD_OBJ(av, GetBDValueMust(self));
     if (RB_FLOAT_TYPE_P(b) && ix > BIGDECIMAL_DOUBLE_FIGURES) {
         /* TODO: I want to refactor this precision control for a float value later
          *       by introducing an implicit conversion function instead of
-         *       GetVpValueWithPrec.  */
-        GUARD_OBJ(bv, GetVpValueWithPrec(b, BIGDECIMAL_DOUBLE_FIGURES, 1));
+         *       GetBDValueWithPrecMust.  */
+        GUARD_OBJ(bv, GetBDValueWithPrecMust(b, BIGDECIMAL_DOUBLE_FIGURES));
     }
     else {
-        GUARD_OBJ(bv, GetVpValueWithPrec(b, ix, 1));
+        GUARD_OBJ(bv, GetBDValueWithPrecMust(b, ix));
     }
 
     if (ix == 0) {
         ssize_t a_prec, b_prec;
-        VpCountPrecisionAndScale(av, &a_prec, NULL);
-        VpCountPrecisionAndScale(bv, &b_prec, NULL);
+        VpCountPrecisionAndScale(av.real, &a_prec, NULL);
+        VpCountPrecisionAndScale(bv.real, &b_prec, NULL);
         ix = ((a_prec > b_prec) ? a_prec : b_prec) + BIGDECIMAL_DOUBLE_FIGURES;
         if (2 * BIGDECIMAL_DOUBLE_FIGURES > ix)
             ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
@@ -2180,22 +2253,22 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     // VpDivd needs 2 extra DECDIGs. One more is needed for rounding.
     GUARD_OBJ(cv, NewZeroWrapLimited(1, ix + 3 * VpBaseFig()));
 
-    mx = bv->Prec + cv->MaxPrec - 1;
-    if (mx <= av->Prec) mx = av->Prec + 1;
+    mx = bv.real->Prec + cv.real->MaxPrec - 1;
+    if (mx <= av.real->Prec) mx = av.real->Prec + 1;
     GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
-    VpDivd(cv, res, av, bv);
+    VpDivd(cv.real, res.real, av.real, bv.real);
     VpSetPrecLimit(pl);
-    if (!VpIsZero(res)) {
+    if (!VpIsZero(res.real)) {
         // Remainder value affects rounding result.
         // ROUND_UP cv = 0.1e0 with ix=10 will be:
         // 0.1e0 if remainder == 0
         // 0.1000000001e0 if remainder != 0
         size_t idx = roomof(ix, BASE_FIG);
-        while (cv->Prec <= idx) cv->frac[cv->Prec++] = 0;
-        if (cv->frac[idx] == 0 || cv->frac[idx] == HALF_BASE) cv->frac[idx]++;
+        while (cv.real->Prec <= idx) cv.real->frac[cv.real->Prec++] = 0;
+        if (cv.real->frac[idx] == 0 || cv.real->frac[idx] == HALF_BASE) cv.real->frac[idx]++;
     }
-    VpLeftRound(cv, VpGetRoundMode(), ix);
-    return VpCheckGetValue(cv);
+    VpLeftRound(cv.real, VpGetRoundMode(), ix);
+    return CheckGetValue(cv);
 }
 
  /*
@@ -2271,17 +2344,17 @@ BigDecimal_div3(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 {
-    ENTER(2);
-    Real *cv;
+    ENTER(1);
+    BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
     if (mx == 0) return BigDecimal_add(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
 	VALUE   c = BigDecimal_add(self, b);
 	VpSetPrecLimit(pl);
-	GUARD_OBJ(cv, GetVpValue(c, 1));
-	VpLeftRound(cv, VpGetRoundMode(), mx);
-        return VpCheckGetValue(cv);
+	GUARD_OBJ(cv, GetBDValueMust(c));
+	VpLeftRound(cv.real, VpGetRoundMode(), mx);
+	return CheckGetValue(cv);
     }
 }
 
@@ -2301,17 +2374,17 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 {
-    ENTER(2);
-    Real *cv;
+    ENTER(1);
+    BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
     if (mx == 0) return BigDecimal_sub(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
 	VALUE   c = BigDecimal_sub(self, b);
 	VpSetPrecLimit(pl);
-	GUARD_OBJ(cv, GetVpValue(c, 1));
-	VpLeftRound(cv, VpGetRoundMode(), mx);
-        return VpCheckGetValue(cv);
+	GUARD_OBJ(cv, GetBDValueMust(c));
+	VpLeftRound(cv.real, VpGetRoundMode(), mx);
+	return CheckGetValue(cv);
     }
 }
 
@@ -2344,17 +2417,17 @@ BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 {
-    ENTER(2);
-    Real *cv;
+    ENTER(1);
+    BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
     if (mx == 0) return BigDecimal_mult(self, b);
     else {
 	size_t pl = VpSetPrecLimit(0);
 	VALUE   c = BigDecimal_mult(self, b);
 	VpSetPrecLimit(pl);
-	GUARD_OBJ(cv, GetVpValue(c, 1));
-	VpLeftRound(cv, VpGetRoundMode(), mx);
-        return VpCheckGetValue(cv);
+	GUARD_OBJ(cv, GetBDValueMust(c));
+	VpLeftRound(cv.real, VpGetRoundMode(), mx);
+	return CheckGetValue(cv);
     }
 }
 
@@ -2372,16 +2445,16 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_abs(VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec *(VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec *(VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpAsgn(c, a, 1);
-    VpChangeSign(c, 1);
-    return VpCheckGetValue(c);
+    VpAsgn(c.real, a.real, 1);
+    VpChangeSign(c.real, 1);
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2394,19 +2467,19 @@ BigDecimal_abs(VALUE self)
 static VALUE
 BigDecimal_sqrt(VALUE self, VALUE nFig)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     size_t mx, n;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
 
     n = check_int_precision(nFig);
     n += VpDblFig() + VpBaseFig();
     if (mx <= n) mx = n;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpSqrt(c, a);
-    return VpCheckGetValue(c);
+    VpSqrt(c.real, a.real);
+    return CheckGetValue(c);
 }
 
 /* Return the integer part of the number, as a BigDecimal.
@@ -2414,15 +2487,15 @@ BigDecimal_sqrt(VALUE self, VALUE nFig)
 static VALUE
 BigDecimal_fix(VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec *(VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec *(VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpActiveRound(c, a, VP_ROUND_DOWN, 0); /* 0: round off */
-    return VpCheckGetValue(c);
+    VpActiveRound(c.real, a.real, VP_ROUND_DOWN, 0); /* 0: round off */
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2454,8 +2527,8 @@ BigDecimal_fix(VALUE self)
 static VALUE
 BigDecimal_round(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    Real   *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     int    iLoc = 0;
     VALUE  vLoc;
     VALUE  vRound;
@@ -2492,15 +2565,15 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
     }
 
     pl = VpSetPrecLimit(0);
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
-    VpActiveRound(c, a, sw, iLoc);
+    VpActiveRound(c.real, a.real, sw, iLoc);
     if (round_to_int) {
-        return BigDecimal_to_i(VpCheckGetValue(c));
+        return BigDecimal_to_i(CheckGetValue(c));
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2525,8 +2598,8 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     int iLoc;
     VALUE vLoc;
     size_t mx, pl = VpSetPrecLimit(0);
@@ -2538,15 +2611,15 @@ BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 	iLoc = NUM2INT(vLoc);
     }
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
-    VpActiveRound(c, a, VP_ROUND_DOWN, iLoc); /* 0: truncate */
+    VpActiveRound(c.real, a.real, VP_ROUND_DOWN, iLoc); /* 0: truncate */
     if (argc == 0) {
-        return BigDecimal_to_i(VpCheckGetValue(c));
+        return BigDecimal_to_i(CheckGetValue(c));
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
 /* Return the fractional part of the number, as a BigDecimal.
@@ -2554,15 +2627,15 @@ BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_frac(VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     size_t mx;
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpFrac(c, a);
-    return VpCheckGetValue(c);
+    VpFrac(c.real, a.real);
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2585,8 +2658,8 @@ BigDecimal_frac(VALUE self)
 static VALUE
 BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     int iLoc;
     VALUE vLoc;
     size_t mx, pl = VpSetPrecLimit(0);
@@ -2598,18 +2671,18 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 	iLoc = NUM2INT(vLoc);
     }
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
-    VpActiveRound(c, a, VP_ROUND_FLOOR, iLoc);
+    VpActiveRound(c.real, a.real, VP_ROUND_FLOOR, iLoc);
 #ifdef BIGDECIMAL_DEBUG
     VPrint(stderr, "floor: c=%\n", c);
 #endif
     if (argc == 0) {
-        return BigDecimal_to_i(VpCheckGetValue(c));
+        return BigDecimal_to_i(CheckGetValue(c));
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2632,8 +2705,8 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    Real *c, *a;
+    ENTER(2);
+    BDVALUE c, a;
     int iLoc;
     VALUE vLoc;
     size_t mx, pl = VpSetPrecLimit(0);
@@ -2644,15 +2717,15 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 	iLoc = NUM2INT(vLoc);
     }
 
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    mx = a->Prec * (VpBaseFig() + 1);
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = a.real->Prec * (VpBaseFig() + 1);
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
-    VpActiveRound(c, a, VP_ROUND_CEIL, iLoc);
+    VpActiveRound(c.real, a.real, VP_ROUND_CEIL, iLoc);
     if (argc == 0) {
-        return BigDecimal_to_i(VpCheckGetValue(c));
+        return BigDecimal_to_i(CheckGetValue(c));
     }
-    return VpCheckGetValue(c);
+    return CheckGetValue(c);
 }
 
 /* call-seq:
@@ -2691,10 +2764,10 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
+    ENTER(1);
     int   fmt = 0;   /* 0: E format, 1: F format */
     int   fPlus = 0; /* 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
-    Real  *vp;
+    BDVALUE vp;
     volatile VALUE str;
     char  *psz;
     char   ch;
@@ -2702,7 +2775,7 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
     SIGNED_VALUE m;
     VALUE  f;
 
-    GUARD_OBJ(vp, GetVpValue(self, 1));
+    GUARD_OBJ(vp, GetBDValueMust(self));
 
     if (rb_scan_args(argc, argv, "01", &f) == 1) {
 	if (RB_TYPE_P(f, T_STRING)) {
@@ -2737,10 +2810,10 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 	}
     }
     if (fmt) {
-	nc = VpNumOfChars(vp, "F");
+	nc = VpNumOfChars(vp.real, "F");
     }
     else {
-	nc = VpNumOfChars(vp, "E");
+	nc = VpNumOfChars(vp.real, "E");
     }
     if (mc > 0) {
 	nc += (nc + mc - 1) / mc + 1;
@@ -2750,10 +2823,10 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
     psz = RSTRING_PTR(str);
 
     if (fmt) {
-	VpToFString(vp, psz, RSTRING_LEN(str), mc, fPlus);
+	VpToFString(vp.real, psz, RSTRING_LEN(str), mc, fPlus);
     }
     else {
-	VpToString (vp, psz, RSTRING_LEN(str), mc, fPlus);
+	VpToString (vp.real, psz, RSTRING_LEN(str), mc, fPlus);
     }
     rb_str_resize(str, strlen(psz));
     return str;
@@ -2786,16 +2859,16 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_split(VALUE self)
 {
-    ENTER(5);
-    Real *vp;
+    ENTER(1);
+    BDVALUE vp;
     VALUE obj,str;
     ssize_t e, s;
     char *psz1;
 
-    GUARD_OBJ(vp, GetVpValue(self, 1));
-    str = rb_str_new(0, VpNumOfChars(vp, "E"));
+    GUARD_OBJ(vp, GetBDValueMust(self));
+    str = rb_str_new(0, VpNumOfChars(vp.real, "E"));
     psz1 = RSTRING_PTR(str);
-    VpSzMantissa(vp, psz1, RSTRING_LEN(str));
+    VpSzMantissa(vp.real, psz1, RSTRING_LEN(str));
     s = 1;
     if(psz1[0] == '-') {
 	size_t len = strlen(psz1 + 1);
@@ -2805,7 +2878,7 @@ BigDecimal_split(VALUE self)
         s = -1;
     }
     if (psz1[0] == 'N') s = 0; /* NaN */
-    e = VpExponent10(vp);
+    e = VpExponent10(vp.real);
     obj = rb_ary_new2(4);
     rb_ary_push(obj, INT2FIX(s));
     rb_ary_push(obj, str);
@@ -2835,16 +2908,16 @@ BigDecimal_exponent(VALUE self)
 static VALUE
 BigDecimal_inspect(VALUE self)
 {
-    ENTER(5);
-    Real *vp;
+    ENTER(1);
+    BDVALUE vp;
     volatile VALUE str;
     size_t nc;
 
-    GUARD_OBJ(vp, GetVpValue(self, 1));
-    nc = VpNumOfChars(vp, "E");
+    GUARD_OBJ(vp, GetBDValueMust(self));
+    nc = VpNumOfChars(vp.real, "E");
 
     str = rb_str_new(0, nc);
-    VpToString(vp, RSTRING_PTR(str), RSTRING_LEN(str), 0, 0);
+    VpToString(vp.real, RSTRING_PTR(str), RSTRING_LEN(str), 0, 0);
     rb_str_resize(str, strlen(RSTRING_PTR(str)));
     return str;
 }
@@ -2954,7 +3027,7 @@ bigdecimal_power_by_bigdecimal(Real const* x, Real const* exp, ssize_t const n)
     volatile VALUE obj = exp->obj;
 
     if (VpIsZero(exp)) {
-        return VpCheckGetValue(NewOneWrapLimited(1, n));
+        return VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(1, n));
     }
 
     log_x = BigMath_log(x->obj, SSIZET2NUM(n+1));
@@ -2988,14 +3061,14 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 
     rb_scan_args(argc, argv, "11", &vexp, &prec);
 
-    GUARD_OBJ(x, GetVpValue(self, 1));
+    GUARD_OBJ_THROUGH_REAL(x, GetVpValueWithLegacyRealObj(self, 1));
     n = NIL_P(prec) ? (ssize_t)(x->Prec*VpBaseFig()) : NUM2SSIZET(prec);
 
     if (VpIsNaN(x)) {
-        y = NewZeroWrapLimited(1, n);
+        y = NewZeroWrapLimitedLegacyReal(1, n);
         VpSetNaN(y);
         RB_GC_GUARD(y->obj);
-        return VpCheckGetValue(y);
+        return VpCheckGetValueWithLegacyRealObj(y);
     }
 
   retry:
@@ -3020,7 +3093,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
         if (NIL_P(prec)) {
             n += BIGDECIMAL_DOUBLE_FIGURES;
         }
-        exp = GetVpValueWithPrec(vexp, 0, 1);
+        exp = GetVpValueWithPrecWithLegacyRealObj(vexp, 0, 1);
 	break;
 
       case T_RATIONAL:
@@ -3034,7 +3107,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 	    vexp = rb_rational_num(vexp);
 	    goto retry;
 	}
-	exp = GetVpValueWithPrec(vexp, n, 1);
+	exp = GetVpValueWithPrecWithLegacyRealObj(vexp, n, 1);
         if (NIL_P(prec)) {
             n += n;
         }
@@ -3049,9 +3122,10 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 		goto retry;
 	    }
             if (NIL_P(prec)) {
-                GUARD_OBJ(y, GetVpValue(vexp, 1));
+                GUARD_OBJ_THROUGH_REAL(y, GetVpValueWithLegacyRealObj(vexp, 1));
                 n += y->Prec*VpBaseFig();
             }
+	    USE_OBJ_THROUGH_REAL(vexp);
 	    exp = DATA_PTR(vexp);
 	    break;
 	}
@@ -3064,7 +3138,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 
     if (VpIsZero(x)) {
         if (is_negative(vexp)) {
-            y = NewZeroWrapNolimit(1, n);
+            y = NewZeroWrapNolimitLegacyReal(1, n);
             if (BIGDECIMAL_NEGATIVE_P(x)) {
                 if (is_integer(vexp)) {
                     if (is_even(vexp)) {
@@ -3086,18 +3160,18 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
                 VpSetPosInf(y);
             }
             RB_GC_GUARD(y->obj);
-            return VpCheckGetValue(y);
+            return VpCheckGetValueWithLegacyRealObj(y);
         }
         else if (is_zero(vexp)) {
-            return VpCheckGetValue(NewOneWrapLimited(1, n));
+            return VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(1, n));
         }
         else {
-            return VpCheckGetValue(NewZeroWrapLimited(1, n));
+            return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(1, n));
         }
     }
 
     if (is_zero(vexp)) {
-        return VpCheckGetValue(NewOneWrapLimited(1, n));
+        return VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(1, n));
     }
     else if (is_one(vexp)) {
         return self;
@@ -3109,24 +3183,24 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
                 if (is_integer(vexp)) {
                     if (is_even(vexp)) {
                         /* (-Infinity) ** (-even_integer) -> +0 */
-                        return VpCheckGetValue(NewZeroWrapLimited(1, n));
+                        return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(1, n));
                     }
                     else {
                         /* (-Infinity) ** (-odd_integer) -> -0 */
-                        return VpCheckGetValue(NewZeroWrapLimited(-1, n));
+                        return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(-1, n));
                     }
                 }
                 else {
                     /* (-Infinity) ** (-non_integer) -> -0 */
-                    return VpCheckGetValue(NewZeroWrapLimited(-1, n));
+                    return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(-1, n));
                 }
             }
             else {
-                return VpCheckGetValue(NewZeroWrapLimited(1, n));
+                return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(1, n));
             }
         }
         else {
-            y = NewZeroWrapLimited(1, n);
+            y = NewZeroWrapLimitedLegacyReal(1, n);
             if (BIGDECIMAL_NEGATIVE_P(x)) {
                 if (is_integer(vexp)) {
                     if (is_even(vexp)) {
@@ -3145,7 +3219,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
             else {
                 VpSetPosInf(y);
             }
-            return VpCheckGetValue(y);
+            return VpCheckGetValueWithLegacyRealObj(y);
         }
     }
 
@@ -3155,32 +3229,32 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     else if (RB_TYPE_P(vexp, T_BIGNUM)) {
         VALUE abs_value = BigDecimal_abs(self);
         if (is_one(abs_value)) {
-            return VpCheckGetValue(NewOneWrapLimited(is_even(vexp) ? 1 : VpGetSign(x), n));
+            return VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(is_even(vexp) ? 1 : VpGetSign(x), n));
         }
         else if (RTEST(rb_funcall(abs_value, '<', 1, INT2FIX(1)))) {
             if (is_negative(vexp)) {
-                y = NewZeroWrapLimited(1, n);
+                y = NewZeroWrapLimitedLegacyReal(1, n);
                 VpSetInf(y, is_even(vexp) ? 1 : VpGetSign(x));
-                return VpCheckGetValue(y);
+                return VpCheckGetValueWithLegacyRealObj(y);
             }
             else if (BIGDECIMAL_NEGATIVE_P(x) && !is_even(vexp)) {
-                return VpCheckGetValue(NewZeroWrapLimited(-1, n));
+                return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(-1, n));
             }
             else {
-                return VpCheckGetValue(NewZeroWrapLimited(1, n));
+                return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(1, n));
             }
         }
         else {
             if (is_positive(vexp)) {
-                y = NewZeroWrapLimited(1, n);
+                y = NewZeroWrapLimitedLegacyReal(1, n);
                 VpSetInf(y, is_even(vexp) ? 1 : VpGetSign(x));
-                return VpCheckGetValue(y);
+                return VpCheckGetValueWithLegacyRealObj(y);
             }
             else if (BIGDECIMAL_NEGATIVE_P(x) && !is_even(vexp)) {
-                return VpCheckGetValue(NewZeroWrapLimited(-1, n));
+                return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(-1, n));
             }
             else {
-                return VpCheckGetValue(NewZeroWrapLimited(1, n));
+                return VpCheckGetValueWithLegacyRealObj(NewZeroWrapLimitedLegacyReal(1, n));
             }
         }
     }
@@ -3192,16 +3266,16 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
 
     if (VpIsDef(x)) {
         mp = x->Prec * (VpBaseFig() + 1);
-        GUARD_OBJ(y, NewZeroWrapLimited(1, mp * (ma + 1)));
+        GUARD_OBJ_THROUGH_REAL(y, NewZeroWrapLimitedLegacyReal(1, mp * (ma + 1)));
     }
     else {
-        GUARD_OBJ(y, NewZeroWrapLimited(1, 1));
+        GUARD_OBJ_THROUGH_REAL(y, NewZeroWrapLimitedLegacyReal(1, 1));
     }
     VpPowerByInt(y, x, int_exp);
     if (!NIL_P(prec) && VpIsDef(y)) {
         VpMidRound(y, VpGetRoundMode(), n);
     }
-    return VpCheckGetValue(y);
+    return VpCheckGetValueWithLegacyRealObj(y);
 }
 
 /*  call-seq:
@@ -3234,7 +3308,7 @@ BigDecimal_initialize_copy(VALUE self, VALUE other)
     Real *x = rb_check_typeddata(other, &BigDecimal_data_type);
 
     if (self != other) {
-	DATA_PTR(self) = VpCopy(pv, x);
+        BigDecimal_wrap_struct(self, VpCopy(pv, x));
     }
     return self;
 }
@@ -3277,7 +3351,7 @@ check_exception(VALUE bd)
 
     Real *vp;
     TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
-    VpCheckGetValue(vp); /* VpCheckGetValue performs exception check */
+    VpCheckException(vp, false);
 
     return bd;
 }
@@ -3378,10 +3452,15 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
 #endif
     else {
         VALUE str = rb_big2str(val, 10);
-        Real *vp = VpCreateRbObject(RSTRING_LEN(str) + BASE_FIG + 1,
-                                    RSTRING_PTR(str), true);
+        BDVALUE v = bdvalue_nonnullable(CreateFromString(
+            RSTRING_LEN(str) + BASE_FIG + 1,
+            RSTRING_PTR(str),
+            rb_cBigDecimal,
+            true,
+            true
+        ));
         RB_GC_GUARD(str);
-        return check_exception(vp->obj);
+        return CheckGetValue(v);
     }
 }
 
@@ -3577,10 +3656,9 @@ rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exceptio
     if (digs == SIZE_MAX)
         digs = 0;
 
-    Real *vp = VpCreateRbObject(digs, c_str, raise_exception);
-    if (!vp)
-        return Qnil;
-    return VpCheckGetValue(vp);
+    NULLABLE_BDVALUE v = CreateFromString(digs, c_str, rb_cBigDecimal, true, raise_exception);
+    if (v.bigdecimal_or_nil == Qnil) return Qnil;
+    return CheckGetValue(bdvalue_nonnullable(v));
 }
 
 static inline VALUE
@@ -3622,7 +3700,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         vp = VpCopy(NULL, vp);
         /* TODO: rounding */
         BigDecimal_wrap_struct(copy, vp);
-        return VpCheckGetValue(vp);
+        return check_exception(copy);
     }
     else if (RB_INTEGER_TYPE_P(val)) {
         return rb_inum_convert_to_BigDecimal(val, digs, raise_exception);
@@ -3747,11 +3825,11 @@ static VALUE
 BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
 {
     char const *c_str = StringValueCStr(str);
-    Real *vp = VpNewRbClass(0, c_str, klass, false, true);
-    if (!vp)
+    NULLABLE_BDVALUE v = CreateFromString(0, c_str, klass, false, true);
+    if (v.bigdecimal_or_nil == Qnil)
         return Qnil;
     else
-        return VpCheckGetValue(vp);
+        return CheckGetValue(bdvalue_nonnullable(v));
 }
 
  /*
@@ -3920,6 +3998,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
     switch (TYPE(x)) {
       case T_DATA:
 	if (!is_kind_of_BigDecimal(x)) break;
+	USE_OBJ_THROUGH_REAL(x);
 	vx = DATA_PTR(x);
 	negative = BIGDECIMAL_NEGATIVE_P(vx);
 	infinite = VpIsPosInf(vx) || VpIsNegInf(vx);
@@ -3929,7 +4008,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
       case T_FIXNUM:
 	/* fall through */
       case T_BIGNUM:
-	vx = GetVpValue(x, 0);
+	vx = GetVpValueWithLegacyRealObj(x, 0);
 	break;
 
       case T_FLOAT:
@@ -3938,12 +4017,12 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
 	infinite = isinf(flo);
 	nan = isnan(flo);
 	if (!infinite && !nan) {
-	    vx = GetVpValueWithPrec(x, 0, 0);
+	    vx = GetVpValueWithPrecWithLegacyRealObj(x, 0, 0);
 	}
 	break;
 
       case T_RATIONAL:
-	vx = GetVpValueWithPrec(x, prec, 0);
+	vx = GetVpValueWithPrecWithLegacyRealObj(x, prec, 0);
 	break;
 
       default:
@@ -3951,20 +4030,20 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
     }
     if (infinite) {
 	if (negative) {
-            return VpCheckGetValue(GetVpValueWithPrec(INT2FIX(0), prec, 1));
+            return VpCheckGetValueWithLegacyRealObj(GetVpValueWithPrecWithLegacyRealObj(INT2FIX(0), prec, 1));
 	}
 	else {
-	    Real* vy = NewZeroWrapNolimit(1, prec);
+	    Real* vy = NewZeroWrapNolimitLegacyReal(1, prec);
 	    VpSetInf(vy, VP_SIGN_POSITIVE_INFINITE);
 	    RB_GC_GUARD(vy->obj);
-            return VpCheckGetValue(vy);
+            return VpCheckGetValueWithLegacyRealObj(vy);
 	}
     }
     else if (nan) {
-        Real* vy = NewZeroWrapNolimit(1, prec);
+        Real* vy = NewZeroWrapNolimitLegacyReal(1, prec);
         VpSetNaN(vy);
         RB_GC_GUARD(vy->obj);
-        return VpCheckGetValue(vy);
+        return VpCheckGetValueWithLegacyRealObj(vy);
     }
     else if (vx == NULL) {
 	cannot_be_coerced_into_BigDecimal(rb_eArgError, x);
@@ -3977,11 +4056,12 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
         VALUE x_zero = INT2NUM(1);
         VALUE x_copy = f_BigDecimal(1, &x_zero, klass);
         x = BigDecimal_initialize_copy(x_copy, x);
+        USE_OBJ_THROUGH_REAL(x);
         vx = DATA_PTR(x);
 	VpSetSign(vx, 1);
     }
 
-    one = VpCheckGetValue(NewOneWrapLimited(1, 1));
+    one = VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(1, 1));
     y   = one;
     d   = y;
     i   = 1;
@@ -4060,6 +4140,7 @@ BigMath_s_log(VALUE klass, VALUE x, VALUE vprec)
     switch (TYPE(x)) {
       case T_DATA:
 	  if (!is_kind_of_BigDecimal(x)) break;
+	  USE_OBJ_THROUGH_REAL(x);
 	  vx = DATA_PTR(x);
 	  zero = VpIsZero(vx);
 	  negative = BIGDECIMAL_NEGATIVE_P(vx);
@@ -4079,7 +4160,7 @@ BigMath_s_log(VALUE klass, VALUE x, VALUE vprec)
 	negative = i < 0;
 get_vp_value:
 	if (zero || negative) break;
-	vx = GetVpValue(x, 0);
+	vx = GetVpValueWithLegacyRealObj(x, 0);
 	break;
 
       case T_FLOAT:
@@ -4089,7 +4170,7 @@ get_vp_value:
 	infinite = isinf(flo);
 	nan = isnan(flo);
 	if (!zero && !negative && !infinite && !nan) {
-	    vx = GetVpValueWithPrec(x, 0, 1);
+	    vx = GetVpValueWithPrecWithLegacyRealObj(x, 0, 1);
 	}
 	break;
 
@@ -4097,7 +4178,7 @@ get_vp_value:
 	zero = RRATIONAL_ZERO_P(x);
 	negative = RRATIONAL_NEGATIVE_P(x);
 	if (zero || negative) break;
-	vx = GetVpValueWithPrec(x, prec, 1);
+	vx = GetVpValueWithPrecWithLegacyRealObj(x, prec, 1);
 	break;
 
       case T_COMPLEX:
@@ -4108,16 +4189,16 @@ get_vp_value:
 	break;
     }
     if (infinite && !negative) {
-        Real *vy = NewZeroWrapNolimit(1, prec);
+	Real *vy = NewZeroWrapNolimitLegacyReal(1, prec);
 	RB_GC_GUARD(vy->obj);
 	VpSetInf(vy, VP_SIGN_POSITIVE_INFINITE);
-        return VpCheckGetValue(vy);
+	return VpCheckGetValueWithLegacyRealObj(vy);
     }
     else if (nan) {
-	Real* vy = NewZeroWrapNolimit(1, prec);
+	Real* vy = NewZeroWrapNolimitLegacyReal(1, prec);
 	RB_GC_GUARD(vy->obj);
 	VpSetNaN(vy);
-        return VpCheckGetValue(vy);
+	return VpCheckGetValueWithLegacyRealObj(vy);
     }
     else if (zero || negative) {
 	rb_raise(rb_eMathDomainError,
@@ -4126,10 +4207,10 @@ get_vp_value:
     else if (vx == NULL) {
 	cannot_be_coerced_into_BigDecimal(rb_eArgError, x);
     }
-    x = VpCheckGetValue(vx);
+    x = VpCheckGetValueWithLegacyRealObj(vx);
 
-    one = VpCheckGetValue(NewOneWrapLimited(1, 1));
-    two = VpCheckGetValue(VpCreateRbObject(1, "2", true));
+    one = VpCheckGetValueWithLegacyRealObj(NewOneWrapLimitedLegacyReal(1, 1));
+    two = VpCheckGetValueWithLegacyRealObj(VpCreateRbObject(1, "2", true));
 
     n = prec + BIGDECIMAL_DOUBLE_FIGURES;
     vn = SSIZET2NUM(n);
@@ -4137,7 +4218,7 @@ get_vp_value:
     if (expo < 0 || expo >= 3) {
 	char buf[DECIMAL_SIZE_OF_BITS(SIZEOF_VALUE * CHAR_BIT) + 4];
 	snprintf(buf, sizeof(buf), "1E%"PRIdVALUE, -expo);
-        x = BigDecimal_mult2(x, VpCheckGetValue(VpCreateRbObject(1, buf, true)), vn);
+        x = BigDecimal_mult2(x, VpCheckGetValueWithLegacyRealObj(VpCreateRbObject(1, buf, true)), vn);
     }
     else {
 	expo = 0;
@@ -4169,7 +4250,7 @@ get_vp_value:
     if (expo != 0) {
 	VALUE log10, vexpo, dy;
 	log10 = BigMath_s_log(klass, INT2FIX(10), vprec);
-        vexpo = VpCheckGetValue(GetVpValue(SSIZET2NUM(expo), 1));
+        vexpo = VpCheckGetValueWithLegacyRealObj(GetVpValueWithLegacyRealObj(SSIZET2NUM(expo), 1));
 	dy = BigDecimal_mult(log10, vexpo);
 	y = BigDecimal_add(y, dy);
     }
@@ -4728,11 +4809,19 @@ VpCheckException(Real *p, bool always)
     }
 }
 
+// Use CheckGetValue instead of this function
 static VALUE
-VpCheckGetValue(Real *p)
+VpCheckGetValueWithLegacyRealObj(Real *p)
 {
     VpCheckException(p, false);
     return p->obj;
+}
+
+static VALUE
+CheckGetValue(BDVALUE v)
+{
+    VpCheckException(v.real, false);
+    return v.bigdecimal;
 }
 
 /*
