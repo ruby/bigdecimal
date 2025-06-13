@@ -1225,6 +1225,8 @@ class TestBigDecimal < Test::Unit::TestCase
     x = BigDecimal((2**200).to_s)
     assert_equal(2**100, x.sqrt(1))
 
+    assert_in_delta(BigDecimal("4.0000000000000000000125"), BigDecimal("16.0000000000000000001").sqrt(100), BigDecimal("1e-40"))
+
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_raise_with_message(FloatDomainError, "sqrt of 'NaN'(Not a Number)") { BigDecimal("NaN").sqrt(1) }
