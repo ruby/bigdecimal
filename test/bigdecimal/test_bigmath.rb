@@ -76,6 +76,17 @@ class TestBigMath < Test::Unit::TestCase
     assert_fixed_point_precision {|n| cos(BigDecimal(PI(50) * 201 / 2), n) }
   end
 
+  def test_tan
+    assert_in_delta(0.0, tan(BigDecimal("0.0"), N))
+    assert_in_delta(0.0, tan(PI(N), N))
+    assert_in_delta(1.0, tan(PI(N) / 4, N))
+    assert_in_delta(sqrt(BigDecimal(3), N), tan(PI(N) / 3, N))
+    assert_in_delta(sqrt(BigDecimal(3), 10 * N), tan(PI(10 * N) / 3, 10 * N))
+    assert_in_delta(0.0, tan(-PI(N), N))
+    assert_in_delta(-1.0, tan(-PI(N) / 4, N))
+    assert_in_delta(-sqrt(BigDecimal(3), N), tan(-PI(N) / 3, N))
+  end
+
   def test_atan
     assert_equal(0.0, atan(BigDecimal("0.0"), N))
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))
