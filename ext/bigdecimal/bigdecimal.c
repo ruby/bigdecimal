@@ -1823,7 +1823,7 @@ BigDecimal_mult(VALUE self, VALUE r)
     return VpCheckGetValue(c);
 }
 
-static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod);
+static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod, bool truncate);
 
 /* call-seq:
  *   a / b   -> bigdecimal
@@ -1893,9 +1893,10 @@ BigDecimal_quo(int argc, VALUE *argv, VALUE self)
 /*
  * %: mod = a%b = a - (a.to_f/b).floor * b
  * div = (a.to_f/b).floor
+ * In truncate mode, use truncate instead of floor.
  */
 static VALUE
-BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
+BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod, bool truncate)
 {
     ENTER(8);
     Real *c=NULL, *d=NULL, *res=NULL;
@@ -1978,7 +1979,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, Real **div, Real **mod)
     VpMult(res, d, b);
     VpAddSub(c, a, res, -1);
 
-    if (!VpIsZero(c) && (VpGetSign(a) * VpGetSign(b) < 0)) {
+    if (!truncate && !VpIsZero(c) && (VpGetSign(a) * VpGetSign(b) < 0)) {
         /* result adjustment for negative case */
         res = rbd_reallocate_struct(res, d->MaxPrec);
         res->MaxPrec = d->MaxPrec;
@@ -2017,64 +2018,11 @@ BigDecimal_mod(VALUE self, VALUE r) /* %: a%b = a - (a.to_f/b).floor * b */
     ENTER(3);
     Real *div = NULL, *mod = NULL;
 
-    if (BigDecimal_DoDivmod(self, r, &div, &mod)) {
-	SAVE(div); SAVE(mod);
+    if (BigDecimal_DoDivmod(self, r, &div, &mod, false)) {
+        SAVE(div); SAVE(mod);
         return VpCheckGetValue(mod);
     }
     return DoSomeOne(self, r, '%');
-}
-
-static VALUE
-BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
-{
-    ENTER(10);
-    size_t mx;
-    Real *a = NULL, *b = NULL, *c = NULL, *res = NULL, *d = NULL, *rr = NULL, *ff = NULL;
-    Real *f = NULL;
-
-    GUARD_OBJ(a, GetVpValue(self, 1));
-    if (RB_TYPE_P(r, T_FLOAT)) {
-	b = GetVpValueWithPrec(r, 0, 1);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-	b = GetVpValueWithPrec(r, a->Prec*VpBaseFig(), 1);
-    }
-    else {
-	b = GetVpValue(r, 0);
-    }
-
-    if (!b) return Qfalse;
-    SAVE(b);
-
-    if (VpIsPosInf(b) || VpIsNegInf(b)) {
-       GUARD_OBJ(*dv, NewZeroWrapLimited(1, 1));
-       VpSetZero(*dv, 1);
-       *rv = a;
-       return Qtrue;
-    }
-
-    mx = (a->MaxPrec + b->MaxPrec) *VpBaseFig();
-    GUARD_OBJ(c,   NewZeroWrapLimited(1, mx));
-    GUARD_OBJ(res, NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
-    GUARD_OBJ(rr,  NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
-    GUARD_OBJ(ff,  NewZeroWrapNolimit(1, (mx+1) * 2 + (VpBaseFig() + 1)));
-
-    VpDivd(c, res, a, b);
-
-    mx = c->Prec *(VpBaseFig() + 1);
-
-    GUARD_OBJ(d, NewZeroWrapLimited(1, mx));
-    GUARD_OBJ(f, NewZeroWrapLimited(1, mx));
-
-    VpActiveRound(d, c, VP_ROUND_DOWN, 0); /* 0: round off */
-
-    VpFrac(f, c);
-    VpMult(rr, f, b);
-    VpAddSub(ff, res, rr, 1);
-
-    *dv = d;
-    *rv = ff;
-    return Qtrue;
 }
 
 /* call-seq:
@@ -2087,9 +2035,12 @@ BigDecimal_divremain(VALUE self, VALUE r, Real **dv, Real **rv)
 static VALUE
 BigDecimal_remainder(VALUE self, VALUE r) /* remainder */
 {
-    Real  *d, *rv = 0;
-    if (BigDecimal_divremain(self, r, &d, &rv)) {
-        return VpCheckGetValue(rv);
+    ENTER(3);
+    Real *div = NULL, *mod = NULL;
+
+    if (BigDecimal_DoDivmod(self, r, &div, &mod, true)) {
+        SAVE(div); SAVE(mod);
+        return VpCheckGetValue(mod);
     }
     return DoSomeOne(self, r, rb_intern("remainder"));
 }
@@ -2122,7 +2073,7 @@ BigDecimal_divmod(VALUE self, VALUE r)
     ENTER(5);
     Real *div = NULL, *mod = NULL;
 
-    if (BigDecimal_DoDivmod(self, r, &div, &mod)) {
+    if (BigDecimal_DoDivmod(self, r, &div, &mod, false)) {
 	SAVE(div); SAVE(mod);
         return rb_assoc_new(VpCheckGetValue(div), VpCheckGetValue(mod));
     }
@@ -2145,7 +2096,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     if (NIL_P(n)) { /* div in Float sense */
         Real *div = NULL;
         Real *mod;
-        if (BigDecimal_DoDivmod(self, b, &div, &mod)) {
+        if (BigDecimal_DoDivmod(self, b, &div, &mod, false)) {
             return BigDecimal_to_i(VpCheckGetValue(div));
         }
         return DoSomeOne(self, b, rb_intern("div"));

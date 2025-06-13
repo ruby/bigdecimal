@@ -1079,6 +1079,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(-1, (-x).remainder(3))
     assert_equal(1, x.remainder(-3))
     assert_equal(-1, (-x).remainder(-3))
+    assert_equal(BigDecimal("1e-10"), BigDecimal("1e10").remainder(BigDecimal("3e-10")))
   end
 
   def test_remainder_with_float
@@ -1091,7 +1092,7 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_remainder_coerce
     o = Object.new
-    def o.coerce(x); [x, BigDecimal("3")]; end
+    def o.coerce(x); [x, BigDecimal("-3")]; end
     assert_equal(BigDecimal("1.1"), BigDecimal("7.1").remainder(o))
   end
 
