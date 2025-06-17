@@ -1709,7 +1709,10 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(pow, pi.power(e, 20))
 
     b = BigDecimal('1.034482758620689655172413793103448275862068965517241379310344827586206896551724')
-    assert_equal(BigDecimal('0.114523E1'), b.power(4, 5), '[Bug #8818] [ruby-core:56802]')
+    assert_equal(BigDecimal('0.11452E1'), b.power(4, 5), '[Bug #8818] [ruby-core:56802]')
+
+    assert_equal(BigDecimal('0.537676775108E-7'), BigDecimal('0.1234').power(8, 12))
+    assert_equal(BigDecimal('0.537676775108E9'), BigDecimal('12.34').power(8, 12))
   end
 
   def test_limit
