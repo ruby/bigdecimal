@@ -193,7 +193,8 @@ module BigMath
     # https://github.com/ruby/bigdecimal/pull/343
     sqrt_steps /= 10
 
-    prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * 0.3010299956639812).ceil
+    lg2 = 0.3010299956639812
+    prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
 
     sqrt_steps.times do
       x = x.sqrt(prec2)
