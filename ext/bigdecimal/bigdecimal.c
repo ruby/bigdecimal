@@ -4629,7 +4629,6 @@ static int gfDebug = 1;         /* Debug switch */
 #endif /* BIGDECIMAL_DEBUG */
 
 static Real *VpConstOne;    /* constant 1.0 */
-static Real *VpConstPt5;    /* constant 0.5 */
 
 enum op_sw {
     OP_SW_ADD = 1,  /* + */
@@ -5034,11 +5033,6 @@ VpInit(DECDIG BaseVal)
 
     /* Const 1.0 */
     VpConstOne = NewOneNolimit(1, 1);
-
-    /* Const 0.5 */
-    VpConstPt5 = NewOneNolimit(1, 1);
-    VpConstPt5->exponent = 0;
-    VpConstPt5->frac[0] = 5*BASE1;
 
 #ifdef BIGDECIMAL_DEBUG
     gnAlloc = 0;
