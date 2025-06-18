@@ -30,6 +30,10 @@ module TestBigDecimalBase
     end
   end
 
+  def integer_sqrt_implemented?
+    RUBY_ENGINE != 'truffleruby' || Integer.sqrt(2**64 - 1) == 2**32 - 1
+  end
+
   def under_gc_stress
     stress, GC.stress = GC.stress, true
     yield

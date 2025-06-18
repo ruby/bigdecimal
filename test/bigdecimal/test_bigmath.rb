@@ -19,6 +19,8 @@ class TestBigMath < Test::Unit::TestCase
   end
 
   def test_sqrt
+    pend 'Integer.sqrt not correctly implemented' unless integer_sqrt_implemented?
+
     assert_in_delta(2**0.5, sqrt(BigDecimal("2"), N))
     assert_equal(10, sqrt(BigDecimal("100"), N))
     assert_equal(0.0, sqrt(BigDecimal("0"), N))
@@ -81,6 +83,8 @@ class TestBigMath < Test::Unit::TestCase
   end
 
   def test_atan
+    pend 'Integer.sqrt not correctly implemented' unless integer_sqrt_implemented?
+
     assert_equal(0.0, atan(BigDecimal("0.0"), N))
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))
     assert_in_delta(Math::PI/6, atan(sqrt(BigDecimal("3.0"), N) / 3, N))

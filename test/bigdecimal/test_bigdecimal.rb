@@ -1335,6 +1335,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_sqrt_bigdecimal
+    pend 'Integer.sqrt not correctly implemented' unless integer_sqrt_implemented?
+
     x = BigDecimal("0.09")
     assert_in_delta(0.3, x.sqrt(1), 0.001)
     x = BigDecimal((2**100).to_s)
@@ -1366,6 +1368,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_sqrt_5266
+    pend 'Integer.sqrt not correctly implemented' unless integer_sqrt_implemented?
+
     x = BigDecimal('2' + '0'*100)
     assert_equal('0.14142135623730950488016887242096980785696718753769480731',
                  x.sqrt(56).to_s(56).split(' ')[0])
@@ -1380,6 +1384,8 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_sqrt_minimum_precision
+    pend 'Integer.sqrt not correctly implemented' unless integer_sqrt_implemented?
+
     x = BigDecimal((2**200).to_s)
     assert_equal(2**100, x.sqrt(1))
 
