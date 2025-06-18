@@ -55,7 +55,7 @@ module TestBigDecimalBase
       if mode == :fixed_point
         precision = -(value - expected).exponent
       elsif mode == :relative
-        precision = -(value.div(expected, expected.precision) - 1).exponent
+        precision = 1 - (value.div(expected, expected.precision) - 1).exponent
       else
         raise ArgumentError, "Unknown mode: #{mode}"
       end
