@@ -1,5 +1,48 @@
 # CHANGES
 
+## 3.2.2
+
+* Make precision calculation in bigdecimal.div(value, 0) gc-compaction safe. [GH-340]
+
+  **@tompng**
+
+## 3.2.1
+
+* Fix division precision limit. [GH-335]
+
+  **@tompng**
+
+## 3.2.0
+
+* Fix division rounding. [GH-330] [GH-328]
+
+  **@tompng**
+
+* Fix exponential precision growth in division. [GH-329] [GH-220] [GH-222] [GH-272]
+
+  **@tompng**
+
+## 3.1.9
+
+* Accept no digits in the fractional part (#302)
+
+  **@kou**
+
+## 3.1.8
+
+* Add missing documents [GH-277]
+
+  **@nobu**
+
+* Fix memory leak in VpAlloc [GH-294] [GH-290]
+
+  Reoprted by **@MaxLap**
+
+## 3.1.7
+
+* Only consists of CI settings and test changes.
+  This release is needed for developing Ruby to run `make test-bundled-gems` with the released version of bigdecimal.
+
 ## 3.1.6
 
 * Add LICENSE file to gem files [GH-282]

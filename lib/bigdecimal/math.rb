@@ -8,13 +8,12 @@ require 'bigdecimal'
 #   sin (x, prec)
 #   cos (x, prec)
 #   tan (x, prec)
-#   atan(x, prec)  Note: |x|<1, x=0.9999 may not converge.
+#   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
 # where:
 #   x    ... BigDecimal number to be computed.
-#            |x| must be small enough to get convergence.
 #   prec ... Number of digits to be obtained.
 #++
 #
@@ -63,7 +62,8 @@ module BigMath
     one  = BigDecimal("1")
     two  = BigDecimal("2")
     x = -x if neg = x < 0
-    if x > (twopi = two * BigMath.PI(prec))
+    if x > 6
+      twopi = two * BigMath.PI(prec + x.exponent)
       if x > 30
         x %= twopi
       else
@@ -86,6 +86,7 @@ module BigMath
       d   = sign * x1.div(z,m)
       y  += d
     end
+    y = BigDecimal("1") if y > 1
     neg ? -y : y
   end
 
@@ -107,7 +108,8 @@ module BigMath
     one  = BigDecimal("1")
     two  = BigDecimal("2")
     x = -x if x < 0
-    if x > (twopi = two * BigMath.PI(prec))
+    if x > 6
+      twopi = two * BigMath.PI(prec + x.exponent)
       if x > 30
         x %= twopi
       else
@@ -130,7 +132,7 @@ module BigMath
       d   = sign * x1.div(z,m)
       y  += d
     end
-    y
+    y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
   end
 
   # call-seq:
@@ -180,9 +182,9 @@ module BigMath
     x = -x if neg = x < 0
     return pi.div(neg ? -2 : 2, prec) if x.infinite?
     return pi / (neg ? -4 : 4) if x.round(prec) == 1
-    x = BigDecimal("1").div(x, prec) if inv = x > 1
-    x = (-1 + sqrt(1 + x**2, prec))/x if dbl = x > 0.5
-    n    = prec + BigDecimal.double_fig
+    n = prec + BigDecimal.double_fig
+    x = BigDecimal("1").div(x, n) if inv = x > 1
+    x = (-1 + sqrt(1 + x.mult(x, n), n)).div(x, n) if dbl = x > 0.5
     y = x
     d = y
     t = x

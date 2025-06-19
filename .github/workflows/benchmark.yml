@@ -28,7 +28,7 @@ jobs:
         os:
         - ubuntu-latest
         - macos-latest
-        - macos-arm-oss
+        - macos-14
         - windows-latest
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         include:
@@ -36,6 +36,11 @@ jobs:
         - { os: windows-latest , ruby: mswin }
         exclude:
         - { os: windows-latest , ruby: debug }
+
+        # These are disabled due to the ambiguity of stringio
+        - { os: windows-latest , ruby: "3.0" }
+        - { os: windows-latest , ruby: "3.1" }
+        - { os: windows-latest , ruby: "3.2" }
 
     steps:
     - uses: actions/checkout@v4
