@@ -153,11 +153,12 @@ module BigMath
     raise ArgumentError, "Zero or negative precision for tan" if prec <= 0
     return BigDecimal("NaN") if x.infinite? || x.nan?
 
-    x, sign = adjust_x_and_detect_sign_of_tangent(x, prec)
+    x_adjusted, sign = adjust_x_and_detect_sign_of_tangent(x, prec)
 
     t = guarantee_precision(prec) do |n|
-      c = cos(x, n)
+      c = cos(x_adjusted, n)
       s = sqrt(1 - c**2, n)
+      s = -s if x_adjusted < 0
       s.div(c, n)
     end
 
