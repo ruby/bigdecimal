@@ -3176,7 +3176,7 @@ BigDecimal_power(int argc, VALUE*argv, VALUE self)
     }
     VpPowerByInt(y.real, x.real, int_exp);
     if (!NIL_P(prec) && VpIsDef(y.real)) {
-        VpMidRound(y.real, VpGetRoundMode(), n);
+        VpMidRound(y.real, VpGetRoundMode(), n - VpExponent10(y.real));
     }
     return CheckGetValue(y);
 }
