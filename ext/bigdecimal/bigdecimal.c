@@ -4333,14 +4333,16 @@ BigDecimal_literal(const char *str)
  *
  * When you require +bigdecimal/util+, the #to_d method will be
  * available on BigDecimal and the native Integer, Float, Rational,
- * and String classes:
+ * String, Complex, and NilClass classes:
  *
  *	require 'bigdecimal/util'
  *
- *      42.to_d         # => 0.42e2
- *      0.5.to_d        # => 0.5e0
- *      (2/3r).to_d(3)  # => 0.667e0
- *      "0.5".to_d      # => 0.5e0
+ *      42.to_d                         # => 0.42e2
+ *      0.5.to_d                        # => 0.5e0
+ *      (2/3r).to_d(3)                  # => 0.667e0
+ *      "0.5".to_d                      # => 0.5e0
+ *      Complex(0.1234567, 0).to_d(4)   # => 0.1235e0
+ *      nil.to_d                        # => 0.0
  *
  * == Methods for Working with \JSON
  *
