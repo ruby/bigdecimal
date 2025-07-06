@@ -2584,7 +2584,7 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, VP_ROUND_FLOOR, iLoc);
 #ifdef BIGDECIMAL_DEBUG
-    VPrint(stderr, "floor: c=%\n", c);
+    VPrint(stderr, "floor: c=%\n", c.real);
 #endif
     if (argc == 0) {
         return BigDecimal_to_i(CheckGetValue(c));
