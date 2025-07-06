@@ -721,6 +721,31 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise(TypeError) { Marshal.load(s) }
   end
 
+  def test_dump_extra_high_maxprec
+    m = BigDecimal(2 ** 1000)
+    n = BigDecimal(2) ** 1000
+    # Even if two bigdecimals have different MaxPrec,
+    # _dump should return same string if they represent the same value.
+    assert_equal(m._dump, n._dump)
+  end
+
+  def test_load_invalid_precision
+    $VERBOSE, verbose = nil, $VERBOSE
+    dumped = BigDecimal('1' * 1000)._dump
+    n = BigDecimal._load(dumped)
+    digits_part = dumped.split(':').last
+    too_few_precs = BigDecimal._load('100:' + digits_part)
+    assert_equal(1000, too_few_precs.precision)
+    assert_equal(n, too_few_precs)
+    assert_equal(n.precs, too_few_precs.precs)
+    too_large_precs = BigDecimal._load('999999999999:' + digits_part)
+    assert_equal(1000, too_large_precs.precision)
+    assert_equal(n, too_large_precs)
+    assert_equal(n.precs, too_large_precs.precs)
+  ensure
+    $VERBOSE = verbose
+  end
+
   def test_finite_infinite_nan
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_ZERODIVIDE, false)

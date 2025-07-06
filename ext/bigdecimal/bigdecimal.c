@@ -844,7 +844,7 @@ BigDecimal_dump(int argc, VALUE *argv, VALUE self)
     GUARD_OBJ(v, GetBDValueMust(self));
     dump = rb_str_new(0, VpNumOfChars(v.real, "E")+50);
     psz = RSTRING_PTR(dump);
-    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", VpMaxPrec(v.real)*VpBaseFig());
+    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", VpPrec(v.real)*VpBaseFig());
     len = strlen(psz);
     VpToString(v.real, psz+len, RSTRING_LEN(dump)-len, 0, 0);
     rb_str_resize(dump, strlen(psz));
@@ -861,22 +861,15 @@ BigDecimal_load(VALUE self, VALUE str)
     BDVALUE v;
     unsigned char *pch;
     unsigned char ch;
-    unsigned long m=0;
 
     pch = (unsigned char *)StringValueCStr(str);
-    /* First get max prec */
+    /* First skip max prec. Don't trust the value. */
     while((*pch) != (unsigned char)'\0' && (ch = *pch++) != (unsigned char)':') {
         if(!ISDIGIT(ch)) {
             rb_raise(rb_eTypeError, "load failed: invalid character in the marshaled string");
         }
-        m = m*10 + (unsigned long)(ch-'0');
     }
-    if (m > VpBaseFig()) m -= VpBaseFig();
-    GUARD_OBJ(v, bdvalue_nonnullable(CreateFromString(m, (char *)pch, self, true, true)));
-    m /= VpBaseFig();
-    if (m && v.real->MaxPrec > m) {
-        v.real->MaxPrec = m+1;
-    }
+    GUARD_OBJ(v, bdvalue_nonnullable(CreateFromString(0, (char *)pch, self, true, true)));
     return CheckGetValue(v);
 }
 
