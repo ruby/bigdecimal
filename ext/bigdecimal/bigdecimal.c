@@ -2653,7 +2653,7 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
  * If s contains a number, a space is inserted after each group of that many
  * digits, starting from '.' and counting outwards.
  *
- * If s ends with an 'E', engineering notation (0.xxxxEnn) is used.
+ * If s ends with an 'E', scientific notation (0.xxxxEnn) is used.
  *
  * If s ends with an 'F', conventional floating point notation is used.
  *
