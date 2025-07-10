@@ -460,6 +460,45 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_mult_div_overflow_underflow_sign
+    BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+    BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
+
+    large_x = BigDecimal("10")
+    100.times do
+      x2 = large_x * large_x
+      break if x2.infinite?
+      large_x = x2
+    end
+
+    small_x = BigDecimal("0.1")
+    100.times do
+      x2 = small_x * small_x
+      break if x2.zero?
+      small_x = x2
+    end
+
+    assert_positive_infinite(large_x * large_x)
+    assert_negative_infinite(large_x * (-large_x))
+    assert_negative_infinite((-large_x) * large_x)
+    assert_positive_infinite((-large_x) * (-large_x))
+
+    assert_positive_zero(small_x * small_x)
+    assert_negative_zero(small_x * (-small_x))
+    assert_negative_zero((-small_x) * small_x)
+    assert_positive_zero((-small_x) * (-small_x))
+
+    assert_positive_infinite(large_x.div(small_x, 10))
+    assert_negative_infinite(large_x.div(-small_x, 10))
+    assert_negative_infinite((-large_x).div(small_x, 10))
+    assert_positive_infinite((-large_x).div(-small_x, 10))
+
+    assert_positive_zero(small_x.div(large_x, 10))
+    assert_negative_zero(small_x.div(-large_x, 10))
+    assert_negative_zero((-small_x).div(large_x, 10))
+    assert_positive_zero((-small_x).div(-large_x, 10))
+  end
+
   def test_exception_zerodivide
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     _test_mode(BigDecimal::EXCEPTION_ZERODIVIDE) { 1 / BigDecimal("0") }

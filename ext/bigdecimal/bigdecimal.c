@@ -5489,7 +5489,7 @@ VpAsgn(Real *c, Real *a, int isw)
 VP_EXPORT size_t
 VpAddSub(Real *c, Real *a, Real *b, int operation)
 {
-    short sw, isw;
+    short sw, isw, sign;
     Real *a_ptr, *b_ptr;
     size_t n, na, nb, i;
     DECDIG mrv;
@@ -5590,19 +5590,20 @@ end_if:
     if (isw) {            /* addition */
 	VpSetSign(c, 1);
 	mrv = VpAddAbs(a_ptr, b_ptr, c);
-	VpSetSign(c, isw / 2);
+	sign = isw / 2;
     }
     else {            /* subtraction */
 	VpSetSign(c, 1);
 	mrv = VpSubAbs(a_ptr, b_ptr, c);
-	if (a_ptr == a) {
-	    VpSetSign(c,VpGetSign(a));
-	}
-	else {
-	    VpSetSign(c, VpGetSign(a_ptr) * sw);
-	}
+	sign = a_ptr == a ? VpGetSign(a) : VpGetSign(a_ptr) * sw;
     }
-    VpInternalRound(c, 0, (c->Prec > 0) ? c->frac[c->Prec-1] : 0, mrv);
+    if (VpIsInf(c)) {
+	VpSetInf(c, sign);
+    }
+    else {
+	VpSetSign(c, sign);
+	VpInternalRound(c, 0, (c->Prec > 0) ? c->frac[c->Prec-1] : 0, mrv);
+    }
 
 #ifdef BIGDECIMAL_DEBUG
     if (gfDebug) {
@@ -5995,11 +5996,11 @@ VpMult(Real *c, Real *a, Real *b)
     /* set LHSV c info */
 
     c->exponent = a->exponent;    /* set exponent */
+    VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     if (!AddExponent(c, b->exponent)) {
         if (w) rbd_free_struct(c);
         return 0;
     }
-    VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     carry = 0;
     nc = ind_c = MxIndAB;
     memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
@@ -6246,10 +6247,10 @@ carry:
 out_side:
     c->Prec = word_c;
     c->exponent = a->exponent;
+    VpSetSign(c, VpGetSign(a) * VpGetSign(b));
     if (!AddExponent(c, 2)) return 0;
     if (!AddExponent(c, -(b->exponent))) return 0;
 
-    VpSetSign(c, VpGetSign(a) * VpGetSign(b));
     VpNmlz(c);            /* normalize c */
     r->Prec = word_r;
     r->exponent = a->exponent;
