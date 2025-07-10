@@ -5996,11 +5996,11 @@ VpMult(Real *c, Real *a, Real *b)
     /* set LHSV c info */
 
     c->exponent = a->exponent;    /* set exponent */
+    VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     if (!AddExponent(c, b->exponent)) {
         if (w) rbd_free_struct(c);
         return 0;
     }
-    VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     carry = 0;
     nc = ind_c = MxIndAB;
     memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
@@ -6247,10 +6247,10 @@ carry:
 out_side:
     c->Prec = word_c;
     c->exponent = a->exponent;
+    VpSetSign(c, VpGetSign(a) * VpGetSign(b));
     if (!AddExponent(c, 2)) return 0;
     if (!AddExponent(c, -(b->exponent))) return 0;
 
-    VpSetSign(c, VpGetSign(a) * VpGetSign(b));
     VpNmlz(c);            /* normalize c */
     r->Prec = word_r;
     r->exponent = a->exponent;
