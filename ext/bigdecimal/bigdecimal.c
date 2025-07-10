@@ -5489,7 +5489,7 @@ VpAsgn(Real *c, Real *a, int isw)
 VP_EXPORT size_t
 VpAddSub(Real *c, Real *a, Real *b, int operation)
 {
-    short sw, isw;
+    short sw, isw, sign;
     Real *a_ptr, *b_ptr;
     size_t n, na, nb, i;
     DECDIG mrv;
@@ -5590,19 +5590,20 @@ end_if:
     if (isw) {            /* addition */
 	VpSetSign(c, 1);
 	mrv = VpAddAbs(a_ptr, b_ptr, c);
-	VpSetSign(c, isw / 2);
+	sign = isw / 2;
     }
     else {            /* subtraction */
 	VpSetSign(c, 1);
 	mrv = VpSubAbs(a_ptr, b_ptr, c);
-	if (a_ptr == a) {
-	    VpSetSign(c,VpGetSign(a));
-	}
-	else {
-	    VpSetSign(c, VpGetSign(a_ptr) * sw);
-	}
+	sign = a_ptr == a ? VpGetSign(a) : VpGetSign(a_ptr) * sw;
     }
-    VpInternalRound(c, 0, (c->Prec > 0) ? c->frac[c->Prec-1] : 0, mrv);
+    if (VpIsInf(c)) {
+	VpSetInf(c, sign);
+    }
+    else {
+	VpSetSign(c, sign);
+	VpInternalRound(c, 0, (c->Prec > 0) ? c->frac[c->Prec-1] : 0, mrv);
+    }
 
 #ifdef BIGDECIMAL_DEBUG
     if (gfDebug) {
