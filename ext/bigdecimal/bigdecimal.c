@@ -1353,7 +1353,7 @@ BigDecimal_to_f(VALUE self)
 	return rb_float_new(d);
     if (e > (SIGNED_VALUE)(DBL_MAX_10_EXP+BASE_FIG))
 	goto overflow;
-    if (e < (SIGNED_VALUE)(DBL_MIN_10_EXP-BASE_FIG))
+    if (e < (SIGNED_VALUE)(DBL_MIN_10_EXP-DBL_DIG))
 	goto underflow;
 
     str = rb_str_new(0, VpNumOfChars(v.real, "E"));
