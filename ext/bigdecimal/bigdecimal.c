@@ -5028,7 +5028,7 @@ VpNumOfChars(Real *vp,const char *pszFmt)
       case 'E':
 	/* fall through */
       default:
-	nc = BASE_FIG*(vp->Prec + 2)+6; /* 3: sign + exponent chars */
+	nc = BASE_FIG * vp->Prec + 25; /* "-0."(3) + digits_chars + "e-"(2) + 64bit_exponent_chars(19) + null(1) */
     }
     return nc;
 }

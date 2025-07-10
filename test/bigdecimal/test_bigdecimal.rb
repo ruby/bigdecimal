@@ -1503,6 +1503,9 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal("0.123456789012e0", BigDecimal("0.123456789012").inspect)
     assert_equal("0.123456789012e4", BigDecimal("1234.56789012").inspect)
     assert_equal("0.123456789012e-4", BigDecimal("0.0000123456789012").inspect)
+    s = '-0.123456789e-1000000000000000008'
+    x = BigDecimal(s)
+    assert_equal(s, x.inspect) unless x.infinite?
   end
 
   def test_power
