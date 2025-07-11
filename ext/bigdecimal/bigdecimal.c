@@ -39,6 +39,11 @@
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
 
+/* max_value = 0.9999_9999_9999E[exponent], exponent <= SIGNED_VALUE_MAX */
+#define VP_EXPONENT_MAX (SIGNED_VALUE_MAX / BASE_FIG)
+/* min_value = 0.0001_0000_0000E[exponent], exponent-(BASE_FIG-1) >= SIGNED_VALUE_MIN */
+#define VP_EXPONENT_MIN ((SIGNED_VALUE_MIN + BASE_FIG - 1) / BASE_FIG)
+
 VALUE rb_cBigDecimal;
 VALUE rb_mBigMath;
 
@@ -5084,24 +5089,14 @@ AddExponent(Real *a, SIGNED_VALUE n)
 {
     SIGNED_VALUE e = a->exponent;
     SIGNED_VALUE m = e+n;
-    SIGNED_VALUE eb, mb;
-    if (e > 0) {
-	if (n > 0) {
-            if (MUL_OVERFLOW_SIGNED_VALUE_P(m, (SIGNED_VALUE)BASE_FIG) ||
-                MUL_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)BASE_FIG))
-                goto overflow;
-	    mb = m*(SIGNED_VALUE)BASE_FIG;
-	    eb = e*(SIGNED_VALUE)BASE_FIG;
-	    if (eb - mb > 0) goto overflow;
-	}
-    }
-    else if (n < 0) {
-        if (MUL_OVERFLOW_SIGNED_VALUE_P(m, (SIGNED_VALUE)BASE_FIG) ||
-            MUL_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)BASE_FIG))
-            goto underflow;
-	mb = m*(SIGNED_VALUE)BASE_FIG;
-	eb = e*(SIGNED_VALUE)BASE_FIG;
-	if (mb - eb > 0) goto underflow;
+    if (e > 0 && n > 0) {
+        if (n > VP_EXPONENT_MAX - e) goto overflow;
+    } else if (e < 0 && n < 0) {
+        if (n < VP_EXPONENT_MIN - e) goto underflow;
+    } else if (m > VP_EXPONENT_MAX) {
+        goto overflow;
+    } else if (m < VP_EXPONENT_MIN) {
+        goto underflow;
     }
     a->exponent = m;
     return 1;
