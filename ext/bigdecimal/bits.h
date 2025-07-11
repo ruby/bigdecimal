@@ -26,6 +26,9 @@
       ((b) > 0 ? (max) / (a) < (b) : (min) / (a) > (b)) : \
       ((b) > 0 ? (min) / (a) < (b) : (max) / (a) > (b)))
 
+#define ADD_OVERFLOW_SIGNED_INTEGER_P(a, b, min, max) ( \
+    ((a) > 0) == ((b) > 0) && ((a) > 0 ? (max) - (a) < (b) : (min) - (a) > (b)))
+
 #ifdef HAVE_UINT128_T
 # define bit_length(x) \
     (unsigned int) \
