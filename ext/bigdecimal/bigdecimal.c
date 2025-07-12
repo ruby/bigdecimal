@@ -38,11 +38,14 @@
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
+#define ADD_OVERFLOW_SIGNED_VALUE_P(a, b) ADD_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
 
 /* max_value = 0.9999_9999_9999E[exponent], exponent <= SIGNED_VALUE_MAX */
 #define VP_EXPONENT_MAX (SIGNED_VALUE_MAX / BASE_FIG)
 /* min_value = 0.0001_0000_0000E[exponent], exponent-(BASE_FIG-1) >= SIGNED_VALUE_MIN */
 #define VP_EXPONENT_MIN ((SIGNED_VALUE_MIN + BASE_FIG - 1) / BASE_FIG)
+#define EXPONENT_MAX (VP_EXPONENT_MAX * BASE_FIG)
+#define EXPONENT_MIN (VP_EXPONENT_MIN * BASE_FIG - (BASE_FIG - 1))
 
 VALUE rb_cBigDecimal;
 VALUE rb_mBigMath;
@@ -6812,7 +6815,7 @@ VP_EXPORT int
 VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne)
 {
     size_t i, j, ind_a, ma, mi, me;
-    SIGNED_VALUE e, es, eb, ef;
+    SIGNED_VALUE e;
     int  sign, signe, exponent_overflow;
 
     /* get exponent part */
@@ -6835,23 +6838,13 @@ VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, con
 	    ++me;
 	}
 	while (i < me) {
-            if (MUL_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)BASE_FIG)) {
-                es = e;
-                goto exp_overflow;
-            }
-	    es = e * (SIGNED_VALUE)BASE_FIG;
-            if (MUL_OVERFLOW_SIGNED_VALUE_P(e, 10) ||
-                SIGNED_VALUE_MAX - (exp_chr[i] - '0') < e * 10)
-                goto exp_overflow;
-	    e = e * 10 + exp_chr[i] - '0';
-            if (MUL_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)BASE_FIG))
-                goto exp_overflow;
-	    if (es > (SIGNED_VALUE)(e * BASE_FIG)) {
-              exp_overflow:
+	    int dig = exp_chr[i] - '0';
+	    if (MUL_OVERFLOW_SIGNED_VALUE_P(e, 10) ||
+		ADD_OVERFLOW_SIGNED_VALUE_P(e * 10, signe * dig)) {
 		exponent_overflow = 1;
-		e = es; /* keep sign */
 		break;
 	    }
+	    e = e * 10 + signe * dig;
 	    ++i;
 	}
     }
@@ -6870,34 +6863,32 @@ VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, con
 	    ++mi;
 	}
     }
-
-    e = signe * e;        /* e: The value of exponent part. */
-    e = e + ni;        /* set actual exponent size. */
-
-    if (e > 0) signe = 1;
-    else       signe = -1;
-
-    /* Adjust the exponent so that it is the multiple of BASE_FIG. */
-    j = 0;
-    ef = 1;
-    while (ef) {
-	if (e >= 0) eb =  e;
-	else        eb = -e;
-	ef = eb / (SIGNED_VALUE)BASE_FIG;
-	ef = eb - ef * (SIGNED_VALUE)BASE_FIG;
-	if (ef) {
-	    ++j;        /* Means to add one more preceding zero */
-	    ++e;
-	}
+    /* skip leading zeros in integer part */
+    while (i < mi && int_chr[i] == '0') {
+        ++i;
+        --ni;
     }
 
-    eb = e / (SIGNED_VALUE)BASE_FIG;
+    /* set actual exponent size. */
+    if (ADD_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)ni)) {
+	exponent_overflow = 1;
+    } else {
+	e += ni;
+    }
 
-    if (exponent_overflow) {
+    /* Adjust the exponent so that it is the multiple of BASE_FIG. */
+    j = (BASE_FIG - e % BASE_FIG) % BASE_FIG;
+    if (ADD_OVERFLOW_SIGNED_VALUE_P(e, (SIGNED_VALUE)j)) {
+        exponent_overflow = 1;
+    } else {
+        e += j;
+    }
+
+    if (exponent_overflow || e < EXPONENT_MIN || e > EXPONENT_MAX) {
 	int zero = 1;
 	for (     ; i < mi && zero; i++) zero = int_chr[i] == '0';
 	for (i = 0; i < nf && zero; i++) zero = frac[i] == '0';
-	if (!zero && signe > 0) {
+	if (!zero && e > 0) {
 	    VpSetInf(a, sign);
 	    VpException(VP_EXCEPTION_INFINITY, "exponent overflow",0);
 	}
@@ -6947,7 +6938,7 @@ Final:
 	++j;
     }
     a->Prec = ind_a + 1;
-    a->exponent = eb;
+    a->exponent = e / (SIGNED_VALUE)BASE_FIG;
     VpSetSign(a, sign);
     VpNmlz(a);
     return 1;

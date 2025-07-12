@@ -9,12 +9,16 @@ class TestBigDecimal < Test::Unit::TestCase
     LIMITS = RbConfig::LIMITS
   else
     require 'fiddle'
+    INTPTR_MAX = (1 << (Fiddle::SIZEOF_INTPTR_T*8 - 1)) - 1
+    INTPTR_MIN = [INTPTR_MAX + 1].pack("L!").unpack("l!")[0]
     LONG_MAX = (1 << (Fiddle::SIZEOF_LONG*8 - 1)) - 1
     LONG_MIN = [LONG_MAX + 1].pack("L!").unpack("l!")[0]
     LLONG_MAX = (1 << (Fiddle::SIZEOF_LONG_LONG*8 - 1)) - 1
     LLONG_MIN = [LLONG_MAX + 1].pack("Q!").unpack("q!")[0]
     ULLONG_MAX = (1 << Fiddle::SIZEOF_LONG_LONG*8) - 1
     LIMITS = {
+      "INTPTR_MAX" => INTPTR_MAX,
+      "INTPTR_MIN" => INTPTR_MIN,
       "LLONG_MIN" => LLONG_MIN,
       "ULLONG_MAX" => ULLONG_MAX,
       "FIXNUM_MIN" => LONG_MIN / 2,
@@ -24,6 +28,9 @@ class TestBigDecimal < Test::Unit::TestCase
       "UINT64_MAX" => 18446744073709551615,
     }.freeze
   end
+
+  EXPONENT_MAX = LIMITS['INTPTR_MAX'] / BASE_FIG * BASE_FIG
+  EXPONENT_MIN = (LIMITS['INTPTR_MIN'] - 2) / BASE_FIG * BASE_FIG + BASE_FIG + 1
 
   ROUNDING_MODE_MAP = [
     [ BigDecimal::ROUND_UP,        :up],
@@ -80,12 +87,24 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise(ArgumentError) { BigDecimal("1", -1) }
     assert_raise_with_message(ArgumentError, /"1__1_1"/) { BigDecimal("1__1_1") }
     assert_raise_with_message(ArgumentError, /"_1_1_1"/) { BigDecimal("_1_1_1") }
+    assert(BigDecimal("0.1E#{EXPONENT_MAX}").finite?)
+    assert(BigDecimal("0.1E#{EXPONENT_MIN}").finite?)
 
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
+      BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
       BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
       assert_positive_infinite(BigDecimal("Infinity"))
-      assert_positive_infinite(BigDecimal("1E1111111111111111111"))
+      assert_positive_infinite(BigDecimal("0.1E#{EXPONENT_MAX + 1}"))
+      assert_negative_infinite(BigDecimal("-0.1E#{EXPONENT_MAX + 1}"))
+      assert_positive_infinite(BigDecimal("1E#{EXPONENT_MAX}"))
+      assert_negative_infinite(BigDecimal("-1E#{EXPONENT_MAX}"))
+      assert_positive_zero(BigDecimal("0E#{EXPONENT_MAX + 1}"))
+      assert_negative_zero(BigDecimal("-0E#{EXPONENT_MAX + 1}"))
+      assert_positive_zero(BigDecimal("0.1E#{EXPONENT_MIN - 1}"))
+      assert_negative_zero(BigDecimal("-0.1E#{EXPONENT_MIN - 1}"))
+      assert_positive_zero(BigDecimal("0.01E#{EXPONENT_MIN}"))
+      assert_negative_zero(BigDecimal("-0.01E#{EXPONENT_MIN}"))
       assert_positive_infinite(BigDecimal(" \t\n\r \rInfinity \t\n\r \r"))
       assert_negative_infinite(BigDecimal("-Infinity"))
       assert_negative_infinite(BigDecimal(" \t\n\r \r-Infinity \t\n\r \r"))
@@ -460,39 +479,48 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_add_sub_underflow
+    BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
+    x = BigDecimal("0.100000000002E#{EXPONENT_MIN + 10}")
+    y = BigDecimal("0.100000000001E#{EXPONENT_MIN + 10}")
+    z = BigDecimal("0.101E#{EXPONENT_MIN + 10}")
+    assert_not_equal(0, x - z)
+    assert_not_equal(0, z - y)
+    assert_positive_zero(x + (-y))
+    assert_positive_zero(x - y)
+    assert_positive_zero((-y) - (-x))
+    assert_negative_zero((-x) + y)
+    assert_negative_zero(y - x)
+    assert_negative_zero((-x) - (-y))
+  end
+
   def test_mult_div_overflow_underflow_sign
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
+    large_x = BigDecimal("0.1E#{EXPONENT_MAX}")
+    small_x = BigDecimal("0.1E#{EXPONENT_MIN}")
 
-    large_x = BigDecimal("10")
-    100.times do
-      x2 = large_x * large_x
-      break if x2.infinite?
-      large_x = x2
-    end
-
-    small_x = BigDecimal("0.1")
-    100.times do
-      x2 = small_x * small_x
-      break if x2.zero?
-      small_x = x2
-    end
-
+    assert_positive_infinite(large_x * 10)
+    assert_positive_infinite(10 * large_x)
     assert_positive_infinite(large_x * large_x)
     assert_negative_infinite(large_x * (-large_x))
     assert_negative_infinite((-large_x) * large_x)
     assert_positive_infinite((-large_x) * (-large_x))
 
+    assert_positive_zero(small_x * 0.1)
+    assert_positive_zero(0.1 * small_x)
     assert_positive_zero(small_x * small_x)
     assert_negative_zero(small_x * (-small_x))
     assert_negative_zero((-small_x) * small_x)
     assert_positive_zero((-small_x) * (-small_x))
 
+    assert_positive_infinite(large_x.div(0.1, 10))
     assert_positive_infinite(large_x.div(small_x, 10))
     assert_negative_infinite(large_x.div(-small_x, 10))
     assert_negative_infinite((-large_x).div(small_x, 10))
     assert_positive_infinite((-large_x).div(-small_x, 10))
 
+    assert_positive_zero(small_x.div(10, 10))
     assert_positive_zero(small_x.div(large_x, 10))
     assert_negative_zero(small_x.div(-large_x, 10))
     assert_negative_zero((-small_x).div(large_x, 10))
@@ -1567,9 +1595,9 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal("0.123456789012e0", BigDecimal("0.123456789012").inspect)
     assert_equal("0.123456789012e4", BigDecimal("1234.56789012").inspect)
     assert_equal("0.123456789012e-4", BigDecimal("0.0000123456789012").inspect)
-    s = '-0.123456789e-1000000000000000008'
-    x = BigDecimal(s)
-    assert_equal(s, x.inspect) unless x.infinite?
+    # Frac part is fully packed, exponent is minimum multiple of BASE_FIG
+    s = "-0.#{'1' * BASE_FIG}e#{(EXPONENT_MIN / BASE_FIG + 1) * BASE_FIG}"
+    assert_equal(s, BigDecimal(s).inspect)
   end
 
   def test_power
