@@ -17,7 +17,7 @@
 # include <float.h>
 #endif
 
-#ifdef HAVE_INT64_T
+#if defined(HAVE_INT64_T) && !defined(BIGDECIMAL_USE_DECDIG_UINT16_T)
 # define DECDIG uint32_t
 # define DECDIG_DBL uint64_t
 # define DECDIG_DBL_SIGNED int64_t
