@@ -196,7 +196,6 @@ typedef struct {
 
 #define VpBaseFig() BIGDECIMAL_COMPONENT_FIGURES
 #define VpDblFig() BIGDECIMAL_DOUBLE_FIGURES
-#define VpBaseVal() BIGDECIMAL_BASE
 
 /* Zero,Inf,NaN (isinf(),isnan() used to check) */
 VP_EXPORT double VpGetDoubleNaN(void);
@@ -214,9 +213,6 @@ VP_EXPORT unsigned short VpGetRoundMode(void);
 VP_EXPORT unsigned short VpSetRoundMode(unsigned short n);
 
 VP_EXPORT int VpException(unsigned short f,const char *str,int always);
-#if 0  /* unused */
-VP_EXPORT int VpIsNegDoubleZero(double v);
-#endif
 VP_EXPORT size_t VpNumOfChars(Real *vp,const char *pszFmt);
 VP_EXPORT size_t VpInit(DECDIG BaseVal);
 VP_EXPORT Real *VpAlloc(size_t mx, const char *szVal, int strict_p, int exc);
@@ -233,9 +229,6 @@ VP_EXPORT void VpToFString(Real *a, char *buf, size_t bufsize, size_t fFmt, int 
 VP_EXPORT int VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne);
 VP_EXPORT int VpVtoD(double *d, SIGNED_VALUE *e, Real *m);
 VP_EXPORT void VpDtoV(Real *m,double d);
-#if 0  /* unused */
-VP_EXPORT void VpItoV(Real *m,S_INT ival);
-#endif
 VP_EXPORT int VpSqrt(Real *y,Real *x);
 VP_EXPORT int VpActiveRound(Real *y, Real *x, unsigned short f, ssize_t il);
 VP_EXPORT int VpMidRound(Real *y, unsigned short f, ssize_t nf);
@@ -255,10 +248,6 @@ VP_EXPORT Real *VpOne(void);
 #define Abs(a)     (((a)>= 0)?(a):(-(a)))
 #define Max(a, b)  (((a)>(b))?(a):(b))
 #define Min(a, b)  (((a)>(b))?(b):(a))
-
-#define VpMaxPrec(a)   ((a)->MaxPrec)
-#define VpPrec(a)      ((a)->Prec)
-#define VpGetFlag(a)   ((a)->flag)
 
 /* Sign */
 
@@ -294,7 +283,6 @@ VP_EXPORT Real *VpOne(void);
 #define VpSetInf(a,s)   (void)(((s)>0)?VpSetPosInf(a):VpSetNegInf(a))
 #define VpHasVal(a)     (a->frac[0])
 #define VpIsOne(a)      ((a->Prec==1)&&(a->frac[0]==1)&&(a->exponent==1))
-#define VpExponent(a)   (a->exponent)
 #ifdef BIGDECIMAL_DEBUG
 int VpVarCheck(Real * v);
 #endif /* BIGDECIMAL_DEBUG */

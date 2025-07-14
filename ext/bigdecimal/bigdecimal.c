@@ -115,8 +115,6 @@ bdvalue_nullable(BDVALUE v)
 #define HALF_BASE (BASE/2)
 #define BASE1 (BASE/10)
 
-#define LOG10_2 0.3010299956639812
-
 #ifndef RRATIONAL_ZERO_P
 # define RRATIONAL_ZERO_P(x) (FIXNUM_P(rb_rational_num(x)) && \
 			      FIX2LONG(rb_rational_num(x)) == 0)
@@ -537,7 +535,7 @@ GetBDValueMust(VALUE v)
 static inline VALUE
 BigDecimal_double_fig(VALUE self)
 {
-    return INT2FIX(VpDblFig());
+    return INT2FIX(BIGDECIMAL_DOUBLE_FIGURES);
 }
 
 /*  call-seq:
@@ -852,7 +850,7 @@ BigDecimal_dump(int argc, VALUE *argv, VALUE self)
     GUARD_OBJ(v, GetBDValueMust(self));
     dump = rb_str_new(0, VpNumOfChars(v.real, "E")+50);
     psz = RSTRING_PTR(dump);
-    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", VpPrec(v.real)*VpBaseFig());
+    snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", v.real->Prec*VpBaseFig());
     len = strlen(psz);
     VpToString(v.real, psz+len, RSTRING_LEN(dump)-len, 0, 0);
     rb_str_resize(dump, strlen(psz));
@@ -4416,7 +4414,7 @@ Init_bigdecimal(void)
      * guarantee that two groups could always be multiplied together without
      * overflow.)
      */
-    rb_define_const(rb_cBigDecimal, "BASE", INT2FIX((SIGNED_VALUE)VpBaseVal()));
+    rb_define_const(rb_cBigDecimal, "BASE", INT2FIX((SIGNED_VALUE)BASE));
 
     /* Exceptions */
 
@@ -4634,10 +4632,6 @@ static Real *VpConstOne;    /* constant 1.0 */
 static Real *VpConstPt5;    /* constant 0.5 */
 #define maxnr 100UL    /* Maximum iterations for calculating sqrt. */
                 /* used in VpSqrt() */
-
-/* ETC */
-#define MemCmp(x,y,z) memcmp(x,y,z)
-#define StrCmp(x,y)   strcmp(x,y)
 
 enum op_sw {
     OP_SW_ADD = 1,  /* + */
@@ -4864,15 +4858,6 @@ VpGetDoubleNegZero(void) /* Returns the value of -0 */
     if (nzero != 0.0) nzero = (One()/VpGetDoubleNegInf());
     return nzero;
 }
-
-#if 0  /* unused */
-VP_EXPORT int
-VpIsNegDoubleZero(double v)
-{
-    double z = VpGetDoubleNegZero();
-    return MemCmp(&v,&z,sizeof(v))==0;
-}
-#endif
 
 VP_EXPORT int
 VpException(unsigned short f, const char *str,int always)
@@ -6978,64 +6963,6 @@ Exit:
 }
 
 /*
- *  m <- ival
- */
-#if 0  /* unused */
-VP_EXPORT void
-VpItoV(Real *m, SIGNED_VALUE ival)
-{
-    size_t mm, ind_m;
-    size_t val, v1, v2, v;
-    int isign;
-    SIGNED_VALUE ne;
-
-    if (ival == 0) {
-	VpSetZero(m, 1);
-	goto Exit;
-    }
-    isign = 1;
-    val = ival;
-    if (ival < 0) {
-	isign = -1;
-	val  =(size_t)(-ival);
-    }
-    ne = 0;
-    ind_m = 0;
-    mm = m->MaxPrec;
-    while (ind_m < mm) {
-	m->frac[ind_m] = 0;
-	++ind_m;
-    }
-    ind_m = 0;
-    while (val > 0) {
-	if (val) {
-	    v1 = val;
-	    v2 = 1;
-	    while (v1 >= BASE) {
-		v1 /= BASE;
-		v2 *= BASE;
-	    }
-	    val = val - v2 * v1;
-	    v = v1;
-	}
-	else {
-	    v = 0;
-	}
-	m->frac[ind_m] = v;
-	++ind_m;
-	++ne;
-    }
-    m->Prec = ind_m - 1;
-    m->exponent = ne;
-    VpSetSign(m, isign);
-    VpNmlz(m);
-
-Exit:
-    return;
-}
-#endif
-
-/*
  * y = SQRT(x),  y*y - x =>0
  */
 VP_EXPORT int
@@ -7317,7 +7244,7 @@ VpLeftRound(Real *y, unsigned short f, ssize_t nf)
     DECDIG v;
     if (!VpHasVal(y)) return 0; /* Unable to round */
     v = y->frac[0];
-    nf -= VpExponent(y) * (ssize_t)BASE_FIG;
+    nf -= y->exponent * (ssize_t)BASE_FIG;
     while ((v /= 10) != 0) nf--;
     nf += (ssize_t)BASE_FIG-1;
     return VpMidRound(y, f, nf);
