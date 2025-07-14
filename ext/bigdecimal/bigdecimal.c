@@ -1516,11 +1516,12 @@ BigDecimal_add(VALUE self, VALUE r)
 
     mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
-        GUARD_OBJ(c, NewZeroWrapLimited(1, VpBaseFig() + 1));
+        /* a or b is inf */
+        GUARD_OBJ(c, NewZeroWrapLimited(1, BASE_FIG));
         VpAddSub(c.real, a.real, b.real, 1);
     }
     else {
-        GUARD_OBJ(c, NewZeroWrapLimited(1, mx * (VpBaseFig() + 1)));
+        GUARD_OBJ(c, NewZeroWrapLimited(1, (mx + 1) * BASE_FIG));
         if (!mx) {
             VpSetInf(c.real, VpGetSign(a.real));
         }
@@ -1572,11 +1573,12 @@ BigDecimal_sub(VALUE self, VALUE r)
 
     mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
-        GUARD_OBJ(c, NewZeroWrapLimited(1, VpBaseFig() + 1));
+        /* a or b is inf */
+        GUARD_OBJ(c, NewZeroWrapLimited(1, BASE_FIG));
         VpAddSub(c.real, a.real, b.real, -1);
     }
     else {
-        GUARD_OBJ(c, NewZeroWrapLimited(1, mx *(VpBaseFig() + 1)));
+        GUARD_OBJ(c, NewZeroWrapLimited(1, (mx + 1) * BASE_FIG));
         if (!mx) {
             VpSetInf(c.real, VpGetSign(a.real));
         }
@@ -1822,7 +1824,7 @@ BigDecimal_neg(VALUE self)
     ENTER(5);
     BDVALUE c, a;
     GUARD_OBJ(a, GetBDValueMust(self));
-    GUARD_OBJ(c, NewZeroWrapLimited(1, a.real->Prec *(VpBaseFig() + 1)));
+    GUARD_OBJ(c, NewZeroWrapLimited(1, a.real->Prec * BASE_FIG));
     VpAsgn(c.real, a.real, -1);
     return CheckGetValue(c);
 }
@@ -1860,7 +1862,7 @@ BigDecimal_mult(VALUE self, VALUE r)
     }
 
     mx = a.real->Prec + b.real->Prec;
-    GUARD_OBJ(c, NewZeroWrapLimited(1, mx * (VpBaseFig() + 1)));
+    GUARD_OBJ(c, NewZeroWrapLimited(1, (mx + 1) * BASE_FIG));
     VpMult(c.real, a.real, b.real);
     return CheckGetValue(c);
 }
@@ -2358,7 +2360,7 @@ BigDecimal_abs(VALUE self)
     size_t mx;
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec *(VpBaseFig() + 1);
+    mx = a.real->Prec * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpAsgn(c.real, a.real, 1);
     VpChangeSign(c.real, 1);
@@ -2400,7 +2402,7 @@ BigDecimal_fix(VALUE self)
     size_t mx;
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec *(VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpActiveRound(c.real, a.real, VP_ROUND_DOWN, 0); /* 0: round off */
     return CheckGetValue(c);
@@ -2474,7 +2476,7 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 
     pl = VpSetPrecLimit(0);
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * (VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, sw, iLoc);
@@ -2520,7 +2522,7 @@ BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
     }
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * (VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, VP_ROUND_DOWN, iLoc); /* 0: truncate */
@@ -2540,7 +2542,7 @@ BigDecimal_frac(VALUE self)
     size_t mx;
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * (VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpFrac(c.real, a.real);
     return CheckGetValue(c);
@@ -2580,7 +2582,7 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
     }
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * (VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, VP_ROUND_FLOOR, iLoc);
@@ -2626,7 +2628,7 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
     }
 
     GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * (VpBaseFig() + 1);
+    mx = (a.real->Prec + 1) * BASE_FIG;
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, VP_ROUND_CEIL, iLoc);
