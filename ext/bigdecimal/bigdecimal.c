@@ -2168,7 +2168,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     VpSetPrecLimit(pl);
     if (!VpIsZero(res.real)) {
         // Remainder value affects rounding result.
-        // ROUND_UP cv = 0.1e0 with ix=10 will be:
+        // ROUND_UP cv = 0.1e0 with idx=10 will be:
         // 0.1e0 if remainder == 0
         // 0.1000000001e0 if remainder != 0
         size_t idx = roomof(ix, BASE_FIG);
