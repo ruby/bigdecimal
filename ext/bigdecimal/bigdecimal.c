@@ -2586,9 +2586,6 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
     GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, VP_ROUND_FLOOR, iLoc);
-#ifdef BIGDECIMAL_DEBUG
-    VPrint(stderr, "floor: c=%\n", c.real);
-#endif
     if (argc == 0) {
         return BigDecimal_to_i(CheckGetValue(c));
     }
@@ -4631,9 +4628,6 @@ Init_bigdecimal(void)
  */
 #ifdef BIGDECIMAL_DEBUG
 static int gfDebug = 1;         /* Debug switch */
-#if 0
-static int gfCheckVal = 1;      /* Value checking flag in VpNmlz()  */
-#endif
 #endif /* BIGDECIMAL_DEBUG */
 
 static Real *VpConstOne;    /* constant 1.0 */
@@ -5068,17 +5062,6 @@ VpInit(DECDIG BaseVal)
     gnAlloc = 0;
 #endif /* BIGDECIMAL_DEBUG */
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-        printf("VpInit: BaseVal = %"PRIuDECDIG"\n", BaseVal);
-        printf("\tBASE      = %"PRIuDECDIG"\n", BASE);
-        printf("\tHALF_BASE = %"PRIuDECDIG"\n", HALF_BASE);
-        printf("\tBASE1     = %"PRIuDECDIG"\n", BASE1);
-        printf("\tBASE_FIG  = %u\n", BASE_FIG);
-        printf("\tBIGDECIMAL_DOUBLE_FIGURES = %d\n", BIGDECIMAL_DOUBLE_FIGURES);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-
     return BIGDECIMAL_DOUBLE_FIGURES;
 }
 
@@ -5487,14 +5470,6 @@ VpAddSub(Real *c, Real *a, Real *b, int operation)
     size_t n, na, nb, i;
     DECDIG mrv;
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpAddSub(enter) a=% \n", a);
-	VPrint(stdout, "     b=% \n", b);
-	printf(" operation=%d\n", operation);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-
     if (!VpIsDefOP(c, a, b, (operation > 0) ? OP_SW_ADD : OP_SW_SUB)) return 0; /* No significant digits */
 
     /* check if a or b is zero  */
@@ -5598,14 +5573,6 @@ end_if:
 	VpInternalRound(c, 0, (c->Prec > 0) ? c->frac[c->Prec-1] : 0, mrv);
     }
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpAddSub(result) c=% \n", c);
-	VPrint(stdout, "     a=% \n", a);
-	VPrint(stdout, "     b=% \n", b);
-	printf(" operation=%d\n", operation);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return c->Prec * BASE_FIG;
 }
 
@@ -5625,13 +5592,6 @@ VpAddAbs(Real *a, Real *b, Real *c)
     size_t b_pos, b_pos_with_word_shift;
     size_t c_pos;
     DECDIG av, bv, carry, mrv;
-
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpAddAbs called: a = %\n", a);
-	VPrint(stdout, "     b = %\n", b);
-    }
-#endif /* BIGDECIMAL_DEBUG */
 
     word_shift = VpSetPTR(a, b, c, &ap, &bp, &cp, &av, &bv);
     a_pos = ap;
@@ -5698,11 +5658,6 @@ Assign_a:
 
 Exit:
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpAddAbs exit: c=% \n", c);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return mrv;
 }
 
@@ -5720,13 +5675,6 @@ VpSubAbs(Real *a, Real *b, Real *c)
     size_t b_pos, b_pos_with_word_shift;
     size_t c_pos;
     DECDIG av, bv, borrow, mrv;
-
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpSubAbs called: a = %\n", a);
-	VPrint(stdout, "     b = %\n", b);
-    }
-#endif /* BIGDECIMAL_DEBUG */
 
     word_shift = VpSetPTR(a, b, c, &ap, &bp, &cp, &av, &bv);
     a_pos = ap;
@@ -5803,11 +5751,6 @@ Assign_a:
     mrv = 0;
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpSubAbs exit: c=% \n", c);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return mrv;
 }
 
@@ -5945,13 +5888,6 @@ VpMult(Real *c, Real *a, Real *b)
     DECDIG_DBL s;
     Real *w;
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpMult(Enter): a=% \n", a);
-	VPrint(stdout, "      b=% \n", b);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-
     if (!VpIsDefOP(c, a, b, OP_SW_MULT)) return 0; /* No significant digit */
 
     if (VpIsZero(a) || VpIsZero(b)) {
@@ -6051,13 +5987,6 @@ VpMult(Real *c, Real *a, Real *b)
     }
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpMult(c=a*b): c=% \n", c);
-	VPrint(stdout, "      a=% \n", a);
-	VPrint(stdout, "      b=% \n", b);
-    }
-#endif /*BIGDECIMAL_DEBUG */
     return c->Prec*BASE_FIG;
 }
 
@@ -6073,13 +6002,6 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     DECDIG_DBL q, b1, b1p1, b1b2, b1b2p1, r1r2;
     DECDIG borrow, borrow1, borrow2;
     DECDIG_DBL qb;
-
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, " VpDivd(c=a/b)  a=% \n", a);
-	VPrint(stdout, "    b=% \n", b);
-    }
-#endif /*BIGDECIMAL_DEBUG */
 
     VpSetNaN(r);
     if (!VpIsDefOP(c, a, b, OP_SW_DIV)) goto Exit;
@@ -6253,24 +6175,9 @@ out_side:
     goto Exit;
 
 space_error:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	printf("   word_a=%"PRIuSIZE"\n", word_a);
-	printf("   word_b=%"PRIuSIZE"\n", word_b);
-	printf("   word_c=%"PRIuSIZE"\n", word_c);
-	printf("   word_r=%"PRIuSIZE"\n", word_r);
-	printf("   ind_r =%"PRIuSIZE"\n", ind_r);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     rb_bug("ERROR(VpDivd): space for remainder too small.");
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, " VpDivd(c=a/b), c=% \n", c);
-	VPrint(stdout, "    r=% \n", r);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return c->Prec * BASE_FIG;
 }
 
@@ -6393,13 +6300,6 @@ Exit:
     if      (val >  1) val =  1;
     else if (val < -1) val = -1;
 
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, " VpComp a=%\n", a);
-	VPrint(stdout, "  b=%\n", b);
-	printf("  ans=%d\n", val);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return (int)val;
 }
 
@@ -7012,13 +6912,6 @@ VpVtoD(double *d, SIGNED_VALUE *e, Real *m)
     *d *= VpGetSign(m);
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, " VpVtoD: m=%\n", m);
-	printf("   d=%e * 10 **%ld\n", *d, *e);
-	printf("   BIGDECIMAL_DOUBLE_FIGURES = %d\n", BIGDECIMAL_DOUBLE_FIGURES);
-    }
-#endif /*BIGDECIMAL_DEBUG */
     return f;
 }
 
@@ -7081,12 +6974,6 @@ VpDtoV(Real *m, double d)
                     (DECDIG)(val*(double)BASE));
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	printf("VpDtoV d=%30.30e\n", d);
-	VPrint(stdout, "  m=%\n", m);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return;
 }
 
@@ -7144,12 +7031,6 @@ VpItoV(Real *m, SIGNED_VALUE ival)
     VpNmlz(m);
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	printf(" VpItoV i=%d\n", ival);
-	VPrint(stdout, "  m=%\n", m);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return;
 }
 #endif
@@ -7573,12 +7454,6 @@ VpFrac(Real *y, Real *x)
     VpNmlz(y);
 
 Exit:
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VPrint(stdout, "VpFrac y=%\n", y);
-	VPrint(stdout, "    x=%\n", x);
-    }
-#endif /* BIGDECIMAL_DEBUG */
     return;
 }
 
