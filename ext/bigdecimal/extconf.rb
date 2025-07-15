@@ -60,6 +60,7 @@ else
 end
 
 $defs.push '-DBIGDECIMAL_USE_DECDIG_UINT16_T' if ENV['BIGDECIMAL_USE_DECDIG_UINT16_T'] == 'true'
+$defs.push '-DBIGDECIMAL_USE_VP_TEST_METHODS' if ENV['BIGDECIMAL_USE_VP_TEST_METHODS'] == 'true'
 
 create_makefile('bigdecimal') {|mf|
   mf << "BIGDECIMAL_RB = #{bigdecimal_rb}\n"
