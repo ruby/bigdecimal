@@ -6004,12 +6004,6 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 	VpSetZero(r, VpGetSign(a) * VpGetSign(b));
 	goto Exit;
     }
-    if (VpIsOne(b)) {
-	/* divide by one  */
-	VpAsgn(c, a, VpGetSign(b));
-	VpSetZero(r, VpGetSign(a));
-	goto Exit;
-    }
 
     word_a = a->Prec;
     word_b = b->Prec;
@@ -6042,15 +6036,14 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 
     /* */
     /* loop start */
-    ind_c = word_r - 1;
-    nLoop = Min(word_c,ind_c);
+    nLoop = Min(word_c, word_r);
     ind_c = 1;
     while (ind_c < nLoop) {
 	if (r->frac[ind_c] == 0) {
 	    ++ind_c;
 	    continue;
 	}
-        r1r2 = (DECDIG_DBL)r->frac[ind_c] * BASE + r->frac[ind_c + 1];
+        r1r2 = (DECDIG_DBL)r->frac[ind_c] * BASE + (ind_c + 1 < word_r ? r->frac[ind_c + 1] : 0);
 	if (r1r2 == b1b2) {
 	    /* The first two word digits is the same */
 	    ind_b = 2;
