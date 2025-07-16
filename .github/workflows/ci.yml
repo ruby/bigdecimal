@@ -44,6 +44,7 @@ jobs:
         - { os: windows-latest , ruby: truffleruby-head }
     env:
       BIGDECIMAL_USE_DECDIG_UINT16_T: ${{ matrix.decdig_bits == 16 }}
+      BIGDECIMAL_USE_VP_TEST_METHODS: true
 
     steps:
       - uses: actions/checkout@v4

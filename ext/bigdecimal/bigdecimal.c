@@ -2158,11 +2158,10 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
             ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
     }
 
-    // VpDivd needs 2 extra DECDIGs. One more is needed for rounding.
-    GUARD_OBJ(cv, NewZeroWrapLimited(1, ix + 3 * VpBaseFig()));
+    // VpDivd needs 2 extra DECDIGs for rounding.
+    GUARD_OBJ(cv, NewZeroWrapLimited(1, ix + 2 * VpBaseFig()));
 
-    mx = bv.real->Prec + cv.real->MaxPrec - 1;
-    if (mx <= av.real->Prec) mx = av.real->Prec + 1;
+    mx = Max(av.real->Prec, bv.real->Prec + cv.real->MaxPrec - 1);
     GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
     VpDivd(cv.real, res.real, av.real, bv.real);
     VpSetPrecLimit(pl);
@@ -4215,6 +4214,35 @@ BigDecimal_literal(const char *str)
 
 #define BIGDECIMAL_LITERAL(var, val) (BIGDECIMAL_ ## var = BigDecimal_literal(#val))
 
+#ifdef BIGDECIMAL_USE_VP_TEST_METHODS
+VALUE
+BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
+  BDVALUE a,b,c,d;
+  size_t cn = NUM2INT(cprec);
+  a = GetBDValueMust(self);
+  b = GetBDValueMust(r);
+  size_t dn = Max(a.real->Prec, b.real->Prec + cn - 1);
+  c = NewZeroWrapLimited(1, cn * BASE_FIG);
+  d = NewZeroWrapLimited(1, dn * BASE_FIG);
+  VpDivd(c.real, d.real, a.real, b.real);
+  VpNmlz(c.real);
+  VpNmlz(d.real);
+  return rb_assoc_new(c.bigdecimal, d.bigdecimal);
+}
+
+VALUE
+BigDecimal_vpmult(VALUE self, VALUE v) {
+  BDVALUE a,b,c;
+  a = GetBDValueMust(self);
+  b = GetBDValueMust(v);
+  size_t cn = a.real->Prec + b.real->Prec + 1;
+  c = NewZeroWrapLimited(1, cn * BASE_FIG);
+  VpMult(c.real, a.real, b.real);
+  VpNmlz(c.real);
+  return c.bigdecimal;
+}
+#endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
+
 /* Document-class: BigDecimal
  * BigDecimal provides arbitrary-precision floating point decimal arithmetic.
  *
@@ -4584,6 +4612,11 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "truncate",  BigDecimal_truncate, -1);
     rb_define_method(rb_cBigDecimal, "_dump", BigDecimal_dump, -1);
 
+#ifdef BIGDECIMAL_USE_VP_TEST_METHODS
+    rb_define_method(rb_cBigDecimal, "vpdivd", BigDecimal_vpdivd, 2);
+    rb_define_method(rb_cBigDecimal, "vpmult", BigDecimal_vpmult, 1);
+#endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
+
     rb_mBigMath = rb_define_module("BigMath");
     rb_define_singleton_method(rb_mBigMath, "exp", BigMath_s_exp, 2);
     rb_define_singleton_method(rb_mBigMath, "log", BigMath_s_log, 2);
@@ -4645,7 +4678,6 @@ static int AddExponent(Real *a, SIGNED_VALUE n);
 static DECDIG VpAddAbs(Real *a,Real *b,Real *c);
 static DECDIG VpSubAbs(Real *a,Real *b,Real *c);
 static size_t VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos, DECDIG *av, DECDIG *bv);
-static int VpNmlz(Real *a);
 static void VpFormatSt(char *psz, size_t fFmt);
 static int VpRdup(Real *m, size_t ind_m);
 
@@ -5977,6 +6009,10 @@ Exit:
 
 /*
  *   c = a / b,  remainder = r
+ *   XXXX_YYYY_ZZZZ / 0001 = XXXX_YYYY_ZZZZ
+ *   XXXX_YYYY_ZZZZ / 1111 = 000X_000Y_000Z
+ *   00XX_XXYY_YYZZ / 1000 = 0000_0XXX_XYYY
+ *   0001_0000_0000 / 9999 = 0000_0001_0001
  */
 VP_EXPORT size_t
 VpDivd(Real *c, Real *r, Real *a, Real *b)
@@ -6010,18 +6046,11 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     word_c = c->MaxPrec;
     word_r = r->MaxPrec;
 
-    if (word_a >= word_r || word_b + word_c - 2 >= word_r) goto space_error;
+    if (word_a > word_r || word_b + word_c - 2 >= word_r) goto space_error;
 
-    ind_r = 1;
-    r->frac[0] = 0;
-    while (ind_r <= word_a) {
-	r->frac[ind_r] = a->frac[ind_r - 1];
-	++ind_r;
-    }
-    while (ind_r < word_r) r->frac[ind_r++] = 0;
-
-    ind_c = 0;
-    while (ind_c < word_c) c->frac[ind_c++] = 0;
+    for (i = 0; i < word_a; ++i) r->frac[i] = a->frac[i];
+    for (i = word_a; i < word_r; ++i) r->frac[i] = 0;
+    for (i = 0; i < word_c; ++i) c->frac[i] = 0;
 
     /* initial procedure */
     b1 = b1p1 = b->frac[0];
@@ -6037,7 +6066,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     /* */
     /* loop start */
     nLoop = Min(word_c, word_r);
-    ind_c = 1;
+    ind_c = 0;
     while (ind_c < nLoop) {
 	if (r->frac[ind_c] == 0) {
 	    ++ind_c;
@@ -6141,13 +6170,12 @@ out_side:
     c->Prec = word_c;
     c->exponent = a->exponent;
     VpSetSign(c, VpGetSign(a) * VpGetSign(b));
-    if (!AddExponent(c, 2)) return 0;
+    if (!AddExponent(c, 1)) return 0;
     if (!AddExponent(c, -(b->exponent))) return 0;
 
     VpNmlz(c);            /* normalize c */
     r->Prec = word_r;
     r->exponent = a->exponent;
-    if (!AddExponent(r, 1)) return 0;
     VpSetSign(r, VpGetSign(a));
     VpNmlz(r);            /* normalize r(remainder) */
     goto Exit;
