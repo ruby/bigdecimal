@@ -4227,6 +4227,8 @@ BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
   VpDivd(c.real, d.real, a.real, b.real);
   VpNmlz(c.real);
   VpNmlz(d.real);
+  RB_GC_GUARD(a.bigdecimal);
+  RB_GC_GUARD(b.bigdecimal);
   return rb_assoc_new(c.bigdecimal, d.bigdecimal);
 }
 
@@ -4239,6 +4241,8 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
   c = NewZeroWrapLimited(1, cn * BASE_FIG);
   VpMult(c.real, a.real, b.real);
   VpNmlz(c.real);
+  RB_GC_GUARD(a.bigdecimal);
+  RB_GC_GUARD(b.bigdecimal);
   return c.bigdecimal;
 }
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
