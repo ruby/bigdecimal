@@ -84,7 +84,7 @@ class TestVpOperation < Test::Unit::TestCase
     end
   end
 
-  def test_vpdivd_carry_borrow
+  def test_vpdivd_borrow
     y_small = BASE / 7 * BASE ** 4
     y_large = (4 * BASE_FIG).times.map {|i| i % 9 + 1 }.join.to_i
     [y_large, y_small].each do |y|
