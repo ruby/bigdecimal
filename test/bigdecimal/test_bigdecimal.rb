@@ -1107,6 +1107,14 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_div_round_worst_precision_case
+    x = BigDecimal(5)
+    y = BigDecimal(9 * BASE / 10)
+    (BASE_FIG * 2..BASE_FIG * 4).each do |prec|
+      assert_equal(BigDecimal('0.' + '5' * (prec - 1) + "6E-#{BASE_FIG - 1}"), x.div(y, prec))
+    end
+  end
+
   def test_div_rounding_with_small_remainder
     BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_UP)
     assert_equal(BigDecimal('0.12e1'), BigDecimal('1.25').div(BigDecimal("1.#{'0' * 30}1"), 2))
@@ -1209,6 +1217,28 @@ class TestBigDecimal < Test::Unit::TestCase
     b = BigDecimal('-1.23456789e10')
     q, r = a.divmod(b)
     assert_equal((a/b).round(0, :down) - 1, q)
+    assert_equal((a - q*b), r)
+
+    a = BigDecimal('3e100')
+    b = BigDecimal('-1.7e-100')
+    q, r = a.divmod(b)
+    assert_include(0...-b, -r)
+    assert_equal((a - q*b), r)
+
+    a = BigDecimal('0.32e23')
+    b = BigDecimal('-0.1999999999e-23')
+    q, r = a.divmod(b)
+    assert_include(0...-b, -r)
+    assert_equal((a - q*b), r)
+
+    a = BigDecimal('199.9999999999999999999999999')
+    q, r = a.divmod(1)
+    assert_equal([199, a - 199], [q, r])
+
+    a = BigDecimal('0.30000000000000000000000000000000000000000000000000000000000000001e91')
+    b = BigDecimal('0.1e20')
+    q, r = a.divmod(b)
+    assert_include(0...b, r)
     assert_equal((a - q*b), r)
   end
 

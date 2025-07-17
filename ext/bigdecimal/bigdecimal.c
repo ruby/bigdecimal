@@ -174,6 +174,14 @@ check_allocation_count_nonzero(void)
 #   define check_allocation_count_nonzero() /* nothing */
 #endif /* BIGDECIMAL_DEBUG */
 
+/* VpMult VpDivd helpers */
+#define VPMULT_RESULT_PREC(a, b) (a->Prec + b->Prec + 1)
+/* To calculate VpDivd with n-digits precision, quotient needs n+2*BASE_FIG-1 digits space */
+/* In the worst precision case 0001_1111_1111 / 9999 = 0000_0001_1112, there are 2*BASE_FIG-1 leading zeros */
+#define VPDIVD_QUO_DIGITS(required_digits) ((required_digits) + 2 * BASE_FIG - 1)
+/* Required r.MaxPrec for calculating VpDivd(c, r, a, b) */
+#define VPDIVD_REM_PREC(a, b, c) Max(a->Prec, b->Prec + c->MaxPrec - 1)
+
 static NULLABLE_BDVALUE
 CreateFromString(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception);
 
@@ -221,16 +229,6 @@ rbd_allocate_struct_decimal_digits(size_t const decimal_digits, bool limit_preci
 }
 
 static VALUE BigDecimal_wrap_struct(VALUE obj, Real *vp);
-
-static BDVALUE
-rbd_reallocate_struct(BDVALUE value, size_t const internal_digits)
-{
-    size_t const size = rbd_struct_size(internal_digits);
-    Real *new_real = (Real *)ruby_xrealloc(value.real, size);
-    new_real->MaxPrec = internal_digits;
-    BigDecimal_wrap_struct(value.bigdecimal, new_real);
-    return (BDVALUE) { value.bigdecimal, new_real };
-}
 
 static void
 rbd_free_struct(Real *real)
@@ -1843,7 +1841,6 @@ BigDecimal_mult(VALUE self, VALUE r)
 {
     ENTER(5);
     BDVALUE a, b, c;
-    size_t mx;
 
     GUARD_OBJ(a, GetBDValueMust(self));
     if (RB_TYPE_P(r, T_FLOAT)) {
@@ -1859,8 +1856,7 @@ BigDecimal_mult(VALUE self, VALUE r)
         b = bdvalue_nonnullable(b2);
     }
 
-    mx = a.real->Prec + b.real->Prec;
-    GUARD_OBJ(c, NewZeroWrapLimited(1, (mx + 1) * BASE_FIG));
+    GUARD_OBJ(c, NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG));
     VpMult(c.real, a.real, b.real);
     return CheckGetValue(c);
 }
@@ -1941,9 +1937,9 @@ static VALUE
 BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate)
 {
     ENTER(8);
-    BDVALUE a, b, c, d, e, res;
-    ssize_t a_prec, b_prec;
-    size_t mx;
+    BDVALUE a, b, dv, md, res;
+    ssize_t a_exponent, b_exponent;
+    size_t mx, rx;
 
     GUARD_OBJ(a, GetBDValueMust(self));
 
@@ -1997,39 +1993,36 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         return Qtrue;
     }
 
-    BigDecimal_count_precision_and_scale(self, &a_prec, NULL);
-    BigDecimal_count_precision_and_scale(rr, &b_prec, NULL);
+    a_exponent = VpExponent10(a.real);
+    b_exponent = VpExponent10(b.real);
+    mx = a_exponent > b_exponent ? a_exponent - b_exponent + 1 : 1;
+    GUARD_OBJ(dv, NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(mx)));
 
-    mx = (a_prec > b_prec) ? a_prec : b_prec;
-    mx *= 2;
+    /* res is reused for VpDivd remainder and VpMult result */
+    rx = VPDIVD_REM_PREC(a.real, b.real, dv.real);
+    mx = VPMULT_RESULT_PREC(dv.real, b.real);
+    GUARD_OBJ(res, NewZeroWrapNolimit(1, Max(rx, mx) * BASE_FIG));
+    /* AddSub needs one more prec */
+    GUARD_OBJ(md, NewZeroWrapLimited(1, (res.real->MaxPrec + 1) * BASE_FIG));
 
-    if (2*BIGDECIMAL_DOUBLE_FIGURES > mx)
-        mx = 2*BIGDECIMAL_DOUBLE_FIGURES;
+    VpDivd(dv.real, res.real, a.real, b.real);
+    VpMidRound(dv.real, VP_ROUND_DOWN, 0);
+    VpMult(res.real, dv.real, b.real);
+    VpAddSub(md.real, a.real, res.real, -1);
 
-    GUARD_OBJ(c, NewZeroWrapLimited(1, mx + 2*BASE_FIG));
-    GUARD_OBJ(res, NewZeroWrapNolimit(1, mx*2 + 2*BASE_FIG));
-    VpDivd(c.real, res.real, a.real, b.real);
-
-    mx = c.real->Prec * BASE_FIG;
-    GUARD_OBJ(d, NewZeroWrapLimited(1, mx));
-    VpActiveRound(d.real, c.real, VP_ROUND_DOWN, 0);
-
-    VpMult(res.real, d.real, b.real);
-    VpAddSub(c.real, a.real, res.real, -1);
-
-    if (!truncate && !VpIsZero(c.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
+    if (!truncate && !VpIsZero(md.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
         /* result adjustment for negative case */
-        res = rbd_reallocate_struct(res, d.real->MaxPrec);
-        res.real->MaxPrec = d.real->MaxPrec;
-        VpAddSub(res.real, d.real, VpOne(), -1);
-        GUARD_OBJ(e, NewZeroWrapLimited(1, GetAddSubPrec(c.real, b.real) * 2*BASE_FIG));
-        VpAddSub(e.real, c.real, b.real, 1);
-        *div = bdvalue_nullable(res);
-        *mod = bdvalue_nullable(e);
+        BDVALUE dv2, md2;
+        GUARD_OBJ(dv2, NewZeroWrapLimited(1, (dv.real->MaxPrec + 1) * BASE_FIG));
+        GUARD_OBJ(md2, NewZeroWrapLimited(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG));
+        VpAddSub(dv2.real, dv.real, VpOne(), -1);
+        VpAddSub(md2.real, md.real, b.real, 1);
+        *div = bdvalue_nullable(dv2);
+        *mod = bdvalue_nullable(md2);
     }
     else {
-        *div = bdvalue_nullable(d);
-        *mod = bdvalue_nullable(c);
+        *div = bdvalue_nullable(dv);
+        *mod = bdvalue_nullable(md);
     }
     return Qtrue;
 
@@ -2121,7 +2114,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     ENTER(5);
     SIGNED_VALUE ix;
     BDVALUE av, bv, cv, res;
-    size_t mx, pl;
+    size_t pl;
 
     if (NIL_P(n)) { /* div in Float sense */
         NULLABLE_BDVALUE div;
@@ -2158,11 +2151,9 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
             ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
     }
 
-    // VpDivd needs 2 extra DECDIGs for rounding.
-    GUARD_OBJ(cv, NewZeroWrapLimited(1, ix + 2 * VpBaseFig()));
-
-    mx = Max(av.real->Prec, bv.real->Prec + cv.real->MaxPrec - 1);
-    GUARD_OBJ(res, NewZeroWrapNolimit(1, mx * VpBaseFig()));
+    // Needs to calculate 1 extra digit for rounding.
+    GUARD_OBJ(cv, NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(ix + 1)));
+    GUARD_OBJ(res, NewZeroWrapNolimit(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG));
     VpDivd(cv.real, res.real, av.real, bv.real);
     VpSetPrecLimit(pl);
     if (!VpIsZero(res.real)) {
@@ -4221,9 +4212,8 @@ BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
   size_t cn = NUM2INT(cprec);
   a = GetBDValueMust(self);
   b = GetBDValueMust(r);
-  size_t dn = Max(a.real->Prec, b.real->Prec + cn - 1);
   c = NewZeroWrapLimited(1, cn * BASE_FIG);
-  d = NewZeroWrapLimited(1, dn * BASE_FIG);
+  d = NewZeroWrapLimited(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
   VpDivd(c.real, d.real, a.real, b.real);
   VpNmlz(c.real);
   VpNmlz(d.real);
@@ -4237,8 +4227,7 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
   BDVALUE a,b,c;
   a = GetBDValueMust(self);
   b = GetBDValueMust(v);
-  size_t cn = a.real->Prec + b.real->Prec + 1;
-  c = NewZeroWrapLimited(1, cn * BASE_FIG);
+  c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
   VpMult(c.real, a.real, b.real);
   VpNmlz(c.real);
   RB_GC_GUARD(a.bigdecimal);
