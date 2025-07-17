@@ -6135,13 +6135,6 @@ sub_mult:
 	}
 
 	r->frac[ind_r] -= borrow2;
-	/* carry */
-	ind_r = ind_c;
-	while (c->frac[ind_r] >= BASE) {
-	    c->frac[ind_r] -= BASE;
-	    --ind_r;
-	    ++c->frac[ind_r];
-	}
     }
     /* End of operation, now final arrangement */
 out_side:
