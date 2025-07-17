@@ -6014,7 +6014,7 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     size_t i, n, ind_a, ind_b, ind_c, ind_r;
     size_t nLoop;
     DECDIG_DBL q, b1, b1p1, b1b2, b1b2p1, r1r2;
-    DECDIG borrow, borrow1, borrow2;
+    DECDIG borrow1, borrow2;
     DECDIG_DBL qb;
 
     VpSetNaN(r);
@@ -6078,26 +6078,11 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 	    }
 	    /* The first few word digits of r and b is the same and */
 	    /* the first different word digit of w is greater than that */
-	    /* of b, so quotient is 1 and just subtract b from r. */
-	    borrow = 0;        /* quotient=1, then just r-b */
-	    ind_b = b->Prec - 1;
-	    ind_r = ind_c + ind_b;
-	    if (ind_r >= word_r) goto space_error;
-	    n = ind_b;
-	    for (i = 0; i <= n; ++i) {
-		if (r->frac[ind_r] < b->frac[ind_b] + borrow) {
-		    r->frac[ind_r] += (BASE - (b->frac[ind_b] + borrow));
-		    borrow = 1;
-		}
-		else {
-		    r->frac[ind_r] = r->frac[ind_r] - b->frac[ind_b] - borrow;
-		    borrow = 0;
-		}
-		--ind_r;
-		--ind_b;
-	    }
+	    /* of b, so quotient is 1. */
+	    q = 1;
 	    ++c->frac[ind_c];
-	    goto carry;
+	    ind_r = b->Prec + ind_c - 1;
+	    goto sub_mult;
 	}
 	/* The first two word digits is not the same, */
 	/* then compare magnitude, and divide actually. */
@@ -6150,7 +6135,7 @@ sub_mult:
 	}
 
 	r->frac[ind_r] -= borrow2;
-carry:
+	/* carry */
 	ind_r = ind_c;
 	while (c->frac[ind_r] >= BASE) {
 	    c->frac[ind_r] -= BASE;
