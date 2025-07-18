@@ -8,6 +8,8 @@ require 'bigdecimal'
 #   sin (x, prec)
 #   cos (x, prec)
 #   atan(x, prec)
+#   erf (x, prec)
+#   erfc(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -230,5 +232,109 @@ module BigMath
   def E(prec)
     raise ArgumentError, "Zero or negative precision for E" if prec <= 0
     BigMath.exp(1, prec)
+  end
+
+  # call-seq:
+  #   erf(decimal, numeric) -> BigDecimal
+  #
+  # Computes the error function of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.erf(BigDecimal('1'), 16).to_s
+  #   #=> "0.84270079294971486934122063508259e0"
+  #
+  def erf(x, prec)
+    raise ArgumentError, "Zero or negative precision for erf" if prec <= 0
+    return BigDecimal("NaN") if x.nan?
+    return BigDecimal(0) if x == 0
+    # erf(x) = (2 / sqrt(pi)) * exp(-x**2) * sum { 4**k * k! * x**(2k + 1) / (2k + 1)! }
+    # Controlling precision of this series is easier than normal erf taylor series.
+    prec += BigDecimal.double_fig
+    x2 = x.mult(x, prec)
+
+    log10 = 2.302585092994046
+    return BigDecimal(x > 0 ? 1 : -1) if x2 > prec * log10
+
+    a = BigDecimal(2).div(sqrt(PI(prec), prec), prec).mult(BigMath.exp(-x2, prec), prec)
+    b = x
+    d = x
+    1.step do |k|
+      d = d.mult(2, prec).div(2 * k + 1, prec).mult(x2, prec)
+      b = b.add(d, prec)
+      if d.exponent < b.exponent - prec
+        break
+      end
+    end
+    v = a.mult(b, prec)
+    v > 1 ? BigDecimal(1) : v
+  end
+
+  # call-seq:
+  #   erfc(decimal, numeric) -> BigDecimal
+  #
+  # Computes the complementary error function of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.erfc(BigDecimal('10'), 16).to_s
+  #   #=> "0.20884875837625447570007862949578e-44"
+  #
+  def erfc(x, prec)
+    raise ArgumentError, "Zero or negative precision for erfc" if prec <= 0
+    return BigDecimal("NaN") if x.nan?
+    return BigDecimal(1).sub(erf(x, prec), prec + BigDecimal.double_fig) if x < 0
+
+    if x >= 8
+      # Faster asymptotic expansion can be used if x is large enough
+      y = _erfc_asymptotic(x, prec)
+      return y if y
+    end
+
+    prec += BigDecimal.double_fig
+
+    # erfc(x) = 1 - erf(x) < exp(-x**2)/x/sqrt(pi)
+    # Precision of erf(x) needs about log10(exp(-x**2)) extra digits
+    log10 = 2.302585092994046
+    high_prec = prec + (x**2 / log10).ceil
+    BigDecimal(1).sub(erf(x, high_prec), prec)
+  end
+
+  private def _erfc_asymptotic(x, prec)
+    # Let f(x) = erfc(x)*sqrt(pi)*exp(x**2)/2
+    # f(x) satisfies the following differential equation:
+    # 2*x*f(x) = f'(x) + 1
+    # From the above equation, we can derive the following asymptotic expansion:
+    # f(x) = sum { (-1)**k * (2*k)! / 4***k / k! / x**(2*k)) } / x
+
+    # This asymptotic expansion does not converge.
+    # But if there is a k that satisfies (2*k)! / 4***k / k! / x**(2*k) < 10**(-prec),
+    # It is enough to calculate erfc within the given precision.
+    # (2*k)! / 4**k / k! can be approximated as sqrt(2) * (k/e)**k by using Stirling's approximation.
+    prec += BigDecimal.double_fig
+    xf = x.to_f
+    log10xf = Math.log10(xf)
+    kmax = 1
+    until kmax * Math.log10(kmax / Math::E) + 1 - 2 * kmax * log10xf < -prec
+      kmax += 1
+      return if xf * xf < kmax # unable to calculate with the given precision
+    end
+
+    sum = BigDecimal(1)
+    xinv = BigDecimal(1).div(x, prec)
+    xinv2 = xinv.mult(xinv, prec)
+    d = BigDecimal(1)
+    (1..kmax).each do |k|
+      d = d.mult(xinv2, prec).mult(1 - 2 * k, prec).div(2, prec)
+      sum = sum.add(d, prec)
+    end
+    expx2 = BigMath.exp(x.mult(x, prec), prec)
+
+    # Workaround for https://github.com/ruby/bigdecimal/issues/345
+    expx2 = BigDecimal(expx2) unless expx2.is_a?(BigDecimal)
+
+    sum.div(expx2.mult(PI(prec).sqrt(prec), prec), prec).mult(xinv, prec)
   end
 end
