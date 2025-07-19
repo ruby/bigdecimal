@@ -5,14 +5,28 @@ require 'bigdecimal'
 #--
 # Contents:
 #   sqrt(x, prec)
+#   cbrt(x, prec)
+#   hypot(x, y, prec)
 #   sin (x, prec)
 #   cos (x, prec)
+#   tan (x, prec)
+#   asin(x, prec)
+#   acos(x, prec)
 #   atan(x, prec)
+#   atan2(y, x, prec)
+#   sinh (x, prec)
+#   cosh (x, prec)
+#   tanh (x, prec)
+#   asinh(x, prec)
+#   acosh(x, prec)
+#   atanh(x, prec)
+#   log2 (x, prec)
+#   log10(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
 # where:
-#   x    ... BigDecimal number to be computed.
+#   x, y ... BigDecimal number to be computed.
 #   prec ... Number of digits to be obtained.
 #++
 #
@@ -40,7 +54,52 @@ module BigMath
   #   #=> "0.1414213562373095048801688724e1"
   #
   def sqrt(x, prec)
+    x = BigMath._coerce_to_bigdecimal(x, :sqrt)
     x.sqrt(prec)
+  end
+
+  # call-seq:
+  #   cbrt(decimal, numeric) -> BigDecimal
+  #
+  # Computes the cube root of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.cbrt(BigDecimal('2'), 16).to_s
+  #   #=> "0.125992104989487316476721060727822e1"
+  #
+  def cbrt(x, prec)
+    BigMath._validate_prec(prec, :cbrt)
+    x = BigMath._coerce_to_bigdecimal(x, :cbrt)
+    return x if x.zero? || x.infinite? || x.nan?
+    return -cbrt(-x, prec) if x < 0
+
+    ex = x.exponent / 3
+    x *= BigDecimal("1e#{-ex * 3}")
+    y = BigDecimal(Math.cbrt(x.to_f))
+    precs = [prec + BigDecimal.double_fig]
+    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
+    precs.reverse_each do |p|
+      y = (2 * y + x.div(y, p).div(y, p)).div(3, p)
+    end
+    y * BigDecimal("1e#{ex}")
+  end
+
+  # call-seq:
+  #   hypot(x, y, numeric) -> BigDecimal
+  #
+  # Returns sqrt(x**2 + y**2) to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.hypot(BigDecimal('1'), BigDecimal('2'), 16).to_s
+  #   #=> "0.2236067977499789696409173668333333334e1"
+  #
+  def hypot(x, y, prec)
+    BigMath._validate_prec(prec, :hypot)
+    x = BigMath._coerce_to_bigdecimal(x, :hypot)
+    return BigDecimal::NAN if x.nan? || y.nan?
+    return BigDecimal::INFINITY if x.infinite? || y.infinite?
+    prec2 = prec + BigDecimal.double_fig
+    sqrt(x.mult(x, prec2) + y.mult(y, prec2), prec)
   end
 
   # call-seq:
@@ -55,7 +114,8 @@ module BigMath
   #   #=> "0.70710678118654752440082036563292800375e0"
   #
   def sin(x, prec)
-    raise ArgumentError, "Zero or negative precision for sin" if prec <= 0
+    BigMath._validate_prec(prec, :sin)
+    x = BigMath._coerce_to_bigdecimal(x, :sin)
     return BigDecimal("NaN") if x.infinite? || x.nan?
     n    = prec + BigDecimal.double_fig
     one  = BigDecimal("1")
@@ -101,7 +161,8 @@ module BigMath
   #   #=> "-0.999999999999999999999999999999856613163740061349e0"
   #
   def cos(x, prec)
-    raise ArgumentError, "Zero or negative precision for cos" if prec <= 0
+    BigMath._validate_prec(prec, :cos)
+    x = BigMath._coerce_to_bigdecimal(x, :cos)
     return BigDecimal("NaN") if x.infinite? || x.nan?
     n    = prec + BigDecimal.double_fig
     one  = BigDecimal("1")
@@ -134,6 +195,96 @@ module BigMath
     y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
   end
 
+  # Calculate a relative precision value from a block that calculates with a fixed precision.
+  private def _ensure_relative_precision(prec)
+    fixed_point_precision = prec + BigDecimal.double_fig
+    loop do
+      value = yield fixed_point_precision
+      return value if !value.zero? && prec - value.exponent <= fixed_point_precision
+
+      if value.zero? || fixed_point_precision < -value.exponent
+        # Multiply precision by 3/2 if the calculated precision is not enough for estimating required precision
+        fixed_point_precision = fixed_point_precision * 3 / 2
+      else
+        fixed_point_precision = prec - value.exponent + BigDecimal.double_fig
+      end
+    end
+  end
+
+  # call-seq:
+  #   tan(decimal, numeric) -> BigDecimal
+  #
+  # Computes the tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is Infinity or NaN, returns NaN.
+  #
+  #   BigMath.tan(BigMath.PI(16) / 3, 16).to_s
+  #   #=> "0.17320508075688772935274463415059e1"
+  #
+  def tan(x, prec)
+    BigMath._validate_prec(prec, :tan)
+    x = BigMath._coerce_to_bigdecimal(x, :tan)
+    return BigDecimal(0) if x.zero?
+
+    # BigMath calculates sin with relative precision only when x.abs is small
+    sin = x.abs < 3 ? sin(x, prec) : _ensure_relative_precision(prec) {|p| sin(x, p) }
+
+    cos = _ensure_relative_precision(prec) {|p| cos(x, p) }
+    sin.div(cos, prec + BigDecimal.double_fig)
+  end
+
+  # call-seq:
+  #   asin(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arcsine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asin(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.52359877559829887307710723054659e0"
+  #
+  def asin(x, prec)
+    BigMath._validate_prec(prec, :asin)
+    x = BigMath._coerce_to_bigdecimal(x, :asin)
+    raise Math::DomainError, "Out of domain argument for asin" if x < -1 || x > 1
+    return BigDecimal::NAN if x.nan?
+    prec2 = prec + BigDecimal.double_fig
+    cos = (1 - x**2).sqrt(prec2)
+    if cos.zero?
+      pi = PI(prec)
+      x > 0 ? pi / 2 : -pi / 2
+    else
+      atan(x.div(cos, prec2), prec)
+    end
+  end
+
+  # call-seq:
+  #   acos(decimal, numeric) -> BigDecimal
+  #
+  # Computes the arccosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acos(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.10471975511965977461542144610932e1"
+  #
+  def acos(x, prec)
+    BigMath._validate_prec(prec, :acos)
+    x = BigMath._coerce_to_bigdecimal(x, :acos)
+    raise Math::DomainError, "Out of domain argument for acos" if x < -1 || x > 1
+
+    return PI(prec) / 2 - asin(x, prec) if x < 0
+    return PI(prec) / 2 if x.zero?
+    return BigDecimal::NAN if x.nan?
+
+    prec2 = prec + BigDecimal.double_fig
+    sin = (1 - x**2).sqrt(prec2)
+    atan(sin.div(x, prec2), prec)
+  end
+
   # call-seq:
   #   atan(decimal, numeric) -> BigDecimal
   #
@@ -146,7 +297,8 @@ module BigMath
   #   #=> "-0.785398163397448309615660845819878471907514682065e0"
   #
   def atan(x, prec)
-    raise ArgumentError, "Zero or negative precision for atan" if prec <= 0
+    BigMath._validate_prec(prec, :atan)
+    x = BigMath._coerce_to_bigdecimal(x, :atan)
     return BigDecimal("NaN") if x.nan?
     pi = PI(prec)
     x = -x if neg = x < 0
@@ -170,7 +322,226 @@ module BigMath
     y *= 2 if dbl
     y = pi / 2 - y if inv
     y = -y if neg
-    y
+    y.mult(1, n)
+  end
+
+  # call-seq:
+  #   atan2(decimal, decimal, numeric) -> BigDecimal
+  #
+  # Computes the arctangent of y and x to the specified number of digits of
+  # precision, +numeric+.
+  #
+  #   BigMath.atan2(BigDecimal('-1'), BigDecimal('1'), 16).to_s
+  #   #=> "-0.785398163397448309615660845819878471907514682065e0"
+  #
+  def atan2(y, x, prec)
+    BigMath._validate_prec(prec, :atan2)
+    x = BigMath._coerce_to_bigdecimal(x, :atan2)
+    y = BigMath._coerce_to_bigdecimal(y, :atan2)
+    if x.infinite? || y.infinite?
+      one = BigDecimal(1)
+      zero = BigDecimal(0)
+      x = x.infinite? ? (x > 0 ? one : -one) : zero
+      y = y.infinite? ? (y > 0 ? one : -one) : y.sign * zero
+    end
+
+    return x.sign >= 0 ? BigDecimal(0) : y.sign * PI(prec) if y.zero?
+
+    y = -y if neg = y < 0
+    xlarge = y.abs < x.abs
+    divprec = prec + BigDecimal.double_fig
+    if x > 0
+      v = xlarge ? atan(y.div(x, divprec), prec) : PI(prec) / 2 - atan(x.div(y, divprec), prec)
+    else
+      v = xlarge ? PI(prec) - atan(-y.div(x, divprec), prec) : PI(prec) / 2 + atan(x.div(-y, divprec), prec)
+    end
+    neg ? -v : v
+  end
+
+  # call-seq:
+  #   sinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.sinh(BigDecimal('1'), 16).to_s
+  #   #=> "0.11752011936438014568823818505956e1"
+  #
+  def sinh(x, prec)
+    BigMath._validate_prec(prec, :sinh)
+    x = BigMath._coerce_to_bigdecimal(x, :sinh)
+    return BigDecimal::NAN if x.nan?
+    return x if x.infinite?
+
+    prec += BigDecimal.double_fig
+    prec -= x.exponent if x.exponent < 0
+    e = BigMath.exp(x, prec)
+    (e - BigDecimal(1).div(e, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   cosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.cosh(BigDecimal('1'), 16).to_s
+  #   #=> "0.15430806348152437784779056207571e1"
+  #
+  def cosh(x, prec)
+    BigMath._validate_prec(prec, :cosh)
+    x = BigMath._coerce_to_bigdecimal(x, :cosh)
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite?
+
+    prec += BigDecimal.double_fig
+    e = BigMath.exp(x, prec)
+    (e + BigDecimal(1).div(e, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   tanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.tanh(BigDecimal('1'), 16).to_s
+  #   #=> "0.7615941559557648881194582826048e0"
+  #
+  def tanh(x, prec)
+    BigMath._validate_prec(prec, :tanh)
+    x = BigMath._coerce_to_bigdecimal(x, :tanh)
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal(x.infinite?) if x.infinite?
+
+    prec += BigDecimal.double_fig
+    prec2 = prec + [-x.exponent, 0].max
+    e = BigMath.exp(x, prec2)
+    einv = BigDecimal(1).div(e, prec2)
+    (e - einv).div(e + einv, prec)
+  end
+
+  # call-seq:
+  #   asinh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic sine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.asinh(BigDecimal('1'), 16).to_s
+  #   #=> "0.881373587019543025232609324892919887466177636058e0"
+  #
+  def asinh(x, prec)
+    BigMath._validate_prec(prec, :asinh)
+    x = BigMath._coerce_to_bigdecimal(x, :asinh)
+    return x if x.nan? || x.infinite?
+    return -asinh(-x, prec) if x < 0
+
+    sqrt_prec = prec + [-x.exponent, 0].max
+    BigMath.log(x + sqrt(x**2 + 1, sqrt_prec), prec)
+  end
+
+  # call-seq:
+  #   acosh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic cosine of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.acosh(BigDecimal('2'), 16).to_s
+  #   #=> "0.1316957896924816708625046347239934461496535769096e1"
+  #
+  def acosh(x, prec)
+    BigMath._validate_prec(prec, :acosh)
+    x = BigMath._coerce_to_bigdecimal(x, :acosh)
+    raise Math::DomainError, "Out of domain argument for acosh" if x < 1
+    return BigDecimal::INFINITY if x.infinite?
+    return BigDecimal::NAN if x.nan?
+
+    BigMath.log(x + sqrt(x**2 - 1, prec), prec)
+  end
+
+  # call-seq:
+  #   atanh(decimal, numeric) -> BigDecimal
+  #
+  # Computes the inverse hyperbolic tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.atanh(BigDecimal('0.5'), 16).to_s
+  #   #=> "0.54930614433405484569762261846126e0"
+  #
+  def atanh(x, prec)
+    BigMath._validate_prec(prec, :atanh)
+    x = BigMath._coerce_to_bigdecimal(x, :atanh)
+    raise Math::DomainError, "Out of domain argument for atanh" if x < -1 || x > 1
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x == 1
+    return -BigDecimal::INFINITY if x == -1
+
+    prec += BigDecimal.double_fig
+    (BigMath.log(x + 1, prec) - BigMath.log(1 - x, prec)).div(2, prec)
+  end
+
+  # call-seq:
+  #   BigMath.log2(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 2 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log2(BigDecimal('3'), 16).to_s
+  #   #=> "0.158496250072115618145373894394782e1"
+  #
+  def log2(x, prec)
+    BigMath._validate_prec(prec, :log2)
+    x = BigMath._coerce_to_bigdecimal(x, :log2, true)
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(2), prec2), prec2)
+    v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+  end
+
+  # call-seq:
+  #   BigMath.log10(decimal, numeric)    -> BigDecimal
+  #
+  # Computes the base 10 logarithm of +decimal+ to the specified number of
+  # digits of precision, +numeric+.
+  #
+  # If +decimal+ is zero or negative, raises Math::DomainError.
+  #
+  # If +decimal+ is positive infinity, returns Infinity.
+  #
+  # If +decimal+ is NaN, returns NaN.
+  #
+  #   BigMath.log10(BigDecimal('3'), 16).to_s
+  #   #=> "0.47712125471966243729502790325512e0"
+  #
+  def log10(x, prec)
+    BigMath._validate_prec(prec, :log10)
+    x = BigMath._coerce_to_bigdecimal(x, :log10, true)
+    return BigDecimal::NAN if x.nan?
+    return BigDecimal::INFINITY if x.infinite? == 1
+
+    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(10), prec2), prec2)
+    v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
   end
 
   # call-seq:
@@ -183,7 +554,7 @@ module BigMath
   #   #=> "0.3141592653589793238462643388813853786957412e1"
   #
   def PI(prec)
-    raise ArgumentError, "Zero or negative precision for PI" if prec <= 0
+    BigMath._validate_prec(prec, :PI)
     n      = prec + BigDecimal.double_fig
     zero   = BigDecimal("0")
     one    = BigDecimal("1")
@@ -228,7 +599,7 @@ module BigMath
   #   #=> "0.271828182845904523536028752390026306410273e1"
   #
   def E(prec)
-    raise ArgumentError, "Zero or negative precision for E" if prec <= 0
+    BigMath._validate_prec(prec, :E)
     BigMath.exp(1, prec)
   end
 end
