@@ -21,9 +21,13 @@ class BigDecimal
       raise ArgumentError, "#{x.inspect} can't be coerced into BigDecimal"
     end
 
-    def self.validate_prec(prec, method_name) # :nodoc:
+    def self.validate_prec(prec, method_name, accept_zero: false) # :nodoc:
       raise ArgumentError, 'precision must be an Integer' unless Integer === prec
-      raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
+      if accept_zero
+        raise ArgumentError, "Negative precision for #{method_name}" if prec < 0
+      else
+        raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
+      end
     end
 
     def self.infinity_computation_result # :nodoc:
@@ -178,12 +182,12 @@ class BigDecimal
   # Result has at least prec significant digits.
   #
   def sqrt(prec)
+    Internal.validate_prec(prec, :sqrt, accept_zero: true)
     if infinite? == 1
       exception_mode = BigDecimal.mode(BigDecimal::EXCEPTION_ALL)
       raise FloatDomainError, "Computation results in 'Infinity'" if exception_mode.anybits?(BigDecimal::EXCEPTION_INFINITY)
       return INFINITY
     end
-    raise ArgumentError, 'negative precision' if prec < 0
     raise FloatDomainError, 'sqrt of negative value' if self < 0
     raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
     return self if zero?
