@@ -235,8 +235,6 @@ VP_EXPORT int VpActiveRound(Real *y, Real *x, unsigned short f, ssize_t il);
 VP_EXPORT int VpMidRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT int VpLeftRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT void VpFrac(Real *y, Real *x);
-VP_EXPORT int VpPowerByInt(Real *y, Real *x, SIGNED_VALUE n);
-#define VpPower VpPowerByInt
 
 /* VP constants */
 VP_EXPORT Real *VpOne(void);
