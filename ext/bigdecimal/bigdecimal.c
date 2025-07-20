@@ -114,29 +114,6 @@ bdvalue_nullable(BDVALUE v)
 #define HALF_BASE (BASE/2)
 #define BASE1 (BASE/10)
 
-#ifndef RRATIONAL_ZERO_P
-# define RRATIONAL_ZERO_P(x) (FIXNUM_P(rb_rational_num(x)) && \
-			      FIX2LONG(rb_rational_num(x)) == 0)
-#endif
-
-#ifndef RRATIONAL_NEGATIVE_P
-# define RRATIONAL_NEGATIVE_P(x) RTEST(rb_funcall((x), '<', 1, INT2FIX(0)))
-#endif
-
-#ifndef DECIMAL_SIZE_OF_BITS
-#define DECIMAL_SIZE_OF_BITS(n) (((n) * 3010 + 9998) / 9999)
-/* an approximation of ceil(n * log10(2)), upto 65536 at least */
-#endif
-
-#ifdef PRIsVALUE
-# define RB_OBJ_CLASSNAME(obj) rb_obj_class(obj)
-# define RB_OBJ_STRING(obj) (obj)
-#else
-# define PRIsVALUE "s"
-# define RB_OBJ_CLASSNAME(obj) rb_obj_classname(obj)
-# define RB_OBJ_STRING(obj) StringValueCStr(obj)
-#endif
-
 #ifndef MAYBE_UNUSED
 # define MAYBE_UNUSED(x) x
 #endif
