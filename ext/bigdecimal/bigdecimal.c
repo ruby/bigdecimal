@@ -5704,25 +5704,29 @@ VPrint(FILE *fp, const char *cntl_chr, Real *a)
 static void
 VpFormatSt(char *psz, size_t fFmt)
 {
-    size_t ie, i, nf = 0;
-    char ch;
+    size_t iend, idig = 0, iexp = 0, nspaces;
+    char *p;
 
     if (fFmt == 0) return;
 
-    ie = strlen(psz);
-    for (i = 0; i < ie; ++i) {
-	ch = psz[i];
-	if (!ch) break;
-	if (ISSPACE(ch) || ch=='-' || ch=='+') continue;
-	if (ch == '.') { nf = 0; continue; }
-	if (ch == 'E' || ch == 'e') break;
+    iend = strlen(psz);
 
-	if (++nf > fFmt) {
-	    memmove(psz + i + 1, psz + i, ie - i + 1);
-	    ++ie;
-	    nf = 0;
-	    psz[i] = ' ';
-	}
+    if ((p = strchr(psz, '.'))) {
+        idig = (p - psz) + 1;
+    }
+    if ((p = strchr(psz, 'E')) || (p = strchr(psz, 'e'))) {
+        iexp = p - psz;
+    }
+    if (idig == 0 || idig > iexp) return;
+
+    nspaces = (iexp - idig - 1) / fFmt;
+    p = psz + iend + 1;
+    for (size_t i = nspaces; i > 0; i--) {
+        char *src = psz + idig + i * fFmt;
+        char *dst = psz + idig + i * (fFmt + 1);
+        memmove(dst, src, p - src);
+        dst[-1] = ' ';
+        p = src;
     }
 }
 

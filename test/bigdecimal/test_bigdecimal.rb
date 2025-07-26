@@ -1601,6 +1601,8 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal('+1000000 0000000.0', BigDecimal('10000000000000').to_s('+7F'))
     assert_equal('0.1234567890123456789e3', BigDecimal('123.45678901234567890').to_s)
     assert_equal('0.12345 67890 12345 6789e3', BigDecimal('123.45678901234567890').to_s(5))
+    assert_equal('0.123456 789012 345678e3', BigDecimal('123.456789012345678').to_s(6))
+    assert_equal('0.123456 789012 345678 9e3', BigDecimal('123.4567890123456789').to_s(6))
   end
 
   def test_split
