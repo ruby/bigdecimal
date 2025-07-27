@@ -3224,7 +3224,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         return rb_convert_to_BigDecimal(rb_complex_real(val), digs, raise_exception);
     }
     else if (RB_TYPE_P(val, T_STRING)) {
-        return rb_str_convert_to_BigDecimal(val, digs, raise_exception);
+        return rb_str_convert_to_BigDecimal(val, 0, raise_exception);
     }
 
     /* TODO: chheck to_d */
@@ -3238,7 +3238,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         }
         return Qnil;
     }
-    return rb_str_convert_to_BigDecimal(str, digs, raise_exception);
+    return rb_str_convert_to_BigDecimal(str, 0, raise_exception);
 }
 
 /*  call-seq:
