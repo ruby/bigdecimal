@@ -106,7 +106,6 @@ bdvalue_nullable(BDVALUE v)
 #endif
 #define PUSH(x)  (vStack[iStack++] = (VALUE)(x))
 #define GUARD_OBJ(p, y) ((p)=(y), PUSH((p).bigdecimal))
-#define GUARD_OBJ_OR_NIL(p, y) ((p)=(y), PUSH((p).bigdecimal_or_nil))
 
 #define BASE_FIG  BIGDECIMAL_COMPONENT_FIGURES
 #define BASE      BIGDECIMAL_BASE
@@ -1459,20 +1458,18 @@ BigDecimal_uplus(VALUE self)
 static VALUE
 BigDecimal_add(VALUE self, VALUE r)
 {
-    ENTER(5);
     BDVALUE a, b, c;
     size_t mx;
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     if (RB_TYPE_P(r, T_FLOAT)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
+        b = GetBDValueWithPrecMust(r, 0);
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
+        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
     }
     else {
-        NULLABLE_BDVALUE b2;
-        GUARD_OBJ_OR_NIL(b2, GetBDValue(r));
+        NULLABLE_BDVALUE b2 = GetBDValue(r);
         if (!b2.real_or_null) return DoSomeOne(self, r, '+');
         b = bdvalue_nonnullable(b2);
     }
@@ -1495,6 +1492,9 @@ BigDecimal_add(VALUE self, VALUE r)
             VpAddSub(c.real, a.real, b.real, 1);
         }
     }
+
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -1516,20 +1516,18 @@ BigDecimal_add(VALUE self, VALUE r)
 static VALUE
 BigDecimal_sub(VALUE self, VALUE r)
 {
-    ENTER(5);
     BDVALUE a, b, c;
     size_t mx;
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     if (RB_TYPE_P(r, T_FLOAT)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
+        b = GetBDValueWithPrecMust(r, 0);
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
+        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
     }
     else {
-        NULLABLE_BDVALUE b2;
-        GUARD_OBJ_OR_NIL(b2, GetBDValue(r));
+        NULLABLE_BDVALUE b2 = GetBDValue(r);
         if (!b2.real_or_null) return DoSomeOne(self, r, '-');
         b = bdvalue_nonnullable(b2);
     }
@@ -1552,17 +1550,19 @@ BigDecimal_sub(VALUE self, VALUE r)
             VpAddSub(c.real, a.real, b.real, -1);
         }
     }
+
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
     return CheckGetValue(c);
 }
 
 static VALUE
 BigDecimalCmp(VALUE self, VALUE r,char op)
 {
-    ENTER(5);
     SIGNED_VALUE e;
-    BDVALUE a;
+    BDVALUE a = GetBDValueMust(self);
     NULLABLE_BDVALUE b = { Qnil, NULL };
-    GUARD_OBJ(a, GetBDValueMust(self));
+
     switch (TYPE(r)) {
     case T_DATA:
 	if (!is_kind_of_BigDecimal(r)) break;
@@ -1570,15 +1570,15 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
     case T_FIXNUM:
 	/* fall through */
     case T_BIGNUM:
-	GUARD_OBJ_OR_NIL(b, GetBDValue(r));
+	b = GetBDValue(r);
 	break;
 
     case T_FLOAT:
-	GUARD_OBJ_OR_NIL(b, GetBDValueWithPrec(r, 0));
+	b = GetBDValueWithPrec(r, 0);
 	break;
 
     case T_RATIONAL:
-	GUARD_OBJ_OR_NIL(b, GetBDValueWithPrec(r, a.real->Prec*VpBaseFig()));
+	b = GetBDValueWithPrec(r, a.real->Prec*VpBaseFig());
 	break;
 
     default:
@@ -1614,6 +1614,10 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
 	return rb_num_coerce_relop(self, r, f);
     }
     e = VpComp(a.real, b.real_or_null);
+
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal_or_nil);
+
     if (e == 999)
 	return (op == '*') ? Qnil : Qfalse;
     switch (op) {
@@ -1808,25 +1812,26 @@ BigDecimal_neg(VALUE self)
 static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
-    ENTER(5);
     BDVALUE a, b, c;
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     if (RB_TYPE_P(r, T_FLOAT)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, 0));
+        b = GetBDValueWithPrecMust(r, 0);
     }
     else if (RB_TYPE_P(r, T_RATIONAL)) {
-        GUARD_OBJ(b, GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig()));
+        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
     }
     else {
-        NULLABLE_BDVALUE b2;
-        GUARD_OBJ_OR_NIL(b2, GetBDValue(r));
+        NULLABLE_BDVALUE b2 = GetBDValue(r);
         if (!b2.real_or_null) return DoSomeOne(self, r, '*');
         b = bdvalue_nonnullable(b2);
     }
 
     c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
+
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
     return CheckGetValue(c);
 }
 
