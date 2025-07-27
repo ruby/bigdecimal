@@ -113,6 +113,11 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_BigDecimal_ignore_digits
+    assert_equal(1, BigDecimal(1, LIMITS["FIXNUM_MAX"]))
+    assert_equal(1, BigDecimal('1', LIMITS["FIXNUM_MAX"]))
+  end
+
   def test_BigDecimal_bug7522
     bd = BigDecimal("1.12", 1)
     assert_same(bd, BigDecimal(bd))
