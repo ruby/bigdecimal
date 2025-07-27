@@ -1840,12 +1840,20 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_equal(1, BigDecimal(1) ** -BigDecimal::INFINITY)
       assert_positive_zero(BigDecimal(0) ** BigDecimal::INFINITY)
       assert_positive_infinite(BigDecimal(0) ** -BigDecimal::INFINITY)
-      assert_positive_zero(BigDecimal(-0) ** BigDecimal::INFINITY)
-      assert_positive_infinite(BigDecimal(-0) ** -BigDecimal::INFINITY)
-      assert_raise(Math::DomainError) { BigDecimal(-3) ** BigDecimal::INFINITY }
-      assert_raise(Math::DomainError) { BigDecimal(-3) ** -BigDecimal::INFINITY }
+      assert_positive_zero(BigDecimal(-0.0) ** BigDecimal::INFINITY)
+      assert_positive_infinite(BigDecimal(-0.0) ** -BigDecimal::INFINITY)
+
+      # negative_number ** infinite_number converge to zero
+      assert_positive_zero(BigDecimal(-2) ** -BigDecimal::INFINITY)
+      assert_positive_zero(BigDecimal(-0.5) ** BigDecimal::INFINITY)
+      assert_positive_zero((-BigDecimal::INFINITY) ** -BigDecimal::INFINITY)
+
+      # negative_number ** infinite_number that does not converge
+      assert_raise(Math::DomainError) { BigDecimal(-2) ** BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { BigDecimal(-0.5) ** -BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { BigDecimal(-1) ** BigDecimal::INFINITY }
+      assert_raise(Math::DomainError) { BigDecimal(-1) ** -BigDecimal::INFINITY }
       assert_raise(Math::DomainError) { (-BigDecimal::INFINITY) ** BigDecimal::INFINITY }
-      assert_raise(Math::DomainError) { (-BigDecimal::INFINITY) ** -BigDecimal::INFINITY }
     end
   end
 
