@@ -98,15 +98,6 @@ bdvalue_nullable(BDVALUE v)
     return (NULLABLE_BDVALUE) { v.bigdecimal, v.real };
 }
 
-/* MACRO's to guard objects from GC by keeping them in stack */
-#ifdef RBIMPL_ATTR_MAYBE_UNUSED
-#define ENTER(n) RBIMPL_ATTR_MAYBE_UNUSED() volatile VALUE vStack[n];int iStack=0
-#else
-#define ENTER(n) volatile VALUE RB_UNUSED_VAR(vStack[n]);int iStack=0
-#endif
-#define PUSH(x)  (vStack[iStack++] = (VALUE)(x))
-#define GUARD_OBJ(p, y) ((p)=(y), PUSH((p).bigdecimal))
-
 #define BASE_FIG  BIGDECIMAL_COMPONENT_FIGURES
 #define BASE      BIGDECIMAL_BASE
 
@@ -1910,12 +1901,11 @@ BigDecimal_quo(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate)
 {
-    ENTER(8);
     BDVALUE a, b, dv, md, res;
     ssize_t a_exponent, b_exponent;
     size_t mx, rx;
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
 
     VALUE rr = r;
     if (is_kind_of_BigDecimal(rr)) {
@@ -1935,10 +1925,13 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         return Qfalse;
     }
 
-    GUARD_OBJ(b, GetBDValueMust(rr));
+    b = GetBDValueMust(rr);
 
-    if (VpIsNaN(a.real) || VpIsNaN(b.real)) goto NaN;
-    if (VpIsInf(a.real) && VpIsInf(b.real)) goto NaN;
+    if (VpIsNaN(a.real) || VpIsNaN(b.real) || (VpIsInf(a.real) && VpIsInf(b.real))) {
+        VALUE nan = BigDecimal_nan();
+        *div = *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
+        goto Done;
+    }
     if (VpIsZero(b.real)) {
         rb_raise(rb_eZeroDivError, "divided by 0");
     }
@@ -1953,31 +1946,31 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         }
         VALUE nan = BigDecimal_nan();
         *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
-        return Qtrue;
+        goto Done;
     }
     if (VpIsInf(b.real)) {
         VALUE zero = BigDecimal_positive_zero();
         *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
         *mod = bdvalue_nullable(a);
-        return Qtrue;
+        goto Done;
     }
     if (VpIsZero(a.real)) {
         VALUE zero = BigDecimal_positive_zero();
         *div = *mod = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
-        return Qtrue;
+        goto Done;
     }
 
     a_exponent = VpExponent10(a.real);
     b_exponent = VpExponent10(b.real);
     mx = a_exponent > b_exponent ? a_exponent - b_exponent + 1 : 1;
-    GUARD_OBJ(dv, NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(mx)));
+    dv = NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(mx));
 
     /* res is reused for VpDivd remainder and VpMult result */
     rx = VPDIVD_REM_PREC(a.real, b.real, dv.real);
     mx = VPMULT_RESULT_PREC(dv.real, b.real);
-    GUARD_OBJ(res, NewZeroWrapNolimit(1, Max(rx, mx) * BASE_FIG));
+    res = NewZeroWrapNolimit(1, Max(rx, mx) * BASE_FIG);
     /* AddSub needs one more prec */
-    GUARD_OBJ(md, NewZeroWrapLimited(1, (res.real->MaxPrec + 1) * BASE_FIG));
+    md = NewZeroWrapLimited(1, (res.real->MaxPrec + 1) * BASE_FIG);
 
     VpDivd(dv.real, res.real, a.real, b.real);
     VpMidRound(dv.real, VP_ROUND_DOWN, 0);
@@ -1986,25 +1979,26 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
 
     if (!truncate && !VpIsZero(md.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
         /* result adjustment for negative case */
-        BDVALUE dv2, md2;
-        GUARD_OBJ(dv2, NewZeroWrapLimited(1, (dv.real->MaxPrec + 1) * BASE_FIG));
-        GUARD_OBJ(md2, NewZeroWrapLimited(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG));
+        BDVALUE dv2 = NewZeroWrapLimited(1, (dv.real->MaxPrec + 1) * BASE_FIG);
+        BDVALUE md2 = NewZeroWrapLimited(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG);
         VpAddSub(dv2.real, dv.real, VpOne(), -1);
         VpAddSub(md2.real, md.real, b.real, 1);
         *div = bdvalue_nullable(dv2);
         *mod = bdvalue_nullable(md2);
+        RB_GC_GUARD(dv2.bigdecimal);
+        RB_GC_GUARD(md2.bigdecimal);
     }
     else {
         *div = bdvalue_nullable(dv);
         *mod = bdvalue_nullable(md);
     }
-    return Qtrue;
 
-  NaN:
-    {
-        VALUE nan = BigDecimal_nan();
-        *div = *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
-    }
+Done:
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
+    RB_GC_GUARD(dv.bigdecimal);
+    RB_GC_GUARD(md.bigdecimal);
+    RB_GC_GUARD(res.bigdecimal);
     return Qtrue;
 }
 
@@ -2085,7 +2079,6 @@ BigDecimal_divmod(VALUE self, VALUE r)
 static inline VALUE
 BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 {
-    ENTER(5);
     SIGNED_VALUE ix;
     BDVALUE av, bv, cv, res;
     size_t pl;
@@ -2105,15 +2098,15 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     pl = VpSetPrecLimit(0);
     if (ix == 0) ix = pl;
 
-    GUARD_OBJ(av, GetBDValueMust(self));
+    av = GetBDValueMust(self);
     if (RB_FLOAT_TYPE_P(b) && ix > BIGDECIMAL_DOUBLE_FIGURES) {
         /* TODO: I want to refactor this precision control for a float value later
          *       by introducing an implicit conversion function instead of
          *       GetBDValueWithPrecMust.  */
-        GUARD_OBJ(bv, GetBDValueWithPrecMust(b, BIGDECIMAL_DOUBLE_FIGURES));
+        bv = GetBDValueWithPrecMust(b, BIGDECIMAL_DOUBLE_FIGURES);
     }
     else {
-        GUARD_OBJ(bv, GetBDValueWithPrecMust(b, ix));
+        bv = GetBDValueWithPrecMust(b, ix);
     }
 
     if (ix == 0) {
@@ -2127,7 +2120,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 
     // Needs to calculate 1 extra digit for rounding.
     cv = NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(ix + 1));
-    GUARD_OBJ(res, NewZeroWrapNolimit(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG));
+    res = NewZeroWrapNolimit(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG);
     VpDivd(cv.real, res.real, av.real, bv.real);
     VpSetPrecLimit(pl);
     if (!VpIsZero(res.real)) {
@@ -2140,6 +2133,10 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
         if (cv.real->frac[idx] == 0 || cv.real->frac[idx] == HALF_BASE) cv.real->frac[idx]++;
     }
     VpLeftRound(cv.real, VpGetRoundMode(), ix);
+
+    RB_GC_GUARD(av.bigdecimal);
+    RB_GC_GUARD(bv.bigdecimal);
+    RB_GC_GUARD(res.bigdecimal);
     return CheckGetValue(cv);
 }
 
