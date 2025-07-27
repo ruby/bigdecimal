@@ -528,7 +528,6 @@ BigDecimal_double_fig(VALUE self)
 static VALUE
 BigDecimal_prec(VALUE self)
 {
-    ENTER(1);
     BDVALUE v;
     VALUE obj;
 
@@ -536,9 +535,11 @@ BigDecimal_prec(VALUE self)
                      "BigDecimal#precs is deprecated and will be removed in the future; "
                      "use BigDecimal#precision instead.");
 
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
     obj = rb_assoc_new(SIZET2NUM(v.real->Prec*VpBaseFig()),
 		       SIZET2NUM(v.real->MaxPrec*VpBaseFig()));
+
+    RB_GC_GUARD(v.bigdecimal);
     return obj;
 }
 
@@ -653,10 +654,9 @@ VpCountPrecisionAndScale(Real *p, ssize_t *out_precision, ssize_t *out_scale)
 static void
 BigDecimal_count_precision_and_scale(VALUE self, ssize_t *out_precision, ssize_t *out_scale)
 {
-    ENTER(1);
-    BDVALUE v;
-    GUARD_OBJ(v, GetBDValueMust(self));
+    BDVALUE v = GetBDValueMust(self);
     VpCountPrecisionAndScale(v.real, out_precision, out_scale);
+    RB_GC_GUARD(v.bigdecimal);
 }
 
 /*
@@ -745,9 +745,7 @@ BigDecimal_precision_scale(VALUE self)
 static VALUE
 BigDecimal_n_significant_digits(VALUE self)
 {
-    ENTER(1);
-    BDVALUE v;
-    GUARD_OBJ(v, GetBDValueMust(self));
+    BDVALUE v = GetBDValueMust(self);
     if (VpIsZero(v.real) || !VpIsDef(v.real)) {
         return INT2FIX(0);
     }
@@ -763,6 +761,7 @@ BigDecimal_n_significant_digits(VALUE self)
     int ntz = 0;
     for (x = v.real->frac[n-1]; x > 0 && x % 10 == 0; x /= 10) ++ntz;
 
+    RB_GC_GUARD(v.bigdecimal);
     ssize_t n_significant_digits = BASE_FIG*n - nlz - ntz;
     return SSIZET2NUM(n_significant_digits);
 }
@@ -784,17 +783,14 @@ BigDecimal_n_significant_digits(VALUE self)
 static VALUE
 BigDecimal_hash(VALUE self)
 {
-    ENTER(1);
-    BDVALUE v;
-    st_index_t hash;
-
-    GUARD_OBJ(v, GetBDValueMust(self));
-    hash = (st_index_t)v.real->sign;
+    BDVALUE v = GetBDValueMust(self);
+    st_index_t hash = (st_index_t)v.real->sign;
     /* hash!=2: the case for 0(1),NaN(0) or +-Infinity(3) is sign itself */
     if(hash == 2 || hash == (st_index_t)-2) {
         hash ^= rb_memhash(v.real->frac, sizeof(DECDIG)*v.real->Prec);
         hash += v.real->exponent;
     }
+    RB_GC_GUARD(v.bigdecimal);
     return ST2FIX(hash);
 }
 
@@ -813,7 +809,6 @@ BigDecimal_hash(VALUE self)
 static VALUE
 BigDecimal_dump(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
     BDVALUE v;
     char *psz;
     VALUE dummy;
@@ -821,13 +816,15 @@ BigDecimal_dump(int argc, VALUE *argv, VALUE self)
     size_t len;
 
     rb_scan_args(argc, argv, "01", &dummy);
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
     dump = rb_str_new(0, VpNumOfChars(v.real, "E")+50);
     psz = RSTRING_PTR(dump);
     snprintf(psz, RSTRING_LEN(dump), "%"PRIuSIZE":", v.real->Prec*VpBaseFig());
     len = strlen(psz);
     VpToString(v.real, psz+len, RSTRING_LEN(dump)-len, 0, 0);
     rb_str_resize(dump, strlen(psz));
+
+    RB_GC_GUARD(v.bigdecimal);
     return dump;
 }
 
@@ -1266,24 +1263,23 @@ static VALUE BigDecimal_split(VALUE self);
 static VALUE
 BigDecimal_to_i(VALUE self)
 {
-    ENTER(5);
     ssize_t e, nf;
     BDVALUE v;
+    VALUE ret;
 
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
     BigDecimal_check_num(v.real);
 
     e = VpExponent10(v.real);
     if (e <= 0) return INT2FIX(0);
     nf = VpBaseFig();
     if (e <= nf) {
-        return LONG2NUM((long)(VpGetSign(v.real) * (DECDIG_DBL_SIGNED)v.real->frac[0]));
+        ret = LONG2NUM((long)(VpGetSign(v.real) * (DECDIG_DBL_SIGNED)v.real->frac[0]));
     }
     else {
 	VALUE a = BigDecimal_split(self);
 	VALUE digits = RARRAY_AREF(a, 1);
 	VALUE numerator = rb_funcall(digits, rb_intern("to_i"), 0);
-	VALUE ret;
 	ssize_t dpower = e - (ssize_t)RSTRING_LEN(digits);
 
 	if (BIGDECIMAL_NEGATIVE_P(v.real)) {
@@ -1302,8 +1298,10 @@ BigDecimal_to_i(VALUE self)
 	if (RB_TYPE_P(ret, T_FLOAT)) {
 	    rb_raise(rb_eFloatDomainError, "Infinity");
 	}
-	return ret;
     }
+
+    RB_GC_GUARD(v.bigdecimal);
+    return ret;
 }
 
 /* Returns a new Float object having approximately the same value as the
@@ -1313,14 +1311,13 @@ BigDecimal_to_i(VALUE self)
 static VALUE
 BigDecimal_to_f(VALUE self)
 {
-    ENTER(1);
-    BDVALUE v;
     double d;
     SIGNED_VALUE e;
     char *buf;
     volatile VALUE str;
+    BDVALUE v = GetBDValueMust(self);
+    bool negative = BIGDECIMAL_NEGATIVE_P(v.real);
 
-    GUARD_OBJ(v, GetBDValueMust(self));
     if (VpVtoD(&d, &e, v.real) != 1)
 	return rb_float_new(d);
     if (e > (SIGNED_VALUE)(DBL_MAX_10_EXP+BASE_FIG))
@@ -1331,6 +1328,9 @@ BigDecimal_to_f(VALUE self)
     str = rb_str_new(0, VpNumOfChars(v.real, "E"));
     buf = RSTRING_PTR(str);
     VpToString(v.real, buf, RSTRING_LEN(str), 0, 0);
+
+    RB_GC_GUARD(v.bigdecimal);
+
     errno = 0;
     d = strtod(buf, 0);
     if (errno == ERANGE) {
@@ -1341,14 +1341,14 @@ BigDecimal_to_f(VALUE self)
 
 overflow:
     VpException(VP_EXCEPTION_OVERFLOW, "BigDecimal to Float conversion", 0);
-    if (BIGDECIMAL_NEGATIVE_P(v.real))
+    if (negative)
 	return rb_float_new(VpGetDoubleNegInf());
     else
 	return rb_float_new(VpGetDoublePosInf());
 
 underflow:
     VpException(VP_EXCEPTION_UNDERFLOW, "BigDecimal to Float conversion", 0);
-    if (BIGDECIMAL_NEGATIVE_P(v.real))
+    if (negative)
 	return rb_float_new(-0.0);
     else
 	return rb_float_new(0.0);
@@ -1366,9 +1366,10 @@ BigDecimal_to_r(VALUE self)
 
     v = GetBDValueMust(self);
     BigDecimal_check_num(v.real);
-
     sign = VpGetSign(v.real);
     power = VpExponent10(v.real);
+    RB_GC_GUARD(v.bigdecimal);
+
     a = BigDecimal_split(self);
     digits = RARRAY_AREF(a, 1);
     denomi_power = power - RSTRING_LEN(digits);
@@ -1786,11 +1787,10 @@ BigDecimal_ge(VALUE self, VALUE r)
 static VALUE
 BigDecimal_neg(VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    GUARD_OBJ(a, GetBDValueMust(self));
-    c = NewZeroWrapLimited(1, a.real->Prec * BASE_FIG);
+    BDVALUE a = GetBDValueMust(self);
+    BDVALUE c = NewZeroWrapLimited(1, a.real->Prec * BASE_FIG);
     VpAsgn(c.real, a.real, -1);
+    RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -2309,15 +2309,11 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_abs(VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    size_t mx;
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = a.real->Prec * BASE_FIG;
-    c = NewZeroWrapLimited(1, mx);
+    BDVALUE a = GetBDValueMust(self);
+    BDVALUE c = NewZeroWrapLimited(1, a.real->Prec * BASE_FIG);
     VpAsgn(c.real, a.real, 1);
     VpChangeSign(c.real, 1);
+    RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -2331,11 +2327,10 @@ BigDecimal_abs(VALUE self)
 static VALUE
 BigDecimal_sqrt(VALUE self, VALUE nFig)
 {
-    ENTER(5);
     BDVALUE c, a;
     size_t mx, n;
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     mx = a.real->Prec * (VpBaseFig() + 1);
 
     n = check_int_precision(nFig);
@@ -2343,6 +2338,8 @@ BigDecimal_sqrt(VALUE self, VALUE nFig)
     if (mx <= n) mx = n;
     c = NewZeroWrapLimited(1, mx);
     VpSqrt(c.real, a.real);
+
+    RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -2351,14 +2348,10 @@ BigDecimal_sqrt(VALUE self, VALUE nFig)
 static VALUE
 BigDecimal_fix(VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    size_t mx;
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapLimited(1, mx);
+    BDVALUE a = GetBDValueMust(self);
+    BDVALUE c = NewZeroWrapLimited(1, (a.real->Prec + 1) * BASE_FIG);
     VpActiveRound(c.real, a.real, VP_ROUND_DOWN, 0); /* 0: round off */
+    RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -2391,7 +2384,6 @@ BigDecimal_fix(VALUE self)
 static VALUE
 BigDecimal_round(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
     BDVALUE c, a;
     int    iLoc = 0;
     VALUE  vLoc;
@@ -2429,11 +2421,14 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
     }
 
     pl = VpSetPrecLimit(0);
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
     c = NewZeroWrapLimited(1, mx);
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, sw, iLoc);
+
+    RB_GC_GUARD(a.bigdecimal);
+
     if (round_to_int) {
         return BigDecimal_to_i(CheckGetValue(c));
     }
@@ -2443,7 +2438,6 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short rounding_mode)
 {
-    ENTER(5);
     BDVALUE c, a;
     int iLoc;
     VALUE vLoc;
@@ -2456,11 +2450,14 @@ BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short
         iLoc = NUM2INT(vLoc);
     }
 
-    GUARD_OBJ(a, GetBDValueMust(self));
+    a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
     c = NewZeroWrapLimited(1, mx);
     VpSetPrecLimit(pl);
     VpActiveRound(c.real, a.real, rounding_mode, iLoc);
+
+    RB_GC_GUARD(a.bigdecimal);
+
     if (argc == 0) {
         return BigDecimal_to_i(CheckGetValue(c));
     }
@@ -2497,14 +2494,10 @@ BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_frac(VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    size_t mx;
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapLimited(1, mx);
+    BDVALUE a = GetBDValueMust(self);
+    BDVALUE c = NewZeroWrapLimited(1, (a.real->Prec + 1) * BASE_FIG);
     VpFrac(c.real, a.real);
+    RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
 
@@ -2590,7 +2583,6 @@ BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
     int   fmt = 0;   /* 0: E format, 1: F format */
     int   fPlus = 0; /* 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
     BDVALUE v;
@@ -2601,7 +2593,7 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
     SIGNED_VALUE m;
     VALUE  f;
 
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
 
     if (rb_scan_args(argc, argv, "01", &f) == 1) {
 	if (RB_TYPE_P(f, T_STRING)) {
@@ -2655,6 +2647,8 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 	VpToString (v.real, psz, RSTRING_LEN(str), mc, fPlus);
     }
     rb_str_resize(str, strlen(psz));
+
+    RB_GC_GUARD(v.bigdecimal);
     return str;
 }
 
@@ -2685,13 +2679,12 @@ BigDecimal_to_s(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_split(VALUE self)
 {
-    ENTER(5);
     BDVALUE v;
     VALUE obj,str;
     ssize_t e, s;
     char *psz1;
 
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
     str = rb_str_new(0, VpNumOfChars(v.real, "E"));
     psz1 = RSTRING_PTR(str);
     VpSzMantissa(v.real, psz1, RSTRING_LEN(str));
@@ -2711,6 +2704,8 @@ BigDecimal_split(VALUE self)
     rb_str_resize(str, strlen(psz1));
     rb_ary_push(obj, INT2FIX(10));
     rb_ary_push(obj, SSIZET2NUM(e));
+
+    RB_GC_GUARD(v.bigdecimal);
     return obj;
 }
 
@@ -2734,17 +2729,18 @@ BigDecimal_exponent(VALUE self)
 static VALUE
 BigDecimal_inspect(VALUE self)
 {
-    ENTER(5);
     BDVALUE v;
     volatile VALUE str;
     size_t nc;
 
-    GUARD_OBJ(v, GetBDValueMust(self));
+    v = GetBDValueMust(self);
     nc = VpNumOfChars(v.real, "E");
 
     str = rb_str_new(0, nc);
     VpToString(v.real, RSTRING_PTR(str), RSTRING_LEN(str), 0, 0);
     rb_str_resize(str, strlen(RSTRING_PTR(str)));
+
+    RB_GC_GUARD(v.bigdecimal);
     return str;
 }
 
