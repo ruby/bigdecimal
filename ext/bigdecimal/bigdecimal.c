@@ -2450,6 +2450,33 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
     return CheckGetValue(c);
 }
 
+static VALUE
+BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short rounding_mode)
+{
+    ENTER(5);
+    BDVALUE c, a;
+    int iLoc;
+    VALUE vLoc;
+    size_t mx, pl = VpSetPrecLimit(0);
+
+    if (rb_scan_args(argc, argv, "01", &vLoc) == 0) {
+        iLoc = 0;
+    }
+    else {
+        iLoc = NUM2INT(vLoc);
+    }
+
+    GUARD_OBJ(a, GetBDValueMust(self));
+    mx = (a.real->Prec + 1) * BASE_FIG;
+    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
+    VpSetPrecLimit(pl);
+    VpActiveRound(c.real, a.real, rounding_mode, iLoc);
+    if (argc == 0) {
+        return BigDecimal_to_i(CheckGetValue(c));
+    }
+    return CheckGetValue(c);
+}
+
 /* call-seq:
  *   truncate(n)
  *
@@ -2472,28 +2499,7 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_truncate(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    int iLoc;
-    VALUE vLoc;
-    size_t mx, pl = VpSetPrecLimit(0);
-
-    if (rb_scan_args(argc, argv, "01", &vLoc) == 0) {
-	iLoc = 0;
-    }
-    else {
-	iLoc = NUM2INT(vLoc);
-    }
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = (a.real->Prec + 1) * BASE_FIG;
-    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpSetPrecLimit(pl);
-    VpActiveRound(c.real, a.real, VP_ROUND_DOWN, iLoc); /* 0: truncate */
-    if (argc == 0) {
-        return BigDecimal_to_i(CheckGetValue(c));
-    }
-    return CheckGetValue(c);
+    return BigDecimal_truncate_floor_ceil(argc, argv, self, VP_ROUND_DOWN);
 }
 
 /* Return the fractional part of the number, as a BigDecimal.
@@ -2532,28 +2538,7 @@ BigDecimal_frac(VALUE self)
 static VALUE
 BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    int iLoc;
-    VALUE vLoc;
-    size_t mx, pl = VpSetPrecLimit(0);
-
-    if (rb_scan_args(argc, argv, "01", &vLoc)==0) {
-	iLoc = 0;
-    }
-    else {
-	iLoc = NUM2INT(vLoc);
-    }
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = (a.real->Prec + 1) * BASE_FIG;
-    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpSetPrecLimit(pl);
-    VpActiveRound(c.real, a.real, VP_ROUND_FLOOR, iLoc);
-    if (argc == 0) {
-        return BigDecimal_to_i(CheckGetValue(c));
-    }
-    return CheckGetValue(c);
+    return BigDecimal_truncate_floor_ceil(argc, argv, self, VP_ROUND_FLOOR);
 }
 
 /* call-seq:
@@ -2576,27 +2561,7 @@ BigDecimal_floor(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_ceil(int argc, VALUE *argv, VALUE self)
 {
-    ENTER(5);
-    BDVALUE c, a;
-    int iLoc;
-    VALUE vLoc;
-    size_t mx, pl = VpSetPrecLimit(0);
-
-    if (rb_scan_args(argc, argv, "01", &vLoc) == 0) {
-	iLoc = 0;
-    } else {
-	iLoc = NUM2INT(vLoc);
-    }
-
-    GUARD_OBJ(a, GetBDValueMust(self));
-    mx = (a.real->Prec + 1) * BASE_FIG;
-    GUARD_OBJ(c, NewZeroWrapLimited(1, mx));
-    VpSetPrecLimit(pl);
-    VpActiveRound(c.real, a.real, VP_ROUND_CEIL, iLoc);
-    if (argc == 0) {
-        return BigDecimal_to_i(CheckGetValue(c));
-    }
-    return CheckGetValue(c);
+    return BigDecimal_truncate_floor_ceil(argc, argv, self, VP_ROUND_CEIL);
 }
 
 /* call-seq:
