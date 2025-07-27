@@ -48,6 +48,20 @@ class BigDecimal
 
     return BigDecimal::NAN if x.nan? || y.nan?
 
+    if y.infinite?
+      if x < 0
+        return BigDecimal(0) if x < -1 && y.negative?
+        return BigDecimal(0) if x > -1 && y.positive?
+        raise Math::DomainError, 'Result undefined for negative base raised to infinite power'
+      elsif x < 1
+        return y.positive? ? BigDecimal(0) : BigDecimal::INFINITY
+      elsif x == 1
+        return BigDecimal(1)
+      else
+        return y.positive? ? BigDecimal::INFINITY : BigDecimal(0)
+      end
+    end
+
     if x.zero?
       return BigDecimal(1) if y.zero?
       return BigDecimal(0) if y > 0
@@ -68,14 +82,6 @@ class BigDecimal
       end
     elsif x == 1
       return BigDecimal(1)
-    end
-
-    if y.infinite?
-      if x < 1
-        return y.positive? ? BigDecimal(0) : BigDecimal::INFINITY
-      else
-        return y.positive? ? BigDecimal::INFINITY : BigDecimal(0)
-      end
     end
 
     prec ||= BigDecimal.limit.nonzero?
