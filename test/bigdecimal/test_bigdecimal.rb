@@ -1443,15 +1443,13 @@ class TestBigDecimal < Test::Unit::TestCase
 
     assert_in_delta(BigDecimal("4.0000000000000000000125"), BigDecimal("16.0000000000000000001").sqrt(100), BigDecimal("1e-40"))
 
-    BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
-    BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-    assert_raise_with_message(FloatDomainError, "sqrt of 'NaN'(Not a Number)") { BigDecimal("NaN").sqrt(1) }
-    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { BigDecimal("-Infinity").sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of 'NaN'(Not a Number)") { BigDecimal::NAN.sqrt(1) }
+    assert_raise_with_message(FloatDomainError, "sqrt of negative value") { NEGATIVE_INFINITY.sqrt(1) }
 
     assert_equal(0, BigDecimal("0").sqrt(1))
     assert_equal(0, BigDecimal("-0").sqrt(1))
     assert_equal(1, BigDecimal("1").sqrt(1))
-    assert_positive_infinite(BigDecimal("Infinity").sqrt(1))
+    assert_positive_infinite_calculation { BigDecimal::INFINITY.sqrt(1) }
 
     # Out of float range
     assert_equal(BigDecimal('12e1024'), BigDecimal('144e2048').sqrt(10))
