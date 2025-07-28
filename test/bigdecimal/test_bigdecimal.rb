@@ -979,6 +979,17 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_coerce_rational
+    assert_in_epsilon(3.0 / 7.0, BigDecimal(1) / (7/3r), 1e-15)
+    assert_in_epsilon(10.0 / 3.0, BigDecimal(1) + (7/3r), 1e-15)
+    assert_in_epsilon(2.0 / 3.0, BigDecimal(3) - (7/3r), 1e-15)
+    assert_in_epsilon(14.0 / 3.0, BigDecimal(2) * (7/3r), 1e-15)
+    assert_in_epsilon(BigDecimal(3).div(7, 100), BigDecimal(1).div(7/3r, 100), 1e-99)
+    assert_in_epsilon(BigDecimal(10).div(3, 100), BigDecimal(1).add(7/3r, 100), 1e-99)
+    assert_in_epsilon(BigDecimal(2).div(3, 100), BigDecimal(3).sub(7/3r, 100), 1e-99)
+    assert_in_epsilon(BigDecimal(14).div(3, 100), BigDecimal(2).mult(7/3r, 100), 1e-99)
+  end
+
   def test_uplus
     x = BigDecimal("1")
     assert_equal(x, x.send(:+@))

@@ -284,6 +284,9 @@ static VALUE BigDecimal_positive_infinity(void);
 static VALUE BigDecimal_negative_infinity(void);
 static VALUE BigDecimal_positive_zero(void);
 static VALUE BigDecimal_negative_zero(void);
+static VALUE BigDecimal_add_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
+static VALUE BigDecimal_sub_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
+static VALUE BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
 
 static void
 BigDecimal_delete(void *pv)
@@ -1364,6 +1367,14 @@ BigDecimal_to_r(VALUE self)
     }
 }
 
+static size_t
+GetCoercePrec(Real *a, size_t prec)
+{
+    if (prec == 0) prec = a->Prec * BASE_FIG;
+    if (prec < 2 * BIGDECIMAL_DOUBLE_FIGURES) prec = 2 * BIGDECIMAL_DOUBLE_FIGURES;
+    return prec;
+}
+
 /* The coerce method provides support for Ruby type coercion. It is not
  * enabled by default.
  *
@@ -1382,7 +1393,7 @@ static VALUE
 BigDecimal_coerce(VALUE self, VALUE other)
 {
     Real* pv = DATA_PTR(self);
-    BDVALUE b = GetBDValueWithPrecMust(other, pv->Prec * BASE_FIG);
+    BDVALUE b = GetBDValueWithPrecMust(other, GetCoercePrec(pv, 0));
     return rb_assoc_new(CheckGetValue(b), self);
 }
 
@@ -1401,6 +1412,15 @@ static VALUE
 BigDecimal_uplus(VALUE self)
 {
     return self;
+}
+
+static bool
+is_coerceable_to_BigDecimal(VALUE r)
+{
+    return is_kind_of_BigDecimal(r) ||
+           RB_INTEGER_TYPE_P(r) ||
+           RB_TYPE_P(r, T_FLOAT) ||
+           RB_TYPE_P(r, T_RATIONAL);
 }
 
  /*
@@ -1422,14 +1442,18 @@ BigDecimal_uplus(VALUE self)
 static VALUE
 BigDecimal_add(VALUE self, VALUE r)
 {
+    if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '+');
+    return BigDecimal_add_with_coerce(self, r, 0);
+}
+
+static VALUE
+BigDecimal_add_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
+{
     BDVALUE a, b, c;
-    NULLABLE_BDVALUE b2;
     size_t mx;
 
     a = GetBDValueMust(self);
-    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
-    if (!b2.real_or_null) return DoSomeOne(self, r, '+');
-    b = bdvalue_nonnullable(b2);
+    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
 
     if (VpIsNaN(b.real)) return b.bigdecimal;
     if (VpIsNaN(a.real)) return a.bigdecimal;
@@ -1473,14 +1497,18 @@ BigDecimal_add(VALUE self, VALUE r)
 static VALUE
 BigDecimal_sub(VALUE self, VALUE r)
 {
+    if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '-');
+    return BigDecimal_sub_with_coerce(self, r, 0);
+}
+
+static VALUE
+BigDecimal_sub_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
+{
     BDVALUE a, b, c;
-    NULLABLE_BDVALUE b2;
     size_t mx;
 
     a = GetBDValueMust(self);
-    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
-    if (!b2.real_or_null) return DoSomeOne(self, r, '-');
-    b = bdvalue_nonnullable(b2);
+    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
 
     if (VpIsNaN(b.real)) return b.bigdecimal;
     if (VpIsNaN(a.real)) return a.bigdecimal;
@@ -1511,7 +1539,7 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
 {
     SIGNED_VALUE e;
     BDVALUE a = GetBDValueMust(self);
-    NULLABLE_BDVALUE b = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    NULLABLE_BDVALUE b = GetBDValueWithPrec(r, GetCoercePrec(a.real, 0));
 
     if (b.real_or_null == NULL) {
 	ID f = 0;
@@ -1737,17 +1765,20 @@ BigDecimal_neg(VALUE self)
  *
  * See BigDecimal#mult.
  */
-
 static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
+    if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '*');
+    return BigDecimal_mult_with_coerce(self, r, 0);
+}
+
+static VALUE
+BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
+{
     BDVALUE a, b, c;
-    NULLABLE_BDVALUE b2;
 
     a = GetBDValueMust(self);
-    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
-    if (!b2.real_or_null) return DoSomeOne(self, r, '*');
-    b = bdvalue_nonnullable(b2);
+    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
 
     c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
@@ -1774,14 +1805,7 @@ static VALUE
 BigDecimal_div(VALUE self, VALUE r)
 /* For c = self/r: with round operation */
 {
-    if (
-        !is_kind_of_BigDecimal(r) &&
-        !RB_INTEGER_TYPE_P(r) &&
-        !RB_TYPE_P(r, T_FLOAT) &&
-        !RB_TYPE_P(r, T_RATIONAL)
-    ) {
-        return DoSomeOne(self, r, '/');
-    }
+    if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '/');
     return BigDecimal_div2(self, r, INT2FIX(0));
 }
 
@@ -1839,7 +1863,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
 
     a = GetBDValueMust(self);
 
-    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    b2 = GetBDValueWithPrec(r, GetCoercePrec(a.real, 0));
     if (!b2.real_or_null) return Qfalse;
     b = bdvalue_nonnullable(b2);
 
@@ -2015,7 +2039,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     if (ix == 0) ix = pl;
 
     av = GetBDValueMust(self);
-    bv = GetBDValueWithPrecMust(b, ix);
+    bv = GetBDValueWithPrecMust(b, GetCoercePrec(av.real, ix));
 
     if (ix == 0) {
         ssize_t a_prec, b_prec;
@@ -2123,15 +2147,13 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 {
     BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_add(self, b);
-    else {
-	size_t pl = VpSetPrecLimit(0);
-	VALUE   c = BigDecimal_add(self, b);
-	VpSetPrecLimit(pl);
-	cv = GetBDValueMust(c);
-	VpLeftRound(cv.real, VpGetRoundMode(), mx);
-	return CheckGetValue(cv);
-    }
+    if (mx == 0) return BigDecimal_add_with_coerce(self, b, 0);
+    size_t pl = VpSetPrecLimit(0);
+    VALUE   c = BigDecimal_add_with_coerce(self, b, mx);
+    VpSetPrecLimit(pl);
+    cv = GetBDValueMust(c);
+    VpLeftRound(cv.real, VpGetRoundMode(), mx);
+    return CheckGetValue(cv);
 }
 
 /* call-seq:
@@ -2152,15 +2174,13 @@ BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 {
     BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_sub(self, b);
-    else {
-	size_t pl = VpSetPrecLimit(0);
-	VALUE   c = BigDecimal_sub(self, b);
-	VpSetPrecLimit(pl);
-	cv = GetBDValueMust(c);
-	VpLeftRound(cv.real, VpGetRoundMode(), mx);
-	return CheckGetValue(cv);
-    }
+    if (mx == 0) return BigDecimal_sub_with_coerce(self, b, 0);
+    size_t pl = VpSetPrecLimit(0);
+    VALUE   c = BigDecimal_sub_with_coerce(self, b, mx);
+    VpSetPrecLimit(pl);
+    cv = GetBDValueMust(c);
+    VpLeftRound(cv.real, VpGetRoundMode(), mx);
+    return CheckGetValue(cv);
 }
 
  /*
@@ -2194,15 +2214,13 @@ BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 {
     BDVALUE cv;
     SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_mult(self, b);
-    else {
-	size_t pl = VpSetPrecLimit(0);
-	VALUE   c = BigDecimal_mult(self, b);
-	VpSetPrecLimit(pl);
-	cv = GetBDValueMust(c);
-	VpLeftRound(cv.real, VpGetRoundMode(), mx);
-	return CheckGetValue(cv);
-    }
+    if (mx == 0) return BigDecimal_mult_with_coerce(self, b, 0);
+    size_t pl = VpSetPrecLimit(0);
+    VALUE   c = BigDecimal_mult_with_coerce(self, b, mx);
+    VpSetPrecLimit(pl);
+    cv = GetBDValueMust(c);
+    VpLeftRound(cv.real, VpGetRoundMode(), mx);
+    return CheckGetValue(cv);
 }
 
 /*
