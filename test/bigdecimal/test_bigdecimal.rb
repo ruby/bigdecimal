@@ -1175,6 +1175,7 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_div_with_float
     assert_kind_of(BigDecimal, BigDecimal("3") / 1.5)
     assert_equal(BigDecimal("0.5"), BigDecimal(1) / 2.0)
+    assert_equal(BigDecimal(100), BigDecimal(7).div(0.07, 100))
   end
 
   def test_div_with_rational
