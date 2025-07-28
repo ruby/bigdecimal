@@ -392,7 +392,7 @@ cannot_be_coerced_into_BigDecimal(VALUE exc_class, VALUE v)
 }
 
 static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
-static VALUE rb_inum_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
+static VALUE rb_inum_convert_to_BigDecimal(VALUE val);
 static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exception);
@@ -1912,7 +1912,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         /* do nothing */
     }
     else if (RB_INTEGER_TYPE_P(r)) {
-        rr = rb_inum_convert_to_BigDecimal(r, 0, true);
+        rr = rb_inum_convert_to_BigDecimal(r);
     }
     else if (RB_TYPE_P(r, T_FLOAT)) {
         rr = rb_float_convert_to_BigDecimal(r, 0, true);
@@ -2813,7 +2813,7 @@ check_exception(VALUE bd)
 }
 
 static VALUE
-rb_uint64_convert_to_BigDecimal(uint64_t uval, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_uint64_convert_to_BigDecimal(uint64_t uval)
 {
     VALUE obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
 
@@ -2865,10 +2865,10 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval, RB_UNUSED_VAR(size_t digs), int r
 }
 
 static VALUE
-rb_int64_convert_to_BigDecimal(int64_t ival, size_t digs, int raise_exception)
+rb_int64_convert_to_BigDecimal(int64_t ival)
 {
     const uint64_t uval = (ival < 0) ? (((uint64_t)-(ival+1))+1) : (uint64_t)ival;
-    VALUE bd = rb_uint64_convert_to_BigDecimal(uval, digs, raise_exception);
+    VALUE bd = rb_uint64_convert_to_BigDecimal(uval);
     if (ival < 0) {
         Real *vp;
         TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
@@ -2878,7 +2878,7 @@ rb_int64_convert_to_BigDecimal(int64_t ival, size_t digs, int raise_exception)
 }
 
 static VALUE
-rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_big_convert_to_BigDecimal(VALUE val)
 {
     assert(RB_TYPE_P(val, T_BIGNUM));
 
@@ -2890,19 +2890,19 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
     }
     if (size <= sizeof(long)) {
         if (sign < 0) {
-            return rb_int64_convert_to_BigDecimal(NUM2LONG(val), digs, raise_exception);
+            return rb_int64_convert_to_BigDecimal(NUM2LONG(val));
         }
         else {
-            return rb_uint64_convert_to_BigDecimal(NUM2ULONG(val), digs, raise_exception);
+            return rb_uint64_convert_to_BigDecimal(NUM2ULONG(val));
         }
     }
 #if defined(SIZEOF_LONG_LONG) && SIZEOF_LONG < SIZEOF_LONG_LONG
     else if (size <= sizeof(LONG_LONG)) {
         if (sign < 0) {
-            return rb_int64_convert_to_BigDecimal(NUM2LL(val), digs, raise_exception);
+            return rb_int64_convert_to_BigDecimal(NUM2LL(val));
         }
         else {
-            return rb_uint64_convert_to_BigDecimal(NUM2ULL(val), digs, raise_exception);
+            return rb_uint64_convert_to_BigDecimal(NUM2ULL(val));
         }
     }
 #endif
@@ -2921,14 +2921,14 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
 }
 
 static VALUE
-rb_inum_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_inum_convert_to_BigDecimal(VALUE val)
 {
     assert(RB_INTEGER_TYPE_P(val));
     if (FIXNUM_P(val)) {
-        return rb_int64_convert_to_BigDecimal(FIX2LONG(val), digs, raise_exception);
+        return rb_int64_convert_to_BigDecimal(FIX2LONG(val));
     }
     else {
-        return rb_big_convert_to_BigDecimal(val, digs, raise_exception);
+        return rb_big_convert_to_BigDecimal(val);
     }
 }
 
@@ -3078,7 +3078,7 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         exp = -exp;
     }
 
-    VALUE bd = rb_inum_convert_to_BigDecimal(inum, SIZE_MAX, raise_exception);
+    VALUE bd = rb_inum_convert_to_BigDecimal(inum);
     Real *vp;
     TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
     assert(vp->Prec == prec);
@@ -3101,7 +3101,7 @@ rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
                  CLASS_OF(val));
     }
 
-    VALUE num = rb_inum_convert_to_BigDecimal(rb_rational_num(val), 0, raise_exception);
+    VALUE num = rb_inum_convert_to_BigDecimal(rb_rational_num(val));
     VALUE d = BigDecimal_div2(num, rb_rational_den(val), SIZET2NUM(digs));
     return d;
 }
@@ -3159,7 +3159,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         return check_exception(copy);
     }
     else if (RB_INTEGER_TYPE_P(val)) {
-        return rb_inum_convert_to_BigDecimal(val, digs, raise_exception);
+        return rb_inum_convert_to_BigDecimal(val);
     }
     else if (RB_FLOAT_TYPE_P(val)) {
         return rb_float_convert_to_BigDecimal(val, digs, raise_exception);
