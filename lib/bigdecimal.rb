@@ -147,11 +147,8 @@ class BigDecimal
   #
   def sqrt(prec)
     BigMath._validate_prec(prec, :sqrt, accept_zero: true)
-    if infinite? == 1
-      exception_mode = BigDecimal.mode(BigDecimal::EXCEPTION_ALL)
-      raise FloatDomainError, "Computation results in 'Infinity'" if exception_mode.anybits?(BigDecimal::EXCEPTION_INFINITY)
-      return INFINITY
-    end
+    return BigMath._infinity_computation_result if infinite? == 1
+
     raise FloatDomainError, 'sqrt of negative value' if self < 0
     raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
     return self if zero?
