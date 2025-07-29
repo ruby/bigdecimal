@@ -392,24 +392,22 @@ cannot_be_coerced_into_BigDecimal(VALUE exc_class, VALUE v)
 }
 
 static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
-static VALUE rb_inum_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
+static VALUE rb_inum_convert_to_BigDecimal(VALUE val);
 static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exception);
 static VALUE rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static NULLABLE_BDVALUE
-GetBDValueWithPrecInternal(VALUE v, long prec, int must)
+GetBDValueWithPrecInternal(VALUE v, size_t prec, int must)
 {
-    const size_t digs = prec < 0 ? SIZE_MAX : (size_t)prec;
-
     switch(TYPE(v)) {
       case T_FLOAT:
-        v = rb_float_convert_to_BigDecimal(v, digs, must);
+        v = rb_float_convert_to_BigDecimal(v, 0, true);
         break;
 
       case T_RATIONAL:
-        v = rb_rational_convert_to_BigDecimal(v, digs, must);
+        v = rb_rational_convert_to_BigDecimal(v, prec, true);
         break;
 
       case T_DATA:
@@ -418,10 +416,9 @@ GetBDValueWithPrecInternal(VALUE v, long prec, int must)
         }
         break;
 
-      case T_FIXNUM: {
-        char szD[128];
-        snprintf(szD, 128, "%ld", FIX2LONG(v));
-        v = rb_cstr_convert_to_BigDecimal(szD, VpBaseFig() * 2 + 1, must);
+      case T_FIXNUM:
+      case T_BIGNUM: {
+        v = rb_inum_convert_to_BigDecimal(v);
         break;
       }
 
@@ -432,13 +429,6 @@ GetBDValueWithPrecInternal(VALUE v, long prec, int must)
         break;
       }
 #endif /* ENABLE_NUMERIC_STRING */
-
-      case T_BIGNUM: {
-	VALUE bg = rb_big2str(v, 10);
-        v = rb_cstr_convert_to_BigDecimal(RSTRING_PTR(bg), RSTRING_LEN(bg) + VpBaseFig() + 1, must);
-        RB_GC_GUARD(bg);
-        break;
-      }
 
       default:
 	goto SomeOneMayDoIt;
@@ -456,14 +446,14 @@ SomeOneMayDoIt:
 }
 
 static inline NULLABLE_BDVALUE
-GetBDValueWithPrec(VALUE v, long prec)
+GetBDValueWithPrec(VALUE v, size_t prec)
 {
     return GetBDValueWithPrecInternal(v, prec, 0);
 }
 
 
 static inline BDVALUE
-GetBDValueWithPrecMust(VALUE v, long prec)
+GetBDValueWithPrecMust(VALUE v, size_t prec)
 {
     return bdvalue_nonnullable(GetBDValueWithPrecInternal(v, prec, 1));
 }
@@ -472,19 +462,13 @@ GetBDValueWithPrecMust(VALUE v, long prec)
 static inline Real*
 GetSelfVpValue(VALUE self)
 {
-    return GetBDValueWithPrecMust(self, -1).real;
-}
-
-static inline NULLABLE_BDVALUE
-GetBDValue(VALUE v)
-{
-    return GetBDValueWithPrec(v, -1);
+    return GetBDValueWithPrecMust(self, 0).real;
 }
 
 static inline BDVALUE
 GetBDValueMust(VALUE v)
 {
-    return GetBDValueWithPrecMust(v, -1);
+    return GetBDValueWithPrecMust(v, 0);
 }
 
 /* call-seq:
@@ -1397,19 +1381,8 @@ BigDecimal_to_r(VALUE self)
 static VALUE
 BigDecimal_coerce(VALUE self, VALUE other)
 {
-    BDVALUE b;
-
-    if (RB_TYPE_P(other, T_FLOAT)) {
-        b = GetBDValueWithPrecMust(other, 0);
-    }
-    else if (RB_TYPE_P(other, T_RATIONAL)) {
-        Real* pv = DATA_PTR(self);
-        b = GetBDValueWithPrecMust(other, pv->Prec*VpBaseFig());
-    }
-    else {
-        b = GetBDValueMust(other);
-    }
-
+    Real* pv = DATA_PTR(self);
+    BDVALUE b = GetBDValueWithPrecMust(other, pv->Prec * BASE_FIG);
     return rb_assoc_new(CheckGetValue(b), self);
 }
 
@@ -1450,20 +1423,13 @@ static VALUE
 BigDecimal_add(VALUE self, VALUE r)
 {
     BDVALUE a, b, c;
+    NULLABLE_BDVALUE b2;
     size_t mx;
 
     a = GetBDValueMust(self);
-    if (RB_TYPE_P(r, T_FLOAT)) {
-        b = GetBDValueWithPrecMust(r, 0);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
-    }
-    else {
-        NULLABLE_BDVALUE b2 = GetBDValue(r);
-        if (!b2.real_or_null) return DoSomeOne(self, r, '+');
-        b = bdvalue_nonnullable(b2);
-    }
+    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    if (!b2.real_or_null) return DoSomeOne(self, r, '+');
+    b = bdvalue_nonnullable(b2);
 
     if (VpIsNaN(b.real)) return b.bigdecimal;
     if (VpIsNaN(a.real)) return a.bigdecimal;
@@ -1508,20 +1474,13 @@ static VALUE
 BigDecimal_sub(VALUE self, VALUE r)
 {
     BDVALUE a, b, c;
+    NULLABLE_BDVALUE b2;
     size_t mx;
 
     a = GetBDValueMust(self);
-    if (RB_TYPE_P(r, T_FLOAT)) {
-        b = GetBDValueWithPrecMust(r, 0);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
-    }
-    else {
-        NULLABLE_BDVALUE b2 = GetBDValue(r);
-        if (!b2.real_or_null) return DoSomeOne(self, r, '-');
-        b = bdvalue_nonnullable(b2);
-    }
+    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    if (!b2.real_or_null) return DoSomeOne(self, r, '-');
+    b = bdvalue_nonnullable(b2);
 
     if (VpIsNaN(b.real)) return b.bigdecimal;
     if (VpIsNaN(a.real)) return a.bigdecimal;
@@ -1552,29 +1511,8 @@ BigDecimalCmp(VALUE self, VALUE r,char op)
 {
     SIGNED_VALUE e;
     BDVALUE a = GetBDValueMust(self);
-    NULLABLE_BDVALUE b = { Qnil, NULL };
+    NULLABLE_BDVALUE b = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
 
-    switch (TYPE(r)) {
-    case T_DATA:
-	if (!is_kind_of_BigDecimal(r)) break;
-	/* fall through */
-    case T_FIXNUM:
-	/* fall through */
-    case T_BIGNUM:
-	b = GetBDValue(r);
-	break;
-
-    case T_FLOAT:
-	b = GetBDValueWithPrec(r, 0);
-	break;
-
-    case T_RATIONAL:
-	b = GetBDValueWithPrec(r, a.real->Prec*VpBaseFig());
-	break;
-
-    default:
-	break;
-    }
     if (b.real_or_null == NULL) {
 	ID f = 0;
 
@@ -1804,19 +1742,12 @@ static VALUE
 BigDecimal_mult(VALUE self, VALUE r)
 {
     BDVALUE a, b, c;
+    NULLABLE_BDVALUE b2;
 
     a = GetBDValueMust(self);
-    if (RB_TYPE_P(r, T_FLOAT)) {
-        b = GetBDValueWithPrecMust(r, 0);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-        b = GetBDValueWithPrecMust(r, a.real->Prec*VpBaseFig());
-    }
-    else {
-        NULLABLE_BDVALUE b2 = GetBDValue(r);
-        if (!b2.real_or_null) return DoSomeOne(self, r, '*');
-        b = bdvalue_nonnullable(b2);
-    }
+    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    if (!b2.real_or_null) return DoSomeOne(self, r, '*');
+    b = bdvalue_nonnullable(b2);
 
     c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
@@ -1902,30 +1833,15 @@ static VALUE
 BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate)
 {
     BDVALUE a, b, dv, md, res;
+    NULLABLE_BDVALUE b2;
     ssize_t a_exponent, b_exponent;
     size_t mx, rx;
 
     a = GetBDValueMust(self);
 
-    VALUE rr = r;
-    if (is_kind_of_BigDecimal(rr)) {
-        /* do nothing */
-    }
-    else if (RB_INTEGER_TYPE_P(r)) {
-        rr = rb_inum_convert_to_BigDecimal(r, 0, true);
-    }
-    else if (RB_TYPE_P(r, T_FLOAT)) {
-        rr = rb_float_convert_to_BigDecimal(r, 0, true);
-    }
-    else if (RB_TYPE_P(r, T_RATIONAL)) {
-        rr = rb_rational_convert_to_BigDecimal(r, a.real->Prec*BASE_FIG, true);
-    }
-
-    if (!is_kind_of_BigDecimal(rr)) {
-        return Qfalse;
-    }
-
-    b = GetBDValueMust(rr);
+    b2 = GetBDValueWithPrec(r, a.real->Prec * BASE_FIG);
+    if (!b2.real_or_null) return Qfalse;
+    b = bdvalue_nonnullable(b2);
 
     if (VpIsNaN(a.real) || VpIsNaN(b.real) || (VpIsInf(a.real) && VpIsInf(b.real))) {
         VALUE nan = BigDecimal_nan();
@@ -2099,15 +2015,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     if (ix == 0) ix = pl;
 
     av = GetBDValueMust(self);
-    if (RB_FLOAT_TYPE_P(b) && ix > BIGDECIMAL_DOUBLE_FIGURES) {
-        /* TODO: I want to refactor this precision control for a float value later
-         *       by introducing an implicit conversion function instead of
-         *       GetBDValueWithPrecMust.  */
-        bv = GetBDValueWithPrecMust(b, BIGDECIMAL_DOUBLE_FIGURES);
-    }
-    else {
-        bv = GetBDValueWithPrecMust(b, ix);
-    }
+    bv = GetBDValueWithPrecMust(b, ix);
 
     if (ix == 0) {
         ssize_t a_prec, b_prec;
@@ -2813,7 +2721,7 @@ check_exception(VALUE bd)
 }
 
 static VALUE
-rb_uint64_convert_to_BigDecimal(uint64_t uval, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_uint64_convert_to_BigDecimal(uint64_t uval)
 {
     VALUE obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
 
@@ -2865,10 +2773,10 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval, RB_UNUSED_VAR(size_t digs), int r
 }
 
 static VALUE
-rb_int64_convert_to_BigDecimal(int64_t ival, size_t digs, int raise_exception)
+rb_int64_convert_to_BigDecimal(int64_t ival)
 {
     const uint64_t uval = (ival < 0) ? (((uint64_t)-(ival+1))+1) : (uint64_t)ival;
-    VALUE bd = rb_uint64_convert_to_BigDecimal(uval, digs, raise_exception);
+    VALUE bd = rb_uint64_convert_to_BigDecimal(uval);
     if (ival < 0) {
         Real *vp;
         TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
@@ -2878,7 +2786,7 @@ rb_int64_convert_to_BigDecimal(int64_t ival, size_t digs, int raise_exception)
 }
 
 static VALUE
-rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_big_convert_to_BigDecimal(VALUE val)
 {
     assert(RB_TYPE_P(val, T_BIGNUM));
 
@@ -2890,19 +2798,19 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
     }
     if (size <= sizeof(long)) {
         if (sign < 0) {
-            return rb_int64_convert_to_BigDecimal(NUM2LONG(val), digs, raise_exception);
+            return rb_int64_convert_to_BigDecimal(NUM2LONG(val));
         }
         else {
-            return rb_uint64_convert_to_BigDecimal(NUM2ULONG(val), digs, raise_exception);
+            return rb_uint64_convert_to_BigDecimal(NUM2ULONG(val));
         }
     }
 #if defined(SIZEOF_LONG_LONG) && SIZEOF_LONG < SIZEOF_LONG_LONG
     else if (size <= sizeof(LONG_LONG)) {
         if (sign < 0) {
-            return rb_int64_convert_to_BigDecimal(NUM2LL(val), digs, raise_exception);
+            return rb_int64_convert_to_BigDecimal(NUM2LL(val));
         }
         else {
-            return rb_uint64_convert_to_BigDecimal(NUM2ULL(val), digs, raise_exception);
+            return rb_uint64_convert_to_BigDecimal(NUM2ULL(val));
         }
     }
 #endif
@@ -2921,14 +2829,14 @@ rb_big_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_ex
 }
 
 static VALUE
-rb_inum_convert_to_BigDecimal(VALUE val, RB_UNUSED_VAR(size_t digs), int raise_exception)
+rb_inum_convert_to_BigDecimal(VALUE val)
 {
     assert(RB_INTEGER_TYPE_P(val));
     if (FIXNUM_P(val)) {
-        return rb_int64_convert_to_BigDecimal(FIX2LONG(val), digs, raise_exception);
+        return rb_int64_convert_to_BigDecimal(FIX2LONG(val));
     }
     else {
-        return rb_big_convert_to_BigDecimal(val, digs, raise_exception);
+        return rb_big_convert_to_BigDecimal(val);
     }
 }
 
@@ -3078,7 +2986,7 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         exp = -exp;
     }
 
-    VALUE bd = rb_inum_convert_to_BigDecimal(inum, SIZE_MAX, raise_exception);
+    VALUE bd = rb_inum_convert_to_BigDecimal(inum);
     Real *vp;
     TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
     assert(vp->Prec == prec);
@@ -3101,7 +3009,7 @@ rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
                  CLASS_OF(val));
     }
 
-    VALUE num = rb_inum_convert_to_BigDecimal(rb_rational_num(val), 0, raise_exception);
+    VALUE num = rb_inum_convert_to_BigDecimal(rb_rational_num(val));
     VALUE d = BigDecimal_div2(num, rb_rational_den(val), SIZET2NUM(digs));
     return d;
 }
@@ -3159,7 +3067,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         return check_exception(copy);
     }
     else if (RB_INTEGER_TYPE_P(val)) {
-        return rb_inum_convert_to_BigDecimal(val, digs, raise_exception);
+        return rb_inum_convert_to_BigDecimal(val);
     }
     else if (RB_FLOAT_TYPE_P(val)) {
         return rb_float_convert_to_BigDecimal(val, digs, raise_exception);
