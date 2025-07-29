@@ -1895,6 +1895,19 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal('0.5394221232e-7'), BigDecimal('0.12345').power(8, 10))
   end
 
+  def test_power_with_rational
+    x1 = BigDecimal(2)
+    x2 = BigDecimal('1.' + '1' * 100)
+    y = 3 / 7r
+    z1 = x1.power(BigDecimal(y, 100), 100)
+    z2 = x2.power(BigDecimal(y, 100), 100)
+    assert_in_epsilon(z1, x1.power(y, 100), 1e-99)
+    assert_in_epsilon(z1, x1.power(y), 1e-30)
+    assert_in_epsilon(z1, x1 ** y, 1e-30)
+    assert_in_epsilon(z2, x2.power(y), 1e-99)
+    assert_in_epsilon(z2, x2 ** y, 1e-99)
+  end
+
   def test_power_precision
     x = BigDecimal("1.41421356237309504880168872420969807856967187537695")
     y = BigDecimal("3.14159265358979323846264338327950288419716939937511")
@@ -2153,6 +2166,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_in_epsilon(Math.exp(40), BigMath.exp(Rational(80,2), prec))
     assert_in_epsilon(Math.exp(-20), BigMath.exp(Rational(-40,2), prec))
     assert_in_epsilon(Math.exp(-40), BigMath.exp(Rational(-80,2), prec))
+    assert_in_epsilon(BigMath.exp(BigDecimal(3 / 7r, 100), 100), BigMath.exp(3 / 7r, 100), 1e-99)
   end
 
   def test_BigMath_exp_under_gc_stress
@@ -2283,6 +2297,10 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_BigMath_log_with_reciprocal_of_42
     assert_in_delta(Math.log(1e-42), BigMath.log(1e-42, 20))
     assert_in_delta(Math.log(1e-42), BigMath.log(BigDecimal("1e-42"), 20))
+  end
+
+  def test_BigMath_log_with_rational
+    assert_in_epsilon(BigMath.log(BigDecimal(3 / 7r, 100), 100), BigMath.log(3 / 7r, 100), 1e-99)
   end
 
   def test_BigMath_log_under_gc_stress
