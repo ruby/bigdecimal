@@ -19,18 +19,15 @@ class BigDecimal
   #  Related: BigDecimal#power.
   #
   def **(y)
-    unless y.is_a?(BigDecimal)
-      case y
-      when Integer, Float, Rational
-        y = BigDecimal(y, 0)
-      when nil
-        raise TypeError, 'wrong argument type NilClass'
-      else
-        x, y = y.coerce(self)
-        return x**y
-      end
+    case y
+    when BigDecimal, Integer, Float, Rational
+      power(y)
+    when nil
+      raise TypeError, 'wrong argument type NilClass'
+    else
+      x, y = y.coerce(self)
+      x**y
     end
-    power(y)
   end
 
   # call-seq:
@@ -44,7 +41,7 @@ class BigDecimal
   def power(y, prec = nil)
     BigMath._validate_prec(prec, :power) if prec
     x = self
-    y = BigMath._coerce_to_bigdecimal(y, :power)
+    y = BigMath._coerce_to_bigdecimal(y, prec || n_significant_digits, :power)
 
     return BigMath._nan_computation_result if x.nan? || y.nan?
     return BigDecimal(1) if y.zero?
@@ -145,12 +142,17 @@ end
 # Core BigMath methods for BigDecimal (log, exp) are defined here.
 # Other methods (sin, cos, atan) are defined in 'bigdecimal/math.rb'.
 module BigMath
-  def self._coerce_to_bigdecimal(x, method_name, complex_domain_error = false) # :nodoc:
+
+  # Coerce x to BigDecimal with the specified precision.
+  # TODO: some methods (example: BigMath.exp) require more precision than specified to coerce.
+  def self._coerce_to_bigdecimal(x, prec, method_name, complex_domain_error = false) # :nodoc:
     case x
     when BigDecimal
       return x
-    when Integer, Float, Rational
-      return BigDecimal(x, 0)
+    when Integer, Float
+      return BigDecimal(x)
+    when Rational
+      return BigDecimal(x, [prec, 2 * BigDecimal.double_fig].max)
     when Complex
       if complex_domain_error
         raise Math::DomainError, "Complex argument for BigMath.#{method_name}"
@@ -192,7 +194,7 @@ module BigMath
   #
   def self.log(x, prec)
     _validate_prec(prec, :log)
-    x = _coerce_to_bigdecimal(x, :log, true)
+    x = _coerce_to_bigdecimal(x, prec, :log, true)
     return _nan_computation_result if x.nan?
     raise Math::DomainError, 'Zero or negative argument for log' if x <= 0
     return _infinity_computation_result if x.infinite?
@@ -258,7 +260,7 @@ module BigMath
   #
   def self.exp(x, prec)
     _validate_prec(prec, :exp)
-    x = _coerce_to_bigdecimal(x, :exp)
+    x = _coerce_to_bigdecimal(x, prec, :exp)
     return _nan_computation_result if x.nan?
     return x.positive? ? _infinity_computation_result : BigDecimal(0) if x.infinite?
     return BigDecimal(1) if x.zero?
