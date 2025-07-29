@@ -1788,7 +1788,7 @@ BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
     return CheckGetValue(c);
 }
 
-static VALUE BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate);
+static bool BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate);
 
 /* call-seq:
  *   a / b   -> bigdecimal
@@ -1853,7 +1853,7 @@ BigDecimal_quo(int argc, VALUE *argv, VALUE self)
  * div = (a.to_f/b).floor
  * In truncate mode, use truncate instead of floor.
  */
-static VALUE
+static bool
 BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE *mod, bool truncate)
 {
     BDVALUE a, b, dv, md, res;
@@ -1864,7 +1864,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     a = GetBDValueMust(self);
 
     b2 = GetBDValueWithPrec(r, GetCoercePrec(a.real, 0));
-    if (!b2.real_or_null) return Qfalse;
+    if (!b2.real_or_null) return false;
     b = bdvalue_nonnullable(b2);
 
     if (VpIsNaN(a.real) || VpIsNaN(b.real) || (VpIsInf(a.real) && VpIsInf(b.real))) {
@@ -1939,7 +1939,7 @@ Done:
     RB_GC_GUARD(dv.bigdecimal);
     RB_GC_GUARD(md.bigdecimal);
     RB_GC_GUARD(res.bigdecimal);
-    return Qtrue;
+    return true;
 }
 
 /* call-seq:
