@@ -40,8 +40,6 @@ have_header("ruby/atomic.h")
 have_header("ruby/internal/has/builtin.h")
 have_header("ruby/internal/static_assert.h")
 
-have_func("rb_rational_num", "ruby.h")
-have_func("rb_rational_den", "ruby.h")
 have_func("rb_complex_real", "ruby.h")
 have_func("rb_complex_imag", "ruby.h")
 have_func("rb_opts_exception_p", "ruby.h")

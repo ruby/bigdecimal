@@ -62,32 +62,6 @@ extern "C" {
 /* dtoa */
 char *BigDecimal_dtoa(double d_, int mode, int ndigits, int *decpt, int *sign, char **rve);
 
-/* rational */
-
-#ifndef HAVE_RB_RATIONAL_NUM
-static inline VALUE
-rb_rational_num(VALUE rat)
-{
-#ifdef RRATIONAL
-    return RRATIONAL(rat)->num;
-#else
-    return rb_funcall(rat, rb_intern("numerator"), 0);
-#endif
-}
-#endif
-
-#ifndef HAVE_RB_RATIONAL_DEN
-static inline VALUE
-rb_rational_den(VALUE rat)
-{
-#ifdef RRATIONAL
-    return RRATIONAL(rat)->den;
-#else
-    return rb_funcall(rat, rb_intern("denominator"), 0);
-#endif
-}
-#endif
-
 /* complex */
 
 #ifndef HAVE_RB_COMPLEX_REAL
