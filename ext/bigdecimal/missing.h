@@ -8,14 +8,6 @@ extern "C" {
 #endif
 #endif
 
-#ifdef HAVE_STDLIB_H
-# include <stdlib.h>
-#endif
-
-#ifdef HAVE_MATH_H
-# include <math.h>
-#endif
-
 #ifndef RB_UNUSED_VAR
 # if defined(_MSC_VER) && _MSC_VER >= 1911
 #  define RB_UNUSED_VAR(x) x [[maybe_unused]]
