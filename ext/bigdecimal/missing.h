@@ -55,66 +55,8 @@ extern "C" {
 
 /* bool */
 
-#if defined(__bool_true_false_are_defined)
-# /* Take that. */
-
-#elif defined(HAVE_STDBOOL_H)
+#ifndef __bool_true_false_are_defined
 # include <stdbool.h>
-
-#else
-typedef unsigned char _Bool;
-# define bool _Bool
-# define true  ((_Bool)+1)
-# define false ((_Bool)-1)
-# define __bool_true_false_are_defined
-#endif
-
-/* abs */
-
-#ifndef HAVE_LABS
-static inline long
-labs(long const x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-#endif
-
-#ifndef HAVE_LLABS
-static inline LONG_LONG
-llabs(LONG_LONG const x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-#endif
-
-#ifdef vabs
-# undef vabs
-#endif
-#if SIZEOF_VALUE <= SIZEOF_INT
-# define vabs abs
-#elif SIZEOF_VALUE <= SIZEOF_LONG
-# define vabs labs
-#elif SIZEOF_VALUE <= SIZEOF_LONG_LONG
-# define vabs llabs
-#endif
-
-/* finite */
-
-#ifndef HAVE_FINITE
-static int
-finite(double)
-{
-    return !isnan(n) && !isinf(n);
-}
-#endif
-
-#ifndef isfinite
-# ifndef HAVE_ISFINITE
-#  define HAVE_ISFINITE 1
-#  define isfinite(x) finite(x)
-# endif
 #endif
 
 /* dtoa */
