@@ -204,9 +204,9 @@ module BigMath
       log10 = log(BigDecimal(10), prec)
       exponent = x.exponent
       x = x * BigDecimal("1e#{-x.exponent}")
-      if x > 3
-        x /= 10
-        exponent += 1
+      if x < 0.3
+        x *= 10
+        exponent -= 1
       end
       return log10 * exponent + log(x, prec)
     end
