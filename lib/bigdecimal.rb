@@ -180,6 +180,58 @@ module BigMath
     BigDecimal::NAN
   end
 
+  private_class_method def self._log_taylor(x, prec) # :nodoc:
+    # Taylor series for log(x) around 1
+    # log(x) = -log((1 + X) / (1 - X)) where X = (x - 1) / (x + 1)
+    # log(x) = 2 * (X + X**3 / 3 + X**5 / 5 + X**7 / 7 + ...)
+    return BigDecimal(0) if x == 1
+
+    if Rational === x
+      x = (x - 1) / (x + 1)
+      y = xn = BigDecimal(x, prec)
+      x2 = BigDecimal(x.numerator ** 2)
+      x2_denominator = BigDecimal(x.denominator ** 2)
+      x2_exponent = x2.div(x2_denominator, 1).exponent
+    else
+      x = (x - 1).div(x + 1, prec)
+      y = xn = x
+      x2 = x.mult(x, prec)
+      x2_exponent = x2.exponent
+    end
+
+    1.step do |i|
+      n = prec + xn.exponent - y.exponent + x2_exponent
+      break if n <= 0 || xn.zero?
+      xn = xn.mult(x2, n)
+      xn = xn.div(x2_denominator, n) if x2_denominator
+      y = y.add(xn.div(2 * i + 1, n), prec)
+    end
+    y.mult(2, prec)
+  end
+
+  private_class_method def self._log_small_rational(x, prec)
+    # Decompose x into (4/3)**n * (5/4)**m * y where y is close to 1.
+    # Then calculate log(x) = n * log(4/3) + m * log(5/4) + log(y).
+    logx = Math.log(x)
+    x43 = 4 / 3r
+    x54 = 5 / 4r
+    log43 = Math.log(x43)
+    log54 = Math.log(x54)
+    diff = logx
+    i43 = i54 = 0
+    (logx / log43).ceil.times do |i|
+      j = ((logx - log43 * i) / log54).round
+      d = (logx - log43 * i - log54 * j).abs
+      if d < diff
+        diff = d
+        i43 = i
+        i54 = j
+      end
+    end
+    y = x / (x43 ** i43 * x54 ** i54)
+    _log_taylor(y, prec).add(i43 == 0 ? 0 : i43 * _log_taylor(x43, prec), prec).add(i54 == 0 ? 0 : i54 * _log_taylor(x54, prec), prec)
+  end
+
   # call-seq:
   #   BigMath.log(decimal, numeric)    -> BigDecimal
   #
@@ -200,19 +252,24 @@ module BigMath
     return _infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 
-    if x > 10 || x < 0.1
-      log10 = log(BigDecimal(10), prec)
+    prec2 = prec + BigDecimal.double_fig
+
+    if x >= 10 || x <= 0.1
+      ln10 = _log_small_rational(10r, prec2)
       exponent = x.exponent
       x = x * BigDecimal("1e#{-x.exponent}")
       if x < 0.3
         x *= 10
         exponent -= 1
       end
-      return log10 * exponent + log(x, prec)
+      return ln10 * exponent + log(x, prec)
+    end
+
+    if x.n_significant_digits <= BigDecimal.double_fig && prec >= 50
+      return _log_small_rational(x.to_r, prec2)
     end
 
     x_minus_one_exponent = (x - 1).exponent
-    prec += BigDecimal.double_fig
 
     # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
     sqrt_steps = [2 * Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
@@ -223,29 +280,16 @@ module BigMath
     sqrt_steps /= 10
 
     lg2 = 0.3010299956639812
-    prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
+    sqrt_prec = prec2 + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
 
     sqrt_steps.times do
-      x = x.sqrt(prec2)
+      x = x.sqrt(sqrt_prec)
 
       # Workaround for https://github.com/ruby/bigdecimal/issues/354
-      x = x.mult(1, prec2 + BigDecimal.double_fig)
+      x = x.mult(1, sqrt_prec)
     end
 
-    # Taylor series for log(x) around 1
-    # log(x) = -log((1 + X) / (1 - X)) where X = (x - 1) / (x + 1)
-    # log(x) = 2 * (X + X**3 / 3 + X**5 / 5 + X**7 / 7 + ...)
-    x = (x - 1).div(x + 1, prec2)
-    y = x
-    x2 = x.mult(x, prec)
-    1.step do |i|
-      n = prec + x.exponent - y.exponent + x2.exponent
-      break if n <= 0 || x.zero?
-      x = x.mult(x2.round(n - x2.exponent), n)
-      y = y.add(x.div(2 * i + 1, n), prec)
-    end
-
-    y.mult(2 ** (sqrt_steps + 1), prec)
+    _log_taylor(x, prec2).mult(2 ** sqrt_steps, prec2)
   end
 
   # call-seq:
