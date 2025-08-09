@@ -282,6 +282,19 @@ module BigMath
     end
   end
 
+  # Taylor series for exp(x) around 0
+  private_class_method def self._exp_taylor(x, prec) # :nodoc:
+    xn = BigDecimal(1)
+    y = BigDecimal(1)
+    1.step do |i|
+      n = prec + xn.exponent
+      break if n <= 0 || xn.zero?
+      xn = xn.mult(x, n).div(i, n)
+      y = y.add(xn, prec)
+    end
+    y
+  end
+
   # call-seq:
   #   BigMath.exp(decimal, numeric)    -> BigDecimal
   #
@@ -298,23 +311,17 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return x.positive? ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0) if x.infinite?
     return BigDecimal(1) if x.zero?
-    return BigDecimal(1).div(exp(-x, prec), prec) if x < 0
 
     # exp(x * 10**cnt) = exp(x)**(10**cnt)
-    cnt = x > 1 ? x.exponent : 0
+    cnt = x < -1 || x > 1 ? x.exponent : 0
     prec2 = prec + BigDecimal.double_fig + cnt
     x = x._decimal_shift(-cnt)
-    xn = BigDecimal(1)
-    y = BigDecimal(1)
 
-    # Taylor series for exp(x) around 0
-    1.step do |i|
-      n = prec2 + xn.exponent
-      break if n <= 0 || xn.zero?
-      x = x.mult(1, n)
-      xn = xn.mult(x, n).div(i, n)
-      y = y.add(xn, prec2)
-    end
+    # Calculation of exp(small_prec) is fast because calculation of x**n is fast
+    # Calculation of exp(small_abs) converges fast.
+    # exp(x) = exp(small_prec_part + small_abs_part) = exp(small_prec_part) * exp(small_abs_part)
+    x_small_prec = x.round(Integer.sqrt(prec2))
+    y = _exp_taylor(x_small_prec, prec2).mult(_exp_taylor(x.sub(x_small_prec, prec2), prec2), prec2)
 
     # calculate exp(x * 10**cnt) from exp(x)
     # exp(x * 10**k) = exp(x * 10**(k - 1)) ** 10
