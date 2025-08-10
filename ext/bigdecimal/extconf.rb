@@ -36,17 +36,10 @@ if have_header("intrin.h")
   have_func("_BitScanReverse64", "intrin.h")
 end
 
-have_func("labs", "stdlib.h")
-have_func("llabs", "stdlib.h")
-have_func("finite", "math.h")
-have_func("isfinite", "math.h")
-
 have_header("ruby/atomic.h")
 have_header("ruby/internal/has/builtin.h")
 have_header("ruby/internal/static_assert.h")
 
-have_func("rb_rational_num", "ruby.h")
-have_func("rb_rational_den", "ruby.h")
 have_func("rb_complex_real", "ruby.h")
 have_func("rb_complex_imag", "ruby.h")
 have_func("rb_opts_exception_p", "ruby.h")
