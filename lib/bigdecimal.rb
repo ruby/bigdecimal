@@ -203,7 +203,7 @@ module BigMath
     if x > 10 || x < 0.1
       log10 = log(BigDecimal(10), prec)
       exponent = x.exponent
-      x = x * BigDecimal("1e#{-x.exponent}")
+      x = x._decimal_shift(-exponent)
       if x < 0.3
         x *= 10
         exponent -= 1
@@ -269,7 +269,7 @@ module BigMath
     # exp(x * 10**cnt) = exp(x)**(10**cnt)
     cnt = x > 1 ? x.exponent : 0
     prec2 = prec + BigDecimal.double_fig + cnt
-    x *= BigDecimal("1e-#{cnt}")
+    x = x._decimal_shift(-cnt)
     xn = BigDecimal(1)
     y = BigDecimal(1)
 
