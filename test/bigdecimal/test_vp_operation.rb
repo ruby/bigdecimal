@@ -5,6 +5,9 @@ require 'bigdecimal'
 class TestVpOperation < Test::Unit::TestCase
   include TestBigDecimalBase
 
+  INTEGER_MULT_THRESHOLD = 150
+  INTEGER_DIV_THRESHOLD = 300
+
   def setup
     super
     unless BigDecimal.instance_methods.include?(:vpdivd)
@@ -16,9 +19,15 @@ class TestVpOperation < Test::Unit::TestCase
   def test_vpmult
     assert_equal(BigDecimal('121932631112635269'), BigDecimal('123456789').vpmult(BigDecimal('987654321')))
     assert_equal(BigDecimal('12193263.1112635269'), BigDecimal('123.456789').vpmult(BigDecimal('98765.4321')))
-    x = 123**456
-    y = 987**123
-    assert_equal(BigDecimal("#{x * y}e-300"), BigDecimal("#{x}e-100").vpmult(BigDecimal("#{y}e-200")))
+
+    [10, 50, INTEGER_MULT_THRESHOLD, INTEGER_MULT_THRESHOLD + 50].each do |prec|
+      x = (BASE + BASE / 7) ** prec
+      y = (BASE + BASE / 3) ** prec
+      assert_equal(BigDecimal("#{x * y}e-168"), BigDecimal("#{x}e-123").vpmult(BigDecimal("#{y}e-45")))
+      assert_equal(BigDecimal("-#{x * y}e-46"), BigDecimal("#{x}e-12").vpmult(BigDecimal("-#{y}e-34")))
+      assert_equal(BigDecimal("-#{x * y}e-333"), BigDecimal("-#{x}e12").vpmult(BigDecimal("#{y}e-345")))
+      assert_equal(BigDecimal("#{x * y}e46"), BigDecimal("-#{x}e12").vpmult(BigDecimal("-#{y}e34")))
+    end
   end
 
   def test_vpdivd
@@ -81,6 +90,35 @@ class TestVpOperation < Test::Unit::TestCase
         div = BigDecimal((x * base / y).to_i) / base
         assert_equal([div, x - y * div], BigDecimal(x).vpdivd(y, n))
       end
+    end
+  end
+
+  def test_vpdivd_by_ruby_integer
+    # Exponent check
+    integer_div_prec = INTEGER_DIV_THRESHOLD + 50
+    x = (BASE + BASE / 7) ** integer_div_prec
+    y = (BASE + BASE / 3) ** integer_div_prec
+    bx = BigDecimal("#{x}e-123")
+    by = BigDecimal("#{y}e-456")
+    div, mod = bx.vpdivd(by, integer_div_prec)
+    assert_include(0...by, mod)
+    assert_equal(bx, div * by + mod)
+
+    # Precision should consistent around DIV_BY_RB_INTEGER_THRESHOLD threshold
+    [2, 3, 4, integer_div_prec, integer_div_prec + 1, integer_div_prec + 2].each do |prec|
+      a = BigDecimal('1' + '2' * BASE_FIG * prec)
+      b = BigDecimal('9' * BASE_FIG + '9' * BASE_FIG * prec)
+      assert_equal(BASE_FIG * (prec - 2) + 1, a.vpdivd(b, prec).first.n_significant_digits)
+      assert_equal(BASE_FIG * prec, b.vpdivd(a, prec).first.n_significant_digits)
+
+      x = BigDecimal("1#{'0' * BASE_FIG * prec}1")
+      y = BigDecimal("1#{'0' * BASE_FIG * prec}2")
+      div = BigDecimal("0.#{'9' * BASE_FIG * (prec - 1)}")
+      mod = BigDecimal("#{'9' * (BASE_FIG + 1)}.#{'0' * (BASE_FIG * (prec - 1) - 1)}2")
+      assert_equal([div, mod], x.vpdivd(y, prec))
+      assert_equal([-div, mod], x.vpdivd(-y, prec))
+      assert_equal([-div, -mod], (-x).vpdivd(y, prec))
+      assert_equal([div, -mod], (-x).vpdivd(-y, prec))
     end
   end
 
