@@ -5,6 +5,41 @@ else
 end
 
 class BigDecimal
+  module Internal # :nodoc:
+
+    # Coerce x to BigDecimal with the specified precision.
+    # TODO: some methods (example: BigMath.exp) require more precision than specified to coerce.
+    def self.coerce_to_bigdecimal(x, prec, method_name) # :nodoc:
+      case x
+      when BigDecimal
+        return x
+      when Integer, Float
+        return BigDecimal(x)
+      when Rational
+        return BigDecimal(x, [prec, 2 * BigDecimal.double_fig].max)
+      end
+      raise ArgumentError, "#{x.inspect} can't be coerced into BigDecimal"
+    end
+
+    def self.validate_prec(prec, method_name) # :nodoc:
+      raise ArgumentError, 'precision must be an Integer' unless Integer === prec
+      raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
+    end
+
+    def self.infinity_computation_result # :nodoc:
+      if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_INFINITY)
+        raise FloatDomainError, "Computation results in 'Infinity'"
+      end
+      BigDecimal::INFINITY
+    end
+
+    def self.nan_computation_result # :nodoc:
+      if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_NaN)
+        raise FloatDomainError, "Computation results to 'NaN'"
+      end
+      BigDecimal::NAN
+    end
+  end
 
   #  call-seq:
   #    self ** other -> bigdecimal
@@ -39,11 +74,11 @@ class BigDecimal
   # Also available as the operator **.
   #
   def power(y, prec = nil)
-    BigMath._validate_prec(prec, :power) if prec
+    Internal.validate_prec(prec, :power) if prec
     x = self
-    y = BigMath._coerce_to_bigdecimal(y, prec || n_significant_digits, :power)
+    y = Internal.coerce_to_bigdecimal(y, prec || n_significant_digits, :power)
 
-    return BigMath._nan_computation_result if x.nan? || y.nan?
+    return Internal.nan_computation_result if x.nan? || y.nan?
     return BigDecimal(1) if y.zero?
 
     if y.infinite?
@@ -52,11 +87,11 @@ class BigDecimal
         return BigDecimal(0) if x > -1 && y.positive?
         raise Math::DomainError, 'Result undefined for negative base raised to infinite power'
       elsif x < 1
-        return y.positive? ? BigDecimal(0) : BigMath._infinity_computation_result
+        return y.positive? ? BigDecimal(0) : BigDecimal::Internal.infinity_computation_result
       elsif x == 1
         return BigDecimal(1)
       else
-        return y.positive? ? BigMath._infinity_computation_result : BigDecimal(0)
+        return y.positive? ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0)
       end
     end
 
@@ -70,9 +105,9 @@ class BigDecimal
       return BigDecimal(1) if y.zero?
       return BigDecimal(0) if y > 0
       if y.frac.zero? && y % 2 == 1 && x.sign == -1
-        return -BigMath._infinity_computation_result
+        return -BigDecimal::Internal.infinity_computation_result
       else
-        return BigMath._infinity_computation_result
+        return BigDecimal::Internal.infinity_computation_result
       end
     elsif x < 0
       if y.frac.zero?
@@ -105,7 +140,7 @@ class BigDecimal
         xn *= xn
         # Detect overflow/underflow before consuming infinite memory
         if (xn.exponent.abs - 1) * int_part / n >= 0x7FFFFFFFFFFFFFFF
-          return ((xn.exponent > 0) ^ neg ? BigMath._infinity_computation_result : BigDecimal(0)) * (int_part.even? || x > 0 ? 1 : -1)
+          return ((xn.exponent > 0) ^ neg ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0)) * (int_part.even? || x > 0 ? 1 : -1)
         end
       end
       return neg ? BigDecimal(1) / ans : ans
@@ -116,7 +151,7 @@ class BigDecimal
     if y < 0
       inv = x.power(-y, prec)
       return BigDecimal(0) if inv.infinite?
-      return BigMath._infinity_computation_result if inv.zero?
+      return BigDecimal::Internal.infinity_computation_result if inv.zero?
       return BigDecimal(1).div(inv, prec)
     end
 
@@ -143,43 +178,6 @@ end
 # Other methods (sin, cos, atan) are defined in 'bigdecimal/math.rb'.
 module BigMath
 
-  # Coerce x to BigDecimal with the specified precision.
-  # TODO: some methods (example: BigMath.exp) require more precision than specified to coerce.
-  def self._coerce_to_bigdecimal(x, prec, method_name, complex_domain_error = false) # :nodoc:
-    case x
-    when BigDecimal
-      return x
-    when Integer, Float
-      return BigDecimal(x)
-    when Rational
-      return BigDecimal(x, [prec, 2 * BigDecimal.double_fig].max)
-    when Complex
-      if complex_domain_error
-        raise Math::DomainError, "Complex argument for BigMath.#{method_name}"
-      end
-    end
-    raise ArgumentError, "#{x.inspect} can't be coerced into BigDecimal"
-  end
-
-  def self._validate_prec(prec, method_name) # :nodoc:
-    raise ArgumentError, 'precision must be an Integer' unless Integer === prec
-    raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
-  end
-
-  def self._infinity_computation_result # :nodoc:
-    if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_INFINITY)
-      raise FloatDomainError, "Computation results in 'Infinity'"
-    end
-    BigDecimal::INFINITY
-  end
-
-  def self._nan_computation_result # :nodoc:
-    if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_NaN)
-      raise FloatDomainError, "Computation results to 'NaN'"
-    end
-    BigDecimal::NAN
-  end
-
   # call-seq:
   #   BigMath.log(decimal, numeric)    -> BigDecimal
   #
@@ -193,11 +191,13 @@ module BigMath
   # If +decimal+ is NaN, returns NaN.
   #
   def self.log(x, prec)
-    _validate_prec(prec, :log)
-    x = _coerce_to_bigdecimal(x, prec, :log, true)
-    return _nan_computation_result if x.nan?
+    BigDecimal::Internal.validate_prec(prec, :log)
+    raise Math::DomainError, 'Complex argument for BigMath.log' if Complex === x
+
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
     raise Math::DomainError, 'Zero or negative argument for log' if x <= 0
-    return _infinity_computation_result if x.infinite?
+    return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 
     if x > 10 || x < 0.1
@@ -259,10 +259,10 @@ module BigMath
   # If +decimal+ is NaN, returns NaN.
   #
   def self.exp(x, prec)
-    _validate_prec(prec, :exp)
-    x = _coerce_to_bigdecimal(x, prec, :exp)
-    return _nan_computation_result if x.nan?
-    return x.positive? ? _infinity_computation_result : BigDecimal(0) if x.infinite?
+    BigDecimal::Internal.validate_prec(prec, :exp)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :exp)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
+    return x.positive? ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0) if x.infinite?
     return BigDecimal(1) if x.zero?
     return BigDecimal(1).div(exp(-x, prec), prec) if x < 0
 
