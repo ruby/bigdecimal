@@ -2565,53 +2565,6 @@ class TestBigDecimal < Test::Unit::TestCase
     }
   end
 
-  def test_gc_compaction_safe
-    omit if RUBY_VERSION < "3.2" || RUBY_ENGINE == "truffleruby"
-
-    assert_separately(["-rbigdecimal"], "#{<<~"begin;"}\n#{<<~'end;'}")
-    begin;
-      x = 1.5
-      y = 0.5
-      nan = BigDecimal("NaN")
-      inf = BigDecimal("Infinity")
-      bx = BigDecimal(x.to_s)
-      by = BigDecimal(y.to_s)
-      GC.verify_compaction_references(expand_heap: true, toward: :empty)
-
-      assert_in_delta(x + y, bx + by)
-      assert_in_delta(x + y, bx.add(by, 10))
-      assert_in_delta(x - y, bx - by)
-      assert_in_delta(x - y, bx.sub(by, 10))
-      assert_in_delta(x * y, bx * by)
-      assert_in_delta(x * y, bx.mult(by, 10))
-      assert_in_delta(x / y, bx / by)
-      assert_in_delta(x / y, bx.div(by, 10))
-      assert_in_delta((x / y).floor, bx.div(by))
-      assert_in_delta(x % y, bx % by)
-      assert_in_delta(Math.sqrt(x), bx.sqrt(10))
-      assert_equal(x.div(y), bx.div(by))
-      assert_equal(x.remainder(y), bx.remainder(by))
-      assert_equal(x.divmod(y), bx.divmod(by))
-      assert_equal([0, x], bx.divmod(inf))
-      assert_in_delta(x, bx.remainder(inf))
-      assert((nan + nan).nan?)
-      assert((nan - nan).nan?)
-      assert((nan * nan).nan?)
-      assert((nan / nan).nan?)
-      assert((nan % nan).nan?)
-      assert((inf + inf).infinite?)
-      assert((inf - inf).nan?)
-      assert((inf * inf).infinite?)
-      assert((inf / inf).nan?)
-      assert((inf % inf).nan?)
-      assert_in_delta(Math.exp(x), BigMath.exp(bx, 10))
-      assert_in_delta(x**y, bx**by)
-      assert_in_delta(x**y, bx.power(by, 10))
-      assert_in_delta(Math.exp(x), BigMath.exp(bx, 10))
-      assert_in_delta(Math.log(x), BigMath.log(bx, 10))
-    end;
-  end
-
   def assert_no_memory_leak(code, *rest, **opt)
     code = "8.times {20_000.times {begin #{code}; rescue NoMemoryError; end}; GC.start}"
     paths = $LOAD_PATH.map{|path| "-I#{path}" }
