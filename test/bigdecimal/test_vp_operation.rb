@@ -13,12 +13,25 @@ class TestVpOperation < Test::Unit::TestCase
     end
   end
 
+  def ntt_mult_available?
+    BASE_FIG == 9
+  end
+
   def test_vpmult
     assert_equal(BigDecimal('121932631112635269'), BigDecimal('123456789').vpmult(BigDecimal('987654321')))
     assert_equal(BigDecimal('12193263.1112635269'), BigDecimal('123.456789').vpmult(BigDecimal('98765.4321')))
     x = 123**456
     y = 987**123
     assert_equal(BigDecimal("#{x * y}e-300"), BigDecimal("#{x}e-100").vpmult(BigDecimal("#{y}e-200")))
+  end
+
+  def test_nttmult
+    omit 'NTT multiplication is only available for 32-bit DECDIG' unless ntt_mult_available?
+    [*1..32].repeated_permutation(2) do |a, b|
+      x = BigDecimal(10 ** (BASE_FIG * a) / 7)
+      y = BigDecimal(10 ** (BASE_FIG * b) / 13)
+      assert_equal(x.to_i * y.to_i, x.nttmult(y))
+    end
   end
 
   def test_vpdivd
