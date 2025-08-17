@@ -33,6 +33,12 @@
 
 #define BIGDECIMAL_VERSION "4.0.1"
 
+#if SIZEOF_DECDIG == 4
+#define USE_NTT_MULTIPLICATION 1
+#include "ntt.h"
+#define NTT_MULTIPLICATION_THRESHOLD 100
+#endif
+
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
@@ -3259,6 +3265,25 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
     RB_GC_GUARD(b.bigdecimal);
     return c.bigdecimal;
 }
+
+#if SIZEOF_DECDIG == 4
+VALUE
+BigDecimal_nttmult(VALUE self, VALUE v) {
+    BDVALUE a,b,c;
+    a = GetBDValueMust(self);
+    b = GetBDValueMust(v);
+    c = NewZeroWrap(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    ntt_multiply(a.real->Prec, b.real->Prec, a.real->frac, b.real->frac, c.real->frac);
+    VpSetSign(c.real, a.real->sign * b.real->sign);
+    c.real->exponent = a.real->exponent + b.real->exponent;
+    c.real->Prec = a.real->Prec + b.real->Prec;
+    VpNmlz(c.real);
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
+    return c.bigdecimal;
+}
+#endif
+
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
 /* Document-class: BigDecimal
@@ -3630,6 +3655,9 @@ Init_bigdecimal(void)
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
     rb_define_method(rb_cBigDecimal, "vpdivd", BigDecimal_vpdivd, 2);
     rb_define_method(rb_cBigDecimal, "vpmult", BigDecimal_vpmult, 1);
+#ifdef USE_NTT_MULTIPLICATION
+    rb_define_method(rb_cBigDecimal, "nttmult", BigDecimal_nttmult, 1);
+#endif
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
 #define ROUNDING_MODE(i, name, value) \
@@ -4912,6 +4940,15 @@ VpMult(Real *c, Real *a, Real *b)
     c->exponent = a->exponent;    /* set exponent */
     VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     if (!AddExponent(c, b->exponent)) return 0;
+
+#ifdef USE_NTT_MULTIPLICATION
+    if (b->Prec >= NTT_MULTIPLICATION_THRESHOLD) {
+        ntt_multiply((uint32_t)a->Prec, (uint32_t)b->Prec, a->frac, b->frac, c->frac);
+        c->Prec = a->Prec + b->Prec;
+        goto Cleanup;
+    }
+#endif
+
     carry = 0;
     nc = ind_c = MxIndAB;
     memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
@@ -4958,6 +4995,8 @@ VpMult(Real *c, Real *a, Real *b)
 	    }
 	}
     }
+
+Cleanup:
     VpNmlz(c);
 
 Exit:
