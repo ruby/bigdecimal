@@ -141,7 +141,7 @@ check_allocation_count_nonzero(void)
 #endif /* BIGDECIMAL_DEBUG */
 
 /* VpMult VpDivd helpers */
-#define VPMULT_RESULT_PREC(a, b) (a->Prec + b->Prec + 1)
+#define VPMULT_RESULT_PREC(a, b) (a->Prec + b->Prec)
 /* To calculate VpDivd with n-digits precision, quotient needs n+2*BASE_FIG-1 digits space */
 /* In the worst precision case 0001_1111_1111 / 9999 = 0000_0001_1112, there are 2*BASE_FIG-1 leading zeros */
 #define VPDIVD_QUO_DIGITS(required_digits) ((required_digits) + 2 * BASE_FIG - 1)
@@ -5080,7 +5080,7 @@ VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos,
 VP_EXPORT size_t
 VpMult(Real *c, Real *a, Real *b)
 {
-    size_t MxIndA, MxIndB, MxIndAB, MxIndC;
+    size_t MxIndA, MxIndB, MxIndAB;
     size_t ind_c, i, ii, nc;
     size_t ind_as, ind_ae, ind_bs;
     DECDIG carry;
@@ -5112,13 +5112,11 @@ VpMult(Real *c, Real *a, Real *b)
     w = NULL;
     MxIndA = a->Prec - 1;
     MxIndB = b->Prec - 1;
-    MxIndC = c->MaxPrec - 1;
     MxIndAB = a->Prec + b->Prec - 1;
 
-    if (MxIndC < MxIndAB) {    /* The Max. prec. of c < Prec(a)+Prec(b) */
-	w = c;
-        c = NewZeroNolimit(1, (size_t)((MxIndAB + 1) * BASE_FIG));
-	MxIndC = MxIndAB;
+    if (c->MaxPrec < VPMULT_RESULT_PREC(a, b)) {
+        w = c;
+        c = NewZeroNolimit(1, VPMULT_RESULT_PREC(a, b) * BASE_FIG);
     }
 
     /* set LHSV c info */
