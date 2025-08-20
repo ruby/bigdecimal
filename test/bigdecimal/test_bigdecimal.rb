@@ -214,6 +214,51 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise_with_message(ArgumentError, "can't omit precision for a Rational.") { BigDecimal(42.quo(7)) }
   end
 
+  def test_restore_prec_limit_on_exception
+    assert_limit_restored = ->(&block) do
+      BigDecimal.save_exception_mode do
+        BigDecimal.mode BigDecimal::EXCEPTION_ALL, true
+        BigDecimal.save_limit do
+          BigDecimal.limit 3
+          begin
+            block.call
+            assert(false, "Expected an exception to be raised")
+          rescue FloatDomainError, TypeError
+          end
+          assert_equal(3, BigDecimal.limit)
+        end
+      end
+    end
+
+    x = BigDecimal(1)
+    nan = BigDecimal::NAN
+    obj = Object.new
+    prec = 10
+    assert_limit_restored.call { x + nan }
+    assert_limit_restored.call { x + obj }
+    assert_limit_restored.call { x - nan }
+    assert_limit_restored.call { x - obj }
+    assert_limit_restored.call { x * nan }
+    assert_limit_restored.call { x * obj }
+    assert_limit_restored.call { x / nan }
+    assert_limit_restored.call { x / obj }
+    assert_limit_restored.call { x % nan }
+    assert_limit_restored.call { x % obj }
+    assert_limit_restored.call { x.add(nan, prec) }
+    assert_limit_restored.call { x.add(obj, prec) }
+    assert_limit_restored.call { x.sub(nan, prec) }
+    assert_limit_restored.call { x.sub(obj, prec) }
+    assert_limit_restored.call { x.mult(nan, prec) }
+    assert_limit_restored.call { x.mult(obj, prec) }
+    assert_limit_restored.call { x.div(nan) }
+    assert_limit_restored.call { x.div(nan, prec) }
+    assert_limit_restored.call { x.div(obj, prec) }
+    assert_limit_restored.call { x.modulo(nan) }
+    assert_limit_restored.call { x.modulo(obj) }
+    assert_limit_restored.call { x.remainder(nan) }
+    assert_limit_restored.call { x.remainder(obj) }
+  end
+
   def test_BigDecimal_with_float
     assert_equal(BigDecimal("0.1235"), BigDecimal(0.1234567, 4))
     assert_equal(BigDecimal("-0.1235"), BigDecimal(-0.1234567, 4))

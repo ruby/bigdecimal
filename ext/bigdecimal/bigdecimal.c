@@ -284,9 +284,8 @@ static VALUE BigDecimal_positive_infinity(void);
 static VALUE BigDecimal_negative_infinity(void);
 static VALUE BigDecimal_positive_zero(void);
 static VALUE BigDecimal_negative_zero(void);
-static VALUE BigDecimal_add_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
-static VALUE BigDecimal_sub_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
-static VALUE BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t coerce_prec);
+static VALUE BigDecimal_addsub_with_coerce(VALUE self, VALUE r, size_t prec, int operation);
+static VALUE BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t prec);
 
 static void
 BigDecimal_delete(void *pv)
@@ -1431,35 +1430,34 @@ static VALUE
 BigDecimal_add(VALUE self, VALUE r)
 {
     if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '+');
-    return BigDecimal_add_with_coerce(self, r, 0);
+    return BigDecimal_addsub_with_coerce(self, r, 0, +1);
 }
 
 static VALUE
-BigDecimal_add_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
+BigDecimal_addsub_with_coerce(VALUE self, VALUE r, size_t prec, int operation)
 {
     BDVALUE a, b, c;
     size_t mx;
 
     a = GetBDValueMust(self);
-    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
+    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, prec));
 
-    if (VpIsNaN(b.real)) return b.bigdecimal;
-    if (VpIsNaN(a.real)) return a.bigdecimal;
+    if (VpIsNaN(a.real)) return CheckGetValue(a);
+    if (VpIsNaN(b.real)) return CheckGetValue(b);
 
     mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
         /* a or b is inf */
         c = NewZeroWrapLimited(1, BASE_FIG);
-        VpAddSub(c.real, a.real, b.real, 1);
+        VpAddSub(c.real, a.real, b.real, operation);
     }
     else {
+        size_t pl = VpGetPrecLimit();
+        if (prec) VpSetPrecLimit(prec);
         c = NewZeroWrapLimited(1, (mx + 1) * BASE_FIG);
-        if (!mx) {
-            VpSetInf(c.real, VpGetSign(a.real));
-        }
-        else {
-            VpAddSub(c.real, a.real, b.real, 1);
-        }
+        // Let VpAddSub round the result
+        VpAddSub(c.real, a.real, b.real, operation);
+        if (prec) VpSetPrecLimit(pl);
     }
 
     RB_GC_GUARD(a.bigdecimal);
@@ -1486,40 +1484,7 @@ static VALUE
 BigDecimal_sub(VALUE self, VALUE r)
 {
     if (!is_coerceable_to_BigDecimal(r)) return DoSomeOne(self, r, '-');
-    return BigDecimal_sub_with_coerce(self, r, 0);
-}
-
-static VALUE
-BigDecimal_sub_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
-{
-    BDVALUE a, b, c;
-    size_t mx;
-
-    a = GetBDValueMust(self);
-    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
-
-    if (VpIsNaN(b.real)) return b.bigdecimal;
-    if (VpIsNaN(a.real)) return a.bigdecimal;
-
-    mx = GetAddSubPrec(a.real, b.real);
-    if (mx == (size_t)-1L) {
-        /* a or b is inf */
-        c = NewZeroWrapLimited(1, BASE_FIG);
-        VpAddSub(c.real, a.real, b.real, -1);
-    }
-    else {
-        c = NewZeroWrapLimited(1, (mx + 1) * BASE_FIG);
-        if (!mx) {
-            VpSetInf(c.real, VpGetSign(a.real));
-        }
-        else {
-            VpAddSub(c.real, a.real, b.real, -1);
-        }
-    }
-
-    RB_GC_GUARD(a.bigdecimal);
-    RB_GC_GUARD(b.bigdecimal);
-    return CheckGetValue(c);
+    return BigDecimal_addsub_with_coerce(self, r, 0, -1);
 }
 
 static VALUE
@@ -1761,15 +1726,21 @@ BigDecimal_mult(VALUE self, VALUE r)
 }
 
 static VALUE
-BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t coerce_prec)
+BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t prec)
 {
     BDVALUE a, b, c;
 
     a = GetBDValueMust(self);
-    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, coerce_prec));
+    b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, prec));
 
-    c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    c = NewZeroWrapNolimit(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
+    if (prec) {
+        VpLeftRound(c.real, VpGetRoundMode(), prec);
+    }
+    else {
+        VpLimitRound(c.real, 0);
+    }
 
     RB_GC_GUARD(a.bigdecimal);
     RB_GC_GUARD(b.bigdecimal);
@@ -2009,7 +1980,6 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
 {
     SIGNED_VALUE ix;
     BDVALUE av, bv, cv, res;
-    size_t pl;
 
     if (NIL_P(n)) { /* div in Float sense */
         NULLABLE_BDVALUE div;
@@ -2023,8 +1993,7 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     /* div in BigDecimal sense */
     ix = check_int_precision(n);
 
-    pl = VpSetPrecLimit(0);
-    if (ix == 0) ix = pl;
+    if (ix == 0) ix = VpGetPrecLimit();
 
     av = GetBDValueMust(self);
     bv = GetBDValueWithPrecMust(b, GetCoercePrec(av.real, ix));
@@ -2039,10 +2008,10 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     }
 
     // Needs to calculate 1 extra digit for rounding.
-    cv = NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(ix + 1));
+    cv = NewZeroWrapNolimit(1, VPDIVD_QUO_DIGITS(ix + 1));
     res = NewZeroWrapNolimit(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG);
     VpDivd(cv.real, res.real, av.real, bv.real);
-    VpSetPrecLimit(pl);
+
     if (!VpIsZero(res.real)) {
         // Remainder value affects rounding result.
         // ROUND_UP cv = 0.1e0 with idx=10 will be:
@@ -2133,15 +2102,7 @@ BigDecimal_div3(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 {
-    BDVALUE cv;
-    SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_add_with_coerce(self, b, 0);
-    size_t pl = VpSetPrecLimit(0);
-    VALUE   c = BigDecimal_add_with_coerce(self, b, mx);
-    VpSetPrecLimit(pl);
-    cv = GetBDValueMust(c);
-    VpLeftRound(cv.real, VpGetRoundMode(), mx);
-    return CheckGetValue(cv);
+    return BigDecimal_addsub_with_coerce(self, b, check_int_precision(n), +1);
 }
 
 /* call-seq:
@@ -2160,15 +2121,7 @@ BigDecimal_add2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 {
-    BDVALUE cv;
-    SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_sub_with_coerce(self, b, 0);
-    size_t pl = VpSetPrecLimit(0);
-    VALUE   c = BigDecimal_sub_with_coerce(self, b, mx);
-    VpSetPrecLimit(pl);
-    cv = GetBDValueMust(c);
-    VpLeftRound(cv.real, VpGetRoundMode(), mx);
-    return CheckGetValue(cv);
+    return BigDecimal_addsub_with_coerce(self, b, check_int_precision(n), -1);
 }
 
  /*
@@ -2200,15 +2153,7 @@ BigDecimal_sub2(VALUE self, VALUE b, VALUE n)
 static VALUE
 BigDecimal_mult2(VALUE self, VALUE b, VALUE n)
 {
-    BDVALUE cv;
-    SIGNED_VALUE mx = check_int_precision(n);
-    if (mx == 0) return BigDecimal_mult_with_coerce(self, b, 0);
-    size_t pl = VpSetPrecLimit(0);
-    VALUE   c = BigDecimal_mult_with_coerce(self, b, mx);
-    VpSetPrecLimit(pl);
-    cv = GetBDValueMust(c);
-    VpLeftRound(cv.real, VpGetRoundMode(), mx);
-    return CheckGetValue(cv);
+    return BigDecimal_mult_with_coerce(self, b, check_int_precision(n));
 }
 
 /*
@@ -2305,7 +2250,7 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
     VALUE  vLoc;
     VALUE  vRound;
     int    round_to_int = 0;
-    size_t mx, pl;
+    size_t mx;
 
     unsigned short sw = VpGetRoundMode();
 
@@ -2336,11 +2281,10 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 	break;
     }
 
-    pl = VpSetPrecLimit(0);
     a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapLimited(1, mx);
-    VpSetPrecLimit(pl);
+    c = NewZeroWrapNolimit(1, mx);
+
     VpActiveRound(c.real, a.real, sw, iLoc);
 
     RB_GC_GUARD(a.bigdecimal);
@@ -2357,7 +2301,7 @@ BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short
     BDVALUE c, a;
     int iLoc;
     VALUE vLoc;
-    size_t mx, pl = VpSetPrecLimit(0);
+    size_t mx;
 
     if (rb_scan_args(argc, argv, "01", &vLoc) == 0) {
         iLoc = 0;
@@ -2368,8 +2312,7 @@ BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short
 
     a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapLimited(1, mx);
-    VpSetPrecLimit(pl);
+    c = NewZeroWrapNolimit(1, mx);
     VpActiveRound(c.real, a.real, rounding_mode, iLoc);
 
     RB_GC_GUARD(a.bigdecimal);
@@ -3391,31 +3334,28 @@ BigDecimal_literal(const char *str)
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
 VALUE
 BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
-  BDVALUE a,b,c,d;
-  size_t cn = NUM2INT(cprec);
-  a = GetBDValueMust(self);
-  b = GetBDValueMust(r);
-  c = NewZeroWrapLimited(1, cn * BASE_FIG);
-  d = NewZeroWrapLimited(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
-  VpDivd(c.real, d.real, a.real, b.real);
-  VpNmlz(c.real);
-  VpNmlz(d.real);
-  RB_GC_GUARD(a.bigdecimal);
-  RB_GC_GUARD(b.bigdecimal);
-  return rb_assoc_new(c.bigdecimal, d.bigdecimal);
+    BDVALUE a,b,c,d;
+    size_t cn = NUM2INT(cprec);
+    a = GetBDValueMust(self);
+    b = GetBDValueMust(r);
+    c = NewZeroWrapNolimit(1, cn * BASE_FIG);
+    d = NewZeroWrapNolimit(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
+    VpDivd(c.real, d.real, a.real, b.real);
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
+    return rb_assoc_new(c.bigdecimal, d.bigdecimal);
 }
 
 VALUE
 BigDecimal_vpmult(VALUE self, VALUE v) {
-  BDVALUE a,b,c;
-  a = GetBDValueMust(self);
-  b = GetBDValueMust(v);
-  c = NewZeroWrapLimited(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
-  VpMult(c.real, a.real, b.real);
-  VpNmlz(c.real);
-  RB_GC_GUARD(a.bigdecimal);
-  RB_GC_GUARD(b.bigdecimal);
-  return c.bigdecimal;
+    BDVALUE a,b,c;
+    a = GetBDValueMust(self);
+    b = GetBDValueMust(v);
+    c = NewZeroWrapNolimit(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    VpMult(c.real, a.real, b.real);
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
+    return c.bigdecimal;
 }
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
@@ -3941,12 +3881,10 @@ VpGetPrecLimit(void)
     return NUM2SIZET(vlimit);
 }
 
-VP_EXPORT size_t
+VP_EXPORT void
 VpSetPrecLimit(size_t n)
 {
-    size_t const s = VpGetPrecLimit();
     bigdecimal_set_thread_local_precision_limit(n);
-    return s;
 }
 
 /*
@@ -4626,7 +4564,7 @@ VpAsgn(Real *c, Real *a, int isw)
 	c->Prec = n;
         memcpy(c->frac, a->frac, n * sizeof(DECDIG));
 	/* Needs round ? */
-	if (isw != 10) {
+	if (isw != 10 && isw != -10) {
 	    /* Not in ActiveRound */
 	    if(c->Prec < a->Prec) {
 		VpInternalRound(c, n, (n>0) ? a->frac[n-1] : 0, a->frac[n]);
@@ -5084,11 +5022,11 @@ VpMult(Real *c, Real *a, Real *b)
     }
 
     if (VpIsOne(a)) {
-	VpAsgn(c, b, VpGetSign(a));
+	VpAsgn(c, b, 10 * VpGetSign(a));
 	goto Exit;
     }
     if (VpIsOne(b)) {
-	VpAsgn(c, a, VpGetSign(b));
+	VpAsgn(c, a, 10 * VpGetSign(b));
 	goto Exit;
     }
     if (b->Prec > a->Prec) {
@@ -5102,6 +5040,7 @@ VpMult(Real *c, Real *a, Real *b)
     MxIndB = b->Prec - 1;
     MxIndAB = a->Prec + b->Prec - 1;
 
+    // Only VpSqrt calls VpMult with insufficient precision
     if (c->MaxPrec < VPMULT_RESULT_PREC(a, b)) {
         w = c;
         c = NewZeroNolimit(1, VPMULT_RESULT_PREC(a, b) * BASE_FIG);
@@ -5161,14 +5100,11 @@ VpMult(Real *c, Real *a, Real *b)
 	    }
 	}
     }
+    VpNmlz(c);
     if (w != NULL) {        /* free work variable */
-        VpNmlz(c);
-        VpAsgn(w, c, 1);
+        VpAsgn(w, c, 10);
         rbd_free_struct(c);
         c = w;
-    }
-    else {
-	VpLimitRound(c,0);
     }
 
 Exit:
