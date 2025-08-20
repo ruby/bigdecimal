@@ -205,7 +205,7 @@ VP_EXPORT double VpGetDoubleNegZero(void);
 
 /* These 2 functions added at v1.1.7 */
 VP_EXPORT size_t VpGetPrecLimit(void);
-VP_EXPORT size_t VpSetPrecLimit(size_t n);
+VP_EXPORT void VpSetPrecLimit(size_t n);
 
 /* Round mode */
 VP_EXPORT int            VpIsRoundMode(unsigned short n);
