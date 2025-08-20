@@ -1116,22 +1116,10 @@ BigDecimal_mode(int argc, VALUE *argv, VALUE self)
 static size_t
 GetAddSubPrec(Real *a, Real *b)
 {
-    size_t mxs;
-    size_t mx = a->Prec;
-    SIGNED_VALUE d;
-
     if (!VpIsDef(a) || !VpIsDef(b)) return (size_t)-1L;
-    if (mx < b->Prec) mx = b->Prec;
-    if (a->exponent != b->exponent) {
-	mxs = mx;
-	d = a->exponent - b->exponent;
-	if (d < 0) d = -d;
-	mx = mx + (size_t)d;
-	if (mx < mxs) {
-	    return VpException(VP_EXCEPTION_INFINITY, "Exponent overflow", 0);
-	}
-    }
-    return mx;
+    ssize_t min_a = a->exponent - a->Prec;
+    ssize_t min_b = b->exponent - b->Prec;
+    return Max(a->exponent, b->exponent) - Min(min_a, min_b);
 }
 
 static inline SIGNED_VALUE
