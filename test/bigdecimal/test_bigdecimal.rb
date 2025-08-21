@@ -2031,6 +2031,26 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_div_mod_rem_operation_with_limit
+    x = -(9 ** 100)
+    y = 7 ** 100
+    div_int = x.div(y)
+    div = BigDecimal(div_int)
+    mod = BigDecimal(x.modulo(y))
+    rem = BigDecimal(x.remainder(y))
+    big_x = BigDecimal(x)
+    big_y = BigDecimal(y)
+
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(div_int, big_x.div(big_y))
+      assert_equal(mod, big_x.modulo(big_y))
+      assert_equal(rem, big_x.remainder(big_y))
+      assert_equal([div, mod], big_x.divmod(big_y))
+      assert_equal(3, BigDecimal.limit)
+    end
+  end
+
   def test_sign
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
