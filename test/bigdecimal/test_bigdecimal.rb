@@ -2051,6 +2051,31 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_sign_operator_ignores_limit
+    plus_x = BigDecimal('7' * 100)
+    minus_x = -plus_x
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(plus_x, +plus_x)
+      assert_equal(minus_x, +minus_x)
+      assert_equal(minus_x, -plus_x)
+      assert_equal(plus_x, -minus_x)
+      assert_equal(plus_x, minus_x.abs)
+      assert_equal(plus_x, plus_x.abs)
+    end
+  end
+
+  def test_fix_frac_ignores_limit
+    fix = BigDecimal("#{'4' * 56}")
+    frac = BigDecimal("0.#{'7' * 89}")
+    x = fix + frac
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(fix, x.fix)
+      assert_equal(frac, x.frac)
+    end
+  end
+
   def test_sign
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)

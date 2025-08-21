@@ -1702,8 +1702,8 @@ static VALUE
 BigDecimal_neg(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapLimited(1, a.real->Prec * BASE_FIG);
-    VpAsgn(c.real, a.real, -1);
+    BDVALUE c = NewZeroWrapNolimit(1, a.real->Prec * BASE_FIG);
+    VpAsgn(c.real, a.real, -10);
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
 }
@@ -2176,8 +2176,8 @@ static VALUE
 BigDecimal_abs(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapLimited(1, a.real->Prec * BASE_FIG);
-    VpAsgn(c.real, a.real, 1);
+    BDVALUE c = NewZeroWrapNolimit(1, a.real->Prec * BASE_FIG);
+    VpAsgn(c.real, a.real, 10);
     VpChangeSign(c.real, 1);
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
@@ -2215,7 +2215,7 @@ static VALUE
 BigDecimal_fix(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapLimited(1, (a.real->Prec + 1) * BASE_FIG);
+    BDVALUE c = NewZeroWrapNolimit(1, (a.real->Prec + 1) * BASE_FIG);
     VpActiveRound(c.real, a.real, VP_ROUND_DOWN, 0); /* 0: round off */
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
@@ -2359,7 +2359,7 @@ static VALUE
 BigDecimal_frac(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapLimited(1, (a.real->Prec + 1) * BASE_FIG);
+    BDVALUE c = NewZeroWrapNolimit(1, (a.real->Prec + 1) * BASE_FIG);
     VpFrac(c.real, a.real);
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
