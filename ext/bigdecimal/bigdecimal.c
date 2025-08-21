@@ -1818,7 +1818,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     BDVALUE a, b, dv, md, res;
     NULLABLE_BDVALUE b2;
     ssize_t a_exponent, b_exponent;
-    size_t mx, rx;
+    size_t mx, rx, pl;
 
     a = GetBDValueMust(self);
 
@@ -1862,26 +1862,31 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     a_exponent = VpExponent10(a.real);
     b_exponent = VpExponent10(b.real);
     mx = a_exponent > b_exponent ? a_exponent - b_exponent + 1 : 1;
-    dv = NewZeroWrapLimited(1, VPDIVD_QUO_DIGITS(mx));
+    dv = NewZeroWrapNolimit(1, VPDIVD_QUO_DIGITS(mx));
 
     /* res is reused for VpDivd remainder and VpMult result */
     rx = VPDIVD_REM_PREC(a.real, b.real, dv.real);
     mx = VPMULT_RESULT_PREC(dv.real, b.real);
     res = NewZeroWrapNolimit(1, Max(rx, mx) * BASE_FIG);
     /* AddSub needs one more prec */
-    md = NewZeroWrapLimited(1, (res.real->MaxPrec + 1) * BASE_FIG);
+    md = NewZeroWrapNolimit(1, (res.real->MaxPrec + 1) * BASE_FIG);
 
     VpDivd(dv.real, res.real, a.real, b.real);
     VpMidRound(dv.real, VP_ROUND_DOWN, 0);
     VpMult(res.real, dv.real, b.real);
+    pl = VpGetPrecLimit();
+    VpSetPrecLimit(0);
     VpAddSub(md.real, a.real, res.real, -1);
+    VpSetPrecLimit(pl);
 
     if (!truncate && !VpIsZero(md.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
         /* result adjustment for negative case */
-        BDVALUE dv2 = NewZeroWrapLimited(1, (dv.real->MaxPrec + 1) * BASE_FIG);
-        BDVALUE md2 = NewZeroWrapLimited(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG);
+        BDVALUE dv2 = NewZeroWrapNolimit(1, (dv.real->MaxPrec + 1) * BASE_FIG);
+        BDVALUE md2 = NewZeroWrapNolimit(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG);
+        VpSetPrecLimit(0);
         VpAddSub(dv2.real, dv.real, VpOne(), -1);
         VpAddSub(md2.real, md.real, b.real, 1);
+        VpSetPrecLimit(pl);
         *div = bdvalue_nullable(dv2);
         *mod = bdvalue_nullable(md2);
         RB_GC_GUARD(dv2.bigdecimal);
