@@ -149,7 +149,7 @@ check_allocation_count_nonzero(void)
 #define VPDIVD_REM_PREC(a, b, c) Max(a->Prec, b->Prec + c->MaxPrec - 1)
 
 static NULLABLE_BDVALUE
-CreateFromString(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception);
+CreateFromString(const char *str, VALUE klass, bool strict_p, bool raise_exception);
 
 PUREFUNC(static inline size_t rbd_struct_size(size_t const));
 
@@ -170,31 +170,11 @@ rbd_allocate_struct(size_t const internal_digits)
     return real;
 }
 
-static size_t
-rbd_calculate_internal_digits(size_t const digits, bool limit_precision)
-{
-    size_t const len = roomof(digits, BASE_FIG);
-    if (limit_precision) {
-        size_t const prec_limit = VpGetPrecLimit();
-        if (prec_limit > 0) {
-            /* NOTE: 2 more digits for rounding and division */
-            size_t const max_len = roomof(prec_limit, BASE_FIG) + 2;
-            if (len > max_len)
-                return max_len;
-        }
-    }
-
-    return len;
-}
-
 static inline Real *
-rbd_allocate_struct_decimal_digits(size_t const decimal_digits, bool limit_precision)
+rbd_allocate_struct_decimal_digits(size_t const decimal_digits)
 {
-    size_t const internal_digits = rbd_calculate_internal_digits(decimal_digits, limit_precision);
-    return rbd_allocate_struct(internal_digits);
+    return rbd_allocate_struct(roomof(decimal_digits, BASE_FIG));
 }
-
-static VALUE BigDecimal_wrap_struct(VALUE obj, Real *vp);
 
 static void
 rbd_free_struct(Real *real)
@@ -206,56 +186,27 @@ rbd_free_struct(Real *real)
     }
 }
 
+MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero(int sign, size_t const digits));
 #define NewZero rbd_allocate_struct_zero
-static Real *
-rbd_allocate_struct_zero(int sign, size_t const digits, bool limit_precision)
+static inline Real *
+rbd_allocate_struct_zero(int sign, size_t const digits)
 {
-    Real *real = rbd_allocate_struct_decimal_digits(digits, limit_precision);
+    Real *real = rbd_allocate_struct_decimal_digits(digits);
     VpSetZero(real, sign);
     return real;
 }
 
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_limited(int sign, size_t const digits));
-#define NewZeroLimited rbd_allocate_struct_zero_limited
-static inline Real *
-rbd_allocate_struct_zero_limited(int sign, size_t const digits)
-{
-    return rbd_allocate_struct_zero(sign, digits, true);
-}
-
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero_nolimit(int sign, size_t const digits));
-#define NewZeroNolimit rbd_allocate_struct_zero_nolimit
-static inline Real *
-rbd_allocate_struct_zero_nolimit(int sign, size_t const digits)
-{
-    return rbd_allocate_struct_zero(sign, digits, false);
-}
-
-#define NewOne rbd_allocate_struct_one
-static Real *
-rbd_allocate_struct_one(int sign, size_t const digits, bool limit_precision)
-{
-    Real *real = rbd_allocate_struct_decimal_digits(digits, limit_precision);
-    VpSetOne(real);
-    if (sign < 0)
-        VpSetSign(real, VP_SIGN_NEGATIVE_FINITE);
-    return real;
-}
-
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_limited(int sign, size_t const digits));
-#define NewOneLimited rbd_allocate_struct_one_limited
-static inline Real *
-rbd_allocate_struct_one_limited(int sign, size_t const digits)
-{
-    return rbd_allocate_struct_one(sign, digits, true);
-}
-
+// Only used in VpSqrt through BigDecimal_sqrt
 MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_nolimit(int sign, size_t const digits));
 #define NewOneNolimit rbd_allocate_struct_one_nolimit
 static inline Real *
 rbd_allocate_struct_one_nolimit(int sign, size_t const digits)
 {
-    return rbd_allocate_struct_one(sign, digits, false);
+    Real *real = rbd_allocate_struct_decimal_digits(digits);
+    VpSetOne(real);
+    if (sign < 0)
+        VpSetSign(real, VP_SIGN_NEGATIVE_FINITE);
+    return real;
 }
 
 /*
@@ -313,60 +264,35 @@ static const rb_data_type_t BigDecimal_data_type = {
 #endif
 };
 
-static NULLABLE_BDVALUE
-rbd_allocate_struct_zero_wrap_klass(VALUE klass, int sign, size_t const digits, bool limit_precision)
+static VALUE
+BigDecimal_wrap_struct(VALUE klass, Real *real)
 {
-    VALUE obj = Qnil;
-    Real *real = rbd_allocate_struct_zero(sign, digits, limit_precision);
-    if (real != NULL) {
-        obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-        BigDecimal_wrap_struct(obj, real);
-    }
-    return (NULLABLE_BDVALUE) { obj, real };
+    VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, real);
+    RB_OBJ_FREEZE(obj);
+    return obj;
 }
 
+MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_wrap(int sign, size_t const digits));
+#define NewZeroWrap rbd_allocate_struct_zero_wrap
+static BDVALUE
+rbd_allocate_struct_zero_wrap(int sign, size_t const digits)
+{
+    Real *real = rbd_allocate_struct_zero(sign, digits);
+    return (BDVALUE) { BigDecimal_wrap_struct(rb_cBigDecimal, real), real };
+}
+
+// Only used in BigDecimal_sqrt
 MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_limited_wrap(int sign, size_t const digits));
 #define NewZeroWrapLimited rbd_allocate_struct_zero_limited_wrap
 static inline BDVALUE
-rbd_allocate_struct_zero_limited_wrap(int sign, size_t const digits)
+rbd_allocate_struct_zero_limited_wrap(int sign, size_t digits)
 {
-    return bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, true));
-}
-
-MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_nolimit_wrap(int sign, size_t const digits));
-#define NewZeroWrapNolimit rbd_allocate_struct_zero_nolimit_wrap
-static inline BDVALUE
-rbd_allocate_struct_zero_nolimit_wrap(int sign, size_t const digits)
-{
-    return bdvalue_nonnullable(rbd_allocate_struct_zero_wrap_klass(rb_cBigDecimal, sign, digits, false));
-}
-
-static NULLABLE_BDVALUE
-rbd_allocate_struct_one_wrap_klass(VALUE klass, int sign, size_t const digits, bool limit_precision)
-{
-    VALUE obj = Qnil;
-    Real *real = rbd_allocate_struct_one(sign, digits, limit_precision);
-    if (real != NULL) {
-        obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-        BigDecimal_wrap_struct(obj, real);
+    size_t prec_limit = VpGetPrecLimit();
+    if (prec_limit) {
+        prec_limit += 2 * BASE_FIG; /* 2 more digits for rounding and division */
+        if (prec_limit < digits) digits = prec_limit;
     }
-    return (NULLABLE_BDVALUE) { obj, real };
-}
-
-MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_one_limited_wrap(int sign, size_t const digits));
-#define NewOneWrapLimited rbd_allocate_struct_one_limited_wrap
-static inline BDVALUE
-rbd_allocate_struct_one_limited_wrap(int sign, size_t const digits)
-{
-    return bdvalue_nonnullable(rbd_allocate_struct_one_wrap_klass(rb_cBigDecimal, sign, digits, true));
-}
-
-MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_one_nolimit_wrap(int sign, size_t const digits));
-#define NewOneWrapNolimit rbd_allocate_struct_one_nolimit_wrap
-static inline BDVALUE
-rbd_allocate_struct_one_nolimit_wrap(int sign, size_t const digits)
-{
-    return bdvalue_nonnullable(rbd_allocate_struct_one_wrap_klass(rb_cBigDecimal, sign, digits, false));
+    return rbd_allocate_struct_zero_wrap(sign, digits);
 }
 
 static inline int
@@ -397,7 +323,7 @@ static inline VALUE BigDecimal_div2(VALUE, VALUE, VALUE);
 static VALUE rb_inum_convert_to_BigDecimal(VALUE val);
 static VALUE rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 static VALUE rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
-static VALUE rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exception);
+static VALUE rb_cstr_convert_to_BigDecimal(const char *c_str, int raise_exception);
 static VALUE rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception);
 
 static NULLABLE_BDVALUE
@@ -427,7 +353,7 @@ GetBDValueWithPrecInternal(VALUE v, size_t prec, int must)
 #ifdef ENABLE_NUMERIC_STRING
       case T_STRING: {
         const char *c_str = StringValueCStr(v);
-        v = rb_cstr_convert_to_BigDecimal(c_str, RSTRING_LEN(v) + VpBaseFig() + 1, must);
+        v = rb_cstr_convert_to_BigDecimal(c_str, must);
         break;
       }
 #endif /* ENABLE_NUMERIC_STRING */
@@ -821,7 +747,7 @@ BigDecimal_load(VALUE self, VALUE str)
             rb_raise(rb_eTypeError, "load failed: invalid character in the marshaled string");
         }
     }
-    v = bdvalue_nonnullable(CreateFromString(0, (char *)pch, self, true, true));
+    v = bdvalue_nonnullable(CreateFromString((char *)pch, self, true, true));
     return CheckGetValue(v);
 }
 
@@ -1138,31 +1064,12 @@ check_int_precision(VALUE v)
     return n;
 }
 
-static VALUE
-BigDecimal_wrap_struct(VALUE obj, Real *vp)
-{
-    assert(is_kind_of_BigDecimal(obj));
-    assert(vp != NULL);
-
-    if (RTYPEDDATA_DATA(obj) == vp)
-        return obj;
-
-    assert(RTYPEDDATA_DATA(obj) == NULL);
-
-    RTYPEDDATA_DATA(obj) = vp;
-    RB_OBJ_FREEZE(obj);
-    return obj;
-}
-
 static NULLABLE_BDVALUE
-CreateFromString(size_t mx, const char *str, VALUE klass, bool strict_p, bool raise_exception)
+CreateFromString(const char *str, VALUE klass, bool strict_p, bool raise_exception)
 {
-    VALUE obj = TypedData_Wrap_Struct(klass, &BigDecimal_data_type, 0);
-    Real *pv = VpAlloc(mx, str, strict_p, raise_exception);
-    if (!pv)
-        return (NULLABLE_BDVALUE) { Qnil, NULL };
-    BigDecimal_wrap_struct(obj, pv);
-    return (NULLABLE_BDVALUE) { obj, pv };
+    Real *pv = VpAlloc(str, strict_p, raise_exception);
+    if (!pv) return (NULLABLE_BDVALUE) { Qnil, NULL };
+    return (NULLABLE_BDVALUE) { BigDecimal_wrap_struct(klass, pv), pv };
 }
 
 static Real *
@@ -1448,13 +1355,13 @@ BigDecimal_addsub_with_coerce(VALUE self, VALUE r, size_t prec, int operation)
     mx = GetAddSubPrec(a.real, b.real);
     if (mx == (size_t)-1L) {
         /* a or b is inf */
-        c = NewZeroWrapLimited(1, BASE_FIG);
+        c = NewZeroWrap(1, BASE_FIG);
         VpAddSub(c.real, a.real, b.real, operation);
     }
     else {
+        c = NewZeroWrap(1, (mx + 1) * BASE_FIG);
         size_t pl = VpGetPrecLimit();
         if (prec) VpSetPrecLimit(prec);
-        c = NewZeroWrapLimited(1, (mx + 1) * BASE_FIG);
         // Let VpAddSub round the result
         VpAddSub(c.real, a.real, b.real, operation);
         if (prec) VpSetPrecLimit(pl);
@@ -1702,7 +1609,7 @@ static VALUE
 BigDecimal_neg(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapNolimit(1, a.real->Prec * BASE_FIG);
+    BDVALUE c = NewZeroWrap(1, a.real->Prec * BASE_FIG);
     VpAsgn(c.real, a.real, -10);
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
@@ -1733,7 +1640,7 @@ BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t prec)
     a = GetBDValueMust(self);
     b = GetBDValueWithPrecMust(r, GetCoercePrec(a.real, prec));
 
-    c = NewZeroWrapNolimit(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    c = NewZeroWrap(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
     if (prec) {
         VpLeftRound(c.real, VpGetRoundMode(), prec);
@@ -1862,14 +1769,14 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     a_exponent = VpExponent10(a.real);
     b_exponent = VpExponent10(b.real);
     mx = a_exponent > b_exponent ? a_exponent - b_exponent + 1 : 1;
-    dv = NewZeroWrapNolimit(1, VPDIVD_QUO_DIGITS(mx));
+    dv = NewZeroWrap(1, VPDIVD_QUO_DIGITS(mx));
 
     /* res is reused for VpDivd remainder and VpMult result */
     rx = VPDIVD_REM_PREC(a.real, b.real, dv.real);
     mx = VPMULT_RESULT_PREC(dv.real, b.real);
-    res = NewZeroWrapNolimit(1, Max(rx, mx) * BASE_FIG);
+    res = NewZeroWrap(1, Max(rx, mx) * BASE_FIG);
     /* AddSub needs one more prec */
-    md = NewZeroWrapNolimit(1, (res.real->MaxPrec + 1) * BASE_FIG);
+    md = NewZeroWrap(1, (res.real->MaxPrec + 1) * BASE_FIG);
 
     VpDivd(dv.real, res.real, a.real, b.real);
     VpMidRound(dv.real, VP_ROUND_DOWN, 0);
@@ -1881,8 +1788,8 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
 
     if (!truncate && !VpIsZero(md.real) && (VpGetSign(a.real) * VpGetSign(b.real) < 0)) {
         /* result adjustment for negative case */
-        BDVALUE dv2 = NewZeroWrapNolimit(1, (dv.real->MaxPrec + 1) * BASE_FIG);
-        BDVALUE md2 = NewZeroWrapNolimit(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG);
+        BDVALUE dv2 = NewZeroWrap(1, (dv.real->MaxPrec + 1) * BASE_FIG);
+        BDVALUE md2 = NewZeroWrap(1, (GetAddSubPrec(md.real, b.real) + 1) * BASE_FIG);
         VpSetPrecLimit(0);
         VpAddSub(dv2.real, dv.real, VpOne(), -1);
         VpAddSub(md2.real, md.real, b.real, 1);
@@ -2013,8 +1920,8 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     }
 
     // Needs to calculate 1 extra digit for rounding.
-    cv = NewZeroWrapNolimit(1, VPDIVD_QUO_DIGITS(ix + 1));
-    res = NewZeroWrapNolimit(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG);
+    cv = NewZeroWrap(1, VPDIVD_QUO_DIGITS(ix + 1));
+    res = NewZeroWrap(1, VPDIVD_REM_PREC(av.real, bv.real, cv.real) * BASE_FIG);
     VpDivd(cv.real, res.real, av.real, bv.real);
 
     if (!VpIsZero(res.real)) {
@@ -2176,7 +2083,7 @@ static VALUE
 BigDecimal_abs(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapNolimit(1, a.real->Prec * BASE_FIG);
+    BDVALUE c = NewZeroWrap(1, a.real->Prec * BASE_FIG);
     VpAsgn(c.real, a.real, 10);
     VpChangeSign(c.real, 1);
     RB_GC_GUARD(a.bigdecimal);
@@ -2215,7 +2122,7 @@ static VALUE
 BigDecimal_fix(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapNolimit(1, (a.real->Prec + 1) * BASE_FIG);
+    BDVALUE c = NewZeroWrap(1, (a.real->Prec + 1) * BASE_FIG);
     VpActiveRound(c.real, a.real, VP_ROUND_DOWN, 0); /* 0: round off */
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
@@ -2288,7 +2195,7 @@ BigDecimal_round(int argc, VALUE *argv, VALUE self)
 
     a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapNolimit(1, mx);
+    c = NewZeroWrap(1, mx);
 
     VpActiveRound(c.real, a.real, sw, iLoc);
 
@@ -2317,7 +2224,7 @@ BigDecimal_truncate_floor_ceil(int argc, VALUE *argv, VALUE self, unsigned short
 
     a = GetBDValueMust(self);
     mx = (a.real->Prec + 1) * BASE_FIG;
-    c = NewZeroWrapNolimit(1, mx);
+    c = NewZeroWrap(1, mx);
     VpActiveRound(c.real, a.real, rounding_mode, iLoc);
 
     RB_GC_GUARD(a.bigdecimal);
@@ -2359,7 +2266,7 @@ static VALUE
 BigDecimal_frac(VALUE self)
 {
     BDVALUE a = GetBDValueMust(self);
-    BDVALUE c = NewZeroWrapNolimit(1, (a.real->Prec + 1) * BASE_FIG);
+    BDVALUE c = NewZeroWrap(1, (a.real->Prec + 1) * BASE_FIG);
     VpFrac(c.real, a.real);
     RB_GC_GUARD(a.bigdecimal);
     return CheckGetValue(c);
@@ -2677,12 +2584,9 @@ check_exception(VALUE bd)
 static VALUE
 rb_uint64_convert_to_BigDecimal(uint64_t uval)
 {
-    VALUE obj = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
-
     Real *vp;
     if (uval == 0) {
         vp = rbd_allocate_struct(1);
-        vp->MaxPrec = 1;
         vp->Prec = 1;
         vp->exponent = 1;
         VpSetZero(vp, 1);
@@ -2690,7 +2594,6 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval)
     }
     else if (uval < BASE) {
         vp = rbd_allocate_struct(1);
-        vp->MaxPrec = 1;
         vp->Prec = 1;
         vp->exponent = 1;
         VpSetSign(vp, 1);
@@ -2716,14 +2619,13 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval)
 
         const size_t exp = len + ntz;
         vp = rbd_allocate_struct(len);
-        vp->MaxPrec = len;
         vp->Prec = len;
         vp->exponent = exp;
         VpSetSign(vp, 1);
         MEMCPY(vp->frac, buf + BIGDECIMAL_INT64_MAX_LENGTH - len, DECDIG, len);
     }
 
-    return BigDecimal_wrap_struct(obj, vp);
+    return BigDecimal_wrap_struct(rb_cBigDecimal, vp);
 }
 
 static VALUE
@@ -2771,7 +2673,6 @@ rb_big_convert_to_BigDecimal(VALUE val)
     else {
         VALUE str = rb_big2str(val, 10);
         BDVALUE v = bdvalue_nonnullable(CreateFromString(
-            RSTRING_LEN(str) + BASE_FIG + 1,
             RSTRING_PTR(str),
             rb_cBigDecimal,
             true,
@@ -2969,21 +2870,18 @@ rb_rational_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
 }
 
 static VALUE
-rb_cstr_convert_to_BigDecimal(const char *c_str, size_t digs, int raise_exception)
+rb_cstr_convert_to_BigDecimal(const char *c_str, int raise_exception)
 {
-    if (digs == SIZE_MAX)
-        digs = 0;
-
-    NULLABLE_BDVALUE v = CreateFromString(digs, c_str, rb_cBigDecimal, true, raise_exception);
+    NULLABLE_BDVALUE v = CreateFromString(c_str, rb_cBigDecimal, true, raise_exception);
     if (v.bigdecimal_or_nil == Qnil) return Qnil;
     return CheckGetValue(bdvalue_nonnullable(v));
 }
 
 static inline VALUE
-rb_str_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
+rb_str_convert_to_BigDecimal(VALUE val, int raise_exception)
 {
     const char *c_str = StringValueCStr(val);
-    return rb_cstr_convert_to_BigDecimal(c_str, digs, raise_exception);
+    return rb_cstr_convert_to_BigDecimal(c_str, raise_exception);
 }
 
 static VALUE
@@ -3013,11 +2911,11 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
 
         Real *vp;
         TypedData_Get_Struct(val, Real, &BigDecimal_data_type, vp);
-
-        VALUE copy = TypedData_Wrap_Struct(rb_cBigDecimal, &BigDecimal_data_type, 0);
         vp = VpCopy(NULL, vp);
+        RB_GC_GUARD(val);
+
+        VALUE copy = BigDecimal_wrap_struct(rb_cBigDecimal, vp);
         /* TODO: rounding */
-        BigDecimal_wrap_struct(copy, vp);
         return check_exception(copy);
     }
     else if (RB_INTEGER_TYPE_P(val)) {
@@ -3039,7 +2937,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         return rb_convert_to_BigDecimal(rb_complex_real(val), digs, raise_exception);
     }
     else if (RB_TYPE_P(val, T_STRING)) {
-        return rb_str_convert_to_BigDecimal(val, 0, raise_exception);
+        return rb_str_convert_to_BigDecimal(val, raise_exception);
     }
 
     /* TODO: chheck to_d */
@@ -3053,7 +2951,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         }
         return Qnil;
     }
-    return rb_str_convert_to_BigDecimal(str, 0, raise_exception);
+    return rb_str_convert_to_BigDecimal(str, raise_exception);
 }
 
 /*  call-seq:
@@ -3143,7 +3041,7 @@ static VALUE
 BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
 {
     char const *c_str = StringValueCStr(str);
-    NULLABLE_BDVALUE v = CreateFromString(0, c_str, klass, false, true);
+    NULLABLE_BDVALUE v = CreateFromString(c_str, klass, false, true);
     if (v.bigdecimal_or_nil == Qnil)
         return Qnil;
     else
@@ -3343,8 +3241,8 @@ BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
     size_t cn = NUM2INT(cprec);
     a = GetBDValueMust(self);
     b = GetBDValueMust(r);
-    c = NewZeroWrapNolimit(1, cn * BASE_FIG);
-    d = NewZeroWrapNolimit(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
+    c = NewZeroWrap(1, cn * BASE_FIG);
+    d = NewZeroWrap(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
     VpDivd(c.real, d.real, a.real, b.real);
     RB_GC_GUARD(a.bigdecimal);
     RB_GC_GUARD(b.bigdecimal);
@@ -3356,7 +3254,7 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
     BDVALUE a,b,c;
     a = GetBDValueMust(self);
     b = GetBDValueMust(v);
-    c = NewZeroWrapNolimit(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    c = NewZeroWrap(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
     VpMult(c.real, a.real, b.real);
     RB_GC_GUARD(a.bigdecimal);
     RB_GC_GUARD(b.bigdecimal);
@@ -4181,10 +4079,12 @@ VpInit(DECDIG BaseVal)
     VpGetDoubleNegZero();
 
     /* Const 1.0 */
-    VpConstOne = NewOneNolimit(1, 1);
+    VpConstOne = NewZero(1, 1);
+    VpSetOne(VpConstOne);
 
     /* Const 0.5 */
-    VpConstPt5 = NewOneNolimit(1, 1);
+    VpConstPt5 = NewZero(1, 1);
+    VpSetSign(VpConstPt5, 1);
     VpConstPt5->exponent = 0;
     VpConstPt5->frac[0] = 5*BASE1;
 
@@ -4255,7 +4155,6 @@ bigdecimal_parse_special_string(const char *str)
         while (*p && ISSPACE(*p)) ++p;
         if (*p == '\0') {
             Real *vp = rbd_allocate_struct(1);
-            vp->MaxPrec = 1;
             switch (table[i].sign) {
               default:
                 UNREACHABLE; break;
@@ -4320,37 +4219,21 @@ protected_VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size
 /*
  * Allocates variable.
  * [Input]
- *   mx ... The number of decimal digits to be allocated, if zero then mx is determined by szVal.
- *          The mx will be the number of significant digits can to be stored.
- *   szVal ... The value assigned(char). If szVal==NULL, then zero is assumed.
- *             If szVal[0]=='#' then MaxPrec is not affected by the precision limit
- *             so that the full precision specified by szVal is allocated.
+ *   szVal ... The value assigned(char).
  *
  * [Returns]
  *   Pointer to the newly allocated variable, or
  *   NULL be returned if memory allocation is failed,or any error.
  */
 VP_EXPORT Real *
-VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
+VpAlloc(const char *szVal, int strict_p, int exc)
 {
     const char *orig_szVal = szVal;
     size_t i, j, ni, ipf, nf, ipe, ne, exp_seen, nalloc;
-    size_t len;
     char v, *psz;
     int  sign=1;
     Real *vp = NULL;
     VALUE buf;
-
-    if (szVal == NULL) {
-      return_zero:
-        /* necessary to be able to store */
-        /* at least mx digits. */
-        /* szVal==NULL ==> allocate zero value. */
-        vp = rbd_allocate_struct(mx);
-        vp->MaxPrec = rbd_calculate_internal_digits(mx, false);  /* Must false */
-        VpSetZero(vp, 1);    /* initialize vp to zero. */
-        return vp;
-    }
 
     /* Skipping leading spaces */
     while (ISSPACE(*szVal)) szVal++;
@@ -4360,14 +4243,11 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
         return vp;
     }
 
-    /* Processing the leading one `#` */
-    if (*szVal != '#') {
-        len = rbd_calculate_internal_digits(mx, true);
-    }
-    else {
-        len = rbd_calculate_internal_digits(mx, false);
-        ++szVal;
-    }
+    /* Skip leading `#`.
+     * It used to be a mark to indicate that an extra MaxPrec should be allocated,
+     * but now it has no effect.
+     */
+    if (*szVal == '#') ++szVal;
 
     /* Scanning digits */
 
@@ -4514,7 +4394,7 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
         VALUE str;
       invalid_value:
         if (!strict_p) {
-            goto return_zero;
+            return NewZero(1, 1);
         }
         if (!exc) {
             return NULL;
@@ -4525,11 +4405,7 @@ VpAlloc(size_t mx, const char *szVal, int strict_p, int exc)
 
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
     /* units for szVal[]  */
-    if (len == 0) len = 1;
-    nalloc = Max(nalloc, len);
-    len = nalloc;
-    vp = rbd_allocate_struct(len);
-    vp->MaxPrec = len;        /* set max precision */
+    vp = rbd_allocate_struct(nalloc);
     VpSetZero(vp, sign);
     protected_VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne, true);
     rb_str_resize(buf, 0);
@@ -5048,7 +4924,7 @@ VpMult(Real *c, Real *a, Real *b)
     // Only VpSqrt calls VpMult with insufficient precision
     if (c->MaxPrec < VPMULT_RESULT_PREC(a, b)) {
         w = c;
-        c = NewZeroNolimit(1, VPMULT_RESULT_PREC(a, b) * BASE_FIG);
+        c = NewZero(1, VPMULT_RESULT_PREC(a, b) * BASE_FIG);
     }
 
     /* set LHSV c info */
