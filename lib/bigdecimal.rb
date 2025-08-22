@@ -200,52 +200,55 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 
-    if x > 10 || x < 0.1
-      log10 = log(BigDecimal(10), prec)
-      exponent = x.exponent
-      x = x * BigDecimal("1e#{-x.exponent}")
-      if x < 0.3
-        x *= 10
-        exponent -= 1
+    BigDecimal.save_limit do
+      BigDecimal.limit(0)
+      if x > 10 || x < 0.1
+        log10 = log(BigDecimal(10), prec)
+        exponent = x.exponent
+        x *= BigDecimal("1e#{-x.exponent}")
+        if x < 0.3
+          x *= 10
+          exponent -= 1
+        end
+        return log10 * exponent + log(x, prec)
       end
-      return log10 * exponent + log(x, prec)
+
+      x_minus_one_exponent = (x - 1).exponent
+      prec += BigDecimal.double_fig
+
+      # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
+      sqrt_steps = [2 * Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
+
+      # Reduce sqrt_step until sqrt gets fast
+      # https://github.com/ruby/bigdecimal/pull/323
+      # https://github.com/ruby/bigdecimal/pull/343
+      sqrt_steps /= 10
+
+      lg2 = 0.3010299956639812
+      prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
+
+      sqrt_steps.times do
+        x = x.sqrt(prec2)
+
+        # Workaround for https://github.com/ruby/bigdecimal/issues/354
+        x = x.mult(1, prec2 + BigDecimal.double_fig)
+      end
+
+      # Taylor series for log(x) around 1
+      # log(x) = -log((1 + X) / (1 - X)) where X = (x - 1) / (x + 1)
+      # log(x) = 2 * (X + X**3 / 3 + X**5 / 5 + X**7 / 7 + ...)
+      x = (x - 1).div(x + 1, prec2)
+      y = x
+      x2 = x.mult(x, prec)
+      1.step do |i|
+        n = prec + x.exponent - y.exponent + x2.exponent
+        break if n <= 0 || x.zero?
+        x = x.mult(x2.round(n - x2.exponent), n)
+        y = y.add(x.div(2 * i + 1, n), prec)
+      end
+
+      y.mult(2 ** (sqrt_steps + 1), prec)
     end
-
-    x_minus_one_exponent = (x - 1).exponent
-    prec += BigDecimal.double_fig
-
-    # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
-    sqrt_steps = [2 * Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
-
-    # Reduce sqrt_step until sqrt gets fast
-    # https://github.com/ruby/bigdecimal/pull/323
-    # https://github.com/ruby/bigdecimal/pull/343
-    sqrt_steps /= 10
-
-    lg2 = 0.3010299956639812
-    prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
-
-    sqrt_steps.times do
-      x = x.sqrt(prec2)
-
-      # Workaround for https://github.com/ruby/bigdecimal/issues/354
-      x = x.mult(1, prec2 + BigDecimal.double_fig)
-    end
-
-    # Taylor series for log(x) around 1
-    # log(x) = -log((1 + X) / (1 - X)) where X = (x - 1) / (x + 1)
-    # log(x) = 2 * (X + X**3 / 3 + X**5 / 5 + X**7 / 7 + ...)
-    x = (x - 1).div(x + 1, prec2)
-    y = x
-    x2 = x.mult(x, prec)
-    1.step do |i|
-      n = prec + x.exponent - y.exponent + x2.exponent
-      break if n <= 0 || x.zero?
-      x = x.mult(x2.round(n - x2.exponent), n)
-      y = y.add(x.div(2 * i + 1, n), prec)
-    end
-
-    y.mult(2 ** (sqrt_steps + 1), prec)
   end
 
   # call-seq:
@@ -266,30 +269,33 @@ module BigMath
     return BigDecimal(1) if x.zero?
     return BigDecimal(1).div(exp(-x, prec), prec) if x < 0
 
-    # exp(x * 10**cnt) = exp(x)**(10**cnt)
-    cnt = x > 1 ? x.exponent : 0
-    prec2 = prec + BigDecimal.double_fig + cnt
-    x *= BigDecimal("1e-#{cnt}")
-    xn = BigDecimal(1)
-    y = BigDecimal(1)
+    BigDecimal.save_limit do
+      BigDecimal.limit(0)
+      # exp(x * 10**cnt) = exp(x)**(10**cnt)
+      cnt = x > 1 ? x.exponent : 0
+      prec2 = prec + BigDecimal.double_fig + cnt
+      x *= BigDecimal("1e-#{cnt}")
+      xn = BigDecimal(1)
+      y = BigDecimal(1)
 
-    # Taylor series for exp(x) around 0
-    1.step do |i|
-      n = prec2 + xn.exponent
-      break if n <= 0 || xn.zero?
-      x = x.mult(1, n)
-      xn = xn.mult(x, n).div(i, n)
-      y = y.add(xn, prec2)
+      # Taylor series for exp(x) around 0
+      1.step do |i|
+        n = prec2 + xn.exponent
+        break if n <= 0 || xn.zero?
+        x = x.mult(1, n)
+        xn = xn.mult(x, n).div(i, n)
+        y = y.add(xn, prec2)
+      end
+
+      # calculate exp(x * 10**cnt) from exp(x)
+      # exp(x * 10**k) = exp(x * 10**(k - 1)) ** 10
+      cnt.times do
+        y2 = y.mult(y, prec2)
+        y5 = y2.mult(y2, prec2).mult(y, prec2)
+        y = y5.mult(y5, prec2)
+      end
+
+      y.mult(1, prec)
     end
-
-    # calculate exp(x * 10**cnt) from exp(x)
-    # exp(x * 10**k) = exp(x * 10**(k - 1)) ** 10
-    cnt.times do
-      y2 = y.mult(y, prec2)
-      y5 = y2.mult(y2, prec2).mult(y, prec2)
-      y = y5.mult(y5, prec2)
-    end
-
-    y.mult(1, prec)
   end
 end
