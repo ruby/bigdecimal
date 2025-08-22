@@ -1905,18 +1905,17 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
     /* div in BigDecimal sense */
     ix = check_int_precision(n);
 
-    if (ix == 0) ix = VpGetPrecLimit();
-
     av = GetBDValueMust(self);
     bv = GetBDValueWithPrecMust(b, GetCoercePrec(av.real, ix));
 
     if (ix == 0) {
-        ssize_t a_prec, b_prec;
+        ssize_t a_prec, b_prec, limit = VpGetPrecLimit();
         VpCountPrecisionAndScale(av.real, &a_prec, NULL);
         VpCountPrecisionAndScale(bv.real, &b_prec, NULL);
         ix = ((a_prec > b_prec) ? a_prec : b_prec) + BIGDECIMAL_DOUBLE_FIGURES;
         if (2 * BIGDECIMAL_DOUBLE_FIGURES > ix)
             ix = 2 * BIGDECIMAL_DOUBLE_FIGURES;
+        if (limit && limit < ix) ix = limit;
     }
 
     // Needs to calculate 1 extra digit for rounding.
