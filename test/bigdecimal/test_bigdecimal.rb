@@ -150,6 +150,7 @@ class TestBigDecimal < Test::Unit::TestCase
     bd = BigDecimal("1.12", 1)
     assert_same(bd, BigDecimal(bd))
     assert_same(bd, BigDecimal(bd, exception: false))
+    assert_equal(bd, BigDecimal(bd, 1))
     assert_not_same(bd, BigDecimal(bd, 1))
     assert_not_same(bd, BigDecimal(bd, 1, exception: false))
   end
