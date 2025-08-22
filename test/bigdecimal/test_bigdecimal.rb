@@ -2429,6 +2429,25 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
+  def test_exp_log_pow_with_limit
+    prec = 100
+    limit = 10
+    x = BigDecimal(123).div(7, prec)
+    y = BigDecimal(456).div(11, prec)
+    exp = BigMath.exp(x, prec)
+    log = BigMath.log(x, prec)
+    pow = x.power(y, prec)
+    pow_lim = x.power(y, limit)
+    BigDecimal.save_limit do
+      BigDecimal.limit(limit)
+      assert_equal(exp, BigMath.exp(x, prec))
+      assert_equal(log, BigMath.log(x, prec))
+      assert_equal(pow, x.power(y, prec))
+      assert_equal(pow_lim, x**y)
+      assert_equal(limit, BigDecimal.limit)
+    end
+  end
+
   def test_frozen_p
     x = BigDecimal(1)
     assert(x.frozen?)
