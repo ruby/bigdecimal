@@ -2032,6 +2032,15 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_div_with_huge_limit
+    BigDecimal.save_limit do
+      x, y = BigDecimal(2), BigDecimal(3)
+      div = x / y
+      BigDecimal.limit(1000)
+      assert_equal(div, x / y)
+    end
+  end
+
   def test_div_mod_rem_operation_with_limit
     x = -(9 ** 100)
     y = 7 ** 100
