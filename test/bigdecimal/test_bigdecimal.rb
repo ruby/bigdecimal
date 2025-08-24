@@ -2484,7 +2484,8 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.save_limit do
       BigDecimal.limit(limit)
       assert_equal(sqrt, BigMath.sqrt(x, prec))
-      assert_equal(sqrt_lim, BigMath.sqrt(x, 0))
+      assert_equal(sqrt, x.sqrt(prec))
+      assert_equal(sqrt_lim, x.sqrt(0))
       assert_equal(exp, BigMath.exp(x, prec))
       assert_equal(log, BigMath.log(x, prec))
       assert_equal(pow, x.power(y, prec))
