@@ -2459,6 +2459,7 @@ class TestBigDecimal < Test::Unit::TestCase
     x = BigDecimal(123).div(7, prec)
     y = BigDecimal(456).div(11, prec)
     sqrt = BigMath.sqrt(x, prec)
+    sqrt_lim = sqrt.mult(1, limit)
     exp = BigMath.exp(x, prec)
     log = BigMath.log(x, prec)
     pow = x.power(y, prec)
@@ -2466,6 +2467,7 @@ class TestBigDecimal < Test::Unit::TestCase
     BigDecimal.save_limit do
       BigDecimal.limit(limit)
       assert_equal(sqrt, BigMath.sqrt(x, prec))
+      assert_equal(sqrt_lim, BigMath.sqrt(x, 0))
       assert_equal(exp, BigMath.exp(x, prec))
       assert_equal(log, BigMath.log(x, prec))
       assert_equal(pow, x.power(y, prec))

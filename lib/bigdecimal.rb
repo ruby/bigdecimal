@@ -189,6 +189,8 @@ class BigDecimal
     raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
     return self if zero?
 
+    limit = BigDecimal.limit.nonzero? if prec == 0
+
     # BigDecimal#sqrt calculates at least n_significant_digits precision.
     # This feature maybe problematic for some cases.
     n_digits = n_significant_digits
@@ -202,6 +204,7 @@ class BigDecimal
     precs.reverse_each do |p|
       y = y.add(x.div(y, p), p).div(2, p)
     end
+    y = y.mult(1, limit) if limit
     y.mult(BigDecimal("1e#{ex}"), precs.first)
   end
 end
