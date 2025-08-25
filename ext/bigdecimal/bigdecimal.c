@@ -196,19 +196,6 @@ rbd_allocate_struct_zero(int sign, size_t const digits)
     return real;
 }
 
-// Only used in VpSqrt through BigDecimal_sqrt
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_one_nolimit(int sign, size_t const digits));
-#define NewOneNolimit rbd_allocate_struct_one_nolimit
-static inline Real *
-rbd_allocate_struct_one_nolimit(int sign, size_t const digits)
-{
-    Real *real = rbd_allocate_struct_decimal_digits(digits);
-    VpSetOne(real);
-    if (sign < 0)
-        VpSetSign(real, VP_SIGN_NEGATIVE_FINITE);
-    return real;
-}
-
 /*
  * ================== Ruby Interface part ==========================
  */
@@ -279,20 +266,6 @@ rbd_allocate_struct_zero_wrap(int sign, size_t const digits)
 {
     Real *real = rbd_allocate_struct_zero(sign, digits);
     return (BDVALUE) { BigDecimal_wrap_struct(rb_cBigDecimal, real), real };
-}
-
-// Only used in BigDecimal_sqrt
-MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_limited_wrap(int sign, size_t const digits));
-#define NewZeroWrapLimited rbd_allocate_struct_zero_limited_wrap
-static inline BDVALUE
-rbd_allocate_struct_zero_limited_wrap(int sign, size_t digits)
-{
-    size_t prec_limit = VpGetPrecLimit();
-    if (prec_limit) {
-        prec_limit += 2 * BASE_FIG; /* 2 more digits for rounding and division */
-        if (prec_limit < digits) digits = prec_limit;
-    }
-    return rbd_allocate_struct_zero_wrap(sign, digits);
 }
 
 static inline int
@@ -2081,32 +2054,6 @@ BigDecimal_abs(VALUE self)
     return CheckGetValue(c);
 }
 
-/* call-seq:
- *   sqrt(n)
- *
- * Returns the square root of the value.
- *
- * Result has at least n significant digits.
- */
-static VALUE
-BigDecimal_sqrt(VALUE self, VALUE nFig)
-{
-    BDVALUE c, a;
-    size_t mx, n;
-
-    a = GetBDValueMust(self);
-    mx = a.real->Prec * (VpBaseFig() + 1);
-
-    n = check_int_precision(nFig);
-    n += VpDblFig() + VpBaseFig();
-    if (mx <= n) mx = n;
-    c = NewZeroWrapLimited(1, mx);
-    VpSqrt(c.real, a.real);
-
-    RB_GC_GUARD(a.bigdecimal);
-    return CheckGetValue(c);
-}
-
 /* Return the integer part of the number, as a BigDecimal.
  */
 static VALUE
@@ -3594,7 +3541,6 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "dup", BigDecimal_clone, 0);
     rb_define_method(rb_cBigDecimal, "to_f", BigDecimal_to_f, 0);
     rb_define_method(rb_cBigDecimal, "abs", BigDecimal_abs, 0);
-    rb_define_method(rb_cBigDecimal, "sqrt", BigDecimal_sqrt, 1);
     rb_define_method(rb_cBigDecimal, "fix", BigDecimal_fix, 0);
     rb_define_method(rb_cBigDecimal, "round", BigDecimal_round, -1);
     rb_define_method(rb_cBigDecimal, "frac", BigDecimal_frac, 0);
@@ -3666,9 +3612,6 @@ static int gfDebug = 1;         /* Debug switch */
 #endif /* BIGDECIMAL_DEBUG */
 
 static Real *VpConstOne;    /* constant 1.0 */
-static Real *VpConstPt5;    /* constant 0.5 */
-#define maxnr 100UL    /* Maximum iterations for calculating sqrt. */
-                /* used in VpSqrt() */
 
 enum op_sw {
     OP_SW_ADD = 1,  /* + */
@@ -4072,12 +4015,6 @@ VpInit(DECDIG BaseVal)
     /* Const 1.0 */
     VpConstOne = NewZero(1, 1);
     VpSetOne(VpConstOne);
-
-    /* Const 0.5 */
-    VpConstPt5 = NewZero(1, 1);
-    VpSetSign(VpConstPt5, 1);
-    VpConstPt5->exponent = 0;
-    VpConstPt5->frac[0] = 5*BASE1;
 
 #ifdef BIGDECIMAL_DEBUG
     gnAlloc = 0;
@@ -4883,7 +4820,6 @@ VpMult(Real *c, Real *a, Real *b)
     size_t ind_as, ind_ae, ind_bs;
     DECDIG carry;
     DECDIG_DBL s;
-    Real *w;
 
     if (!VpIsDefOP(c, a, b, OP_SW_MULT)) return 0; /* No significant digit */
 
@@ -4903,29 +4839,19 @@ VpMult(Real *c, Real *a, Real *b)
     }
     if (b->Prec > a->Prec) {
 	/* Adjust so that digits(a)>digits(b) */
-	w = a;
+	Real *w = a;
 	a = b;
 	b = w;
     }
-    w = NULL;
     MxIndA = a->Prec - 1;
     MxIndB = b->Prec - 1;
     MxIndAB = a->Prec + b->Prec - 1;
-
-    // Only VpSqrt calls VpMult with insufficient precision
-    if (c->MaxPrec < VPMULT_RESULT_PREC(a, b)) {
-        w = c;
-        c = NewZero(1, VPMULT_RESULT_PREC(a, b) * BASE_FIG);
-    }
 
     /* set LHSV c info */
 
     c->exponent = a->exponent;    /* set exponent */
     VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
-    if (!AddExponent(c, b->exponent)) {
-        if (w) rbd_free_struct(c);
-        return 0;
-    }
+    if (!AddExponent(c, b->exponent)) return 0;
     carry = 0;
     nc = ind_c = MxIndAB;
     memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
@@ -4973,11 +4899,6 @@ VpMult(Real *c, Real *a, Real *b)
 	}
     }
     VpNmlz(c);
-    if (w != NULL) {        /* free work variable */
-        VpAsgn(w, c, 10);
-        rbd_free_struct(c);
-        c = w;
-    }
 
 Exit:
     return c->Prec*BASE_FIG;
@@ -5877,174 +5798,6 @@ VpVtoD(double *d, SIGNED_VALUE *e, Real *m)
 
 Exit:
     return f;
-}
-
-/*
- * m <- d
- */
-VP_EXPORT void
-VpDtoV(Real *m, double d)
-{
-    size_t ind_m, mm;
-    SIGNED_VALUE ne;
-    DECDIG i;
-    double  val, val2;
-
-    if (isnan(d)) {
-	VpSetNaN(m);
-	goto Exit;
-    }
-    if (isinf(d)) {
-	if (d > 0.0) VpSetPosInf(m);
-	else VpSetNegInf(m);
-	goto Exit;
-    }
-
-    if (d == 0.0) {
-	VpSetZero(m, 1);
-	goto Exit;
-    }
-    val = (d > 0.) ? d : -d;
-    ne = 0;
-    if (val >= 1.0) {
-	while (val >= 1.0) {
-	    val /= (double)BASE;
-	    ++ne;
-	}
-    }
-    else {
-	val2 = 1.0 / (double)BASE;
-	while (val < val2) {
-	    val *= (double)BASE;
-	    --ne;
-	}
-    }
-    /* Now val = 0.xxxxx*BASE**ne */
-
-    mm = m->MaxPrec;
-    memset(m->frac, 0, mm * sizeof(DECDIG));
-    for (ind_m = 0; val > 0.0 && ind_m < mm; ind_m++) {
-        val *= (double)BASE;
-        i = (DECDIG)val;
-        val -= (double)i;
-        m->frac[ind_m] = i;
-    }
-    if (ind_m >= mm) ind_m = mm - 1;
-    VpSetSign(m, (d > 0.0) ? 1 : -1);
-    m->Prec = ind_m + 1;
-    m->exponent = ne;
-
-    VpInternalRound(m, 0, (m->Prec > 0) ? m->frac[m->Prec-1] : 0,
-                    (DECDIG)(val*(double)BASE));
-
-Exit:
-    return;
-}
-
-/*
- * y = SQRT(x),  y*y - x =>0
- */
-VP_EXPORT int
-VpSqrt(Real *y, Real *x)
-{
-    Real *f = NULL;
-    Real *r = NULL;
-    size_t y_prec;
-    SIGNED_VALUE n, e;
-    ssize_t nr;
-    double val;
-
-    /* Zero or +Infinity ? */
-    if (VpIsZero(x) || VpIsPosInf(x)) {
-	VpAsgn(y,x,1);
-	goto Exit;
-    }
-
-    /* Negative ? */
-    if (BIGDECIMAL_NEGATIVE_P(x)) {
-	VpSetNaN(y);
-	return VpException(VP_EXCEPTION_OP, "sqrt of negative value", 0);
-    }
-
-    /* NaN ? */
-    if (VpIsNaN(x)) {
-	VpSetNaN(y);
-	return VpException(VP_EXCEPTION_OP, "sqrt of 'NaN'(Not a Number)", 0);
-    }
-
-    /* One ? */
-    if (VpIsOne(x)) {
-	VpSetOne(y);
-	goto Exit;
-    }
-
-    n = (SIGNED_VALUE)y->MaxPrec;
-    if (x->MaxPrec > (size_t)n) n = (ssize_t)x->MaxPrec;
-
-    /* allocate temporally variables  */
-    /* TODO: reconsider MaxPrec of f and r */
-    f = NewOneNolimit(1, y->MaxPrec * (BASE_FIG + 2));
-    r = NewOneNolimit(1, (n + n) * (BASE_FIG + 2));
-
-    nr = 0;
-    y_prec = y->MaxPrec;
-
-    VpVtoD(&val, &e, x);    /* val <- x  */
-    e /= (SIGNED_VALUE)BASE_FIG;
-    n = e / 2;
-    if (e - n * 2 != 0) {
-	val /= BASE;
-	n = (e + 1) / 2;
-    }
-    VpDtoV(y, sqrt(val));    /* y <- sqrt(val) */
-    y->exponent += n;
-    n = (SIGNED_VALUE)roomof(BIGDECIMAL_DOUBLE_FIGURES, BASE_FIG);
-    y->MaxPrec = Min((size_t)n , y_prec);
-    f->MaxPrec = y->MaxPrec + 1;
-    n = (SIGNED_VALUE)(y_prec * BASE_FIG);
-    if (n > (SIGNED_VALUE)maxnr) n = (SIGNED_VALUE)maxnr;
-
-    /*
-     * Perform: y_{n+1} = (y_n - x/y_n) / 2
-     */
-    do {
-        y->MaxPrec *= 2;
-        if (y->MaxPrec > y_prec) y->MaxPrec = y_prec;
-        f->MaxPrec = y->MaxPrec;
-        VpDivd(f, r, x, y);        /* f = x/y    */
-        VpAddSub(r, f, y, -1);     /* r = f - y  */
-        VpMult(f, VpConstPt5, r);  /* f = 0.5*r  */
-        if (y_prec == y->MaxPrec && VpIsZero(f))
-            goto converge;
-        VpAddSub(r, f, y, 1);      /* r = y + f  */
-        VpAsgn(y, r, 1);           /* y = r      */
-    } while (++nr < n);
-
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	printf("ERROR(VpSqrt): did not converge within %ld iterations.\n", nr);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-    y->MaxPrec = y_prec;
-
-converge:
-    VpChangeSign(y, 1);
-#ifdef BIGDECIMAL_DEBUG
-    if (gfDebug) {
-	VpMult(r, y, y);
-	VpAddSub(f, x, r, -1);
-	printf("VpSqrt: iterations = %"PRIdSIZE"\n", nr);
-	VPrint(stdout, "  y =% \n", y);
-	VPrint(stdout, "  x =% \n", x);
-	VPrint(stdout, "  x-y*y = % \n", f);
-    }
-#endif /* BIGDECIMAL_DEBUG */
-    y->MaxPrec = y_prec;
-
-Exit:
-    rbd_free_struct(f);
-    rbd_free_struct(r);
-    return 1;
 }
 
 /*
