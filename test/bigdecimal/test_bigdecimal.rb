@@ -928,8 +928,10 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_raise(FloatDomainError) {( 0 / x).to_i}
     x = BigDecimal("1")
     assert_equal(1, x.to_i)
-    x = BigDecimal((2**100).to_s)
-    assert_equal(2**100, x.to_i)
+
+    assert_equal(2**100, BigDecimal(2**100).to_i)
+    assert_equal(2**100 / 10**50, BigDecimal("#{2**100}e-50").to_i)
+    assert_equal(2**100 * 10**50, BigDecimal("#{2**100}e50").to_i)
   end
 
   def test_to_f
