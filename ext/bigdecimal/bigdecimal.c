@@ -1125,6 +1125,7 @@ BigDecimal_check_num(Real *p)
     VpCheckException(p, true);
 }
 
+static VALUE BigDecimal_fix(VALUE self);
 static VALUE BigDecimal_split(VALUE self);
 
 /* Returns the value as an Integer.
@@ -1134,41 +1135,32 @@ static VALUE BigDecimal_split(VALUE self);
 static VALUE
 BigDecimal_to_i(VALUE self)
 {
-    ssize_t e, nf;
     BDVALUE v;
     VALUE ret;
 
     v = GetBDValueMust(self);
     BigDecimal_check_num(v.real);
 
-    e = VpExponent10(v.real);
-    if (e <= 0) return INT2FIX(0);
-    nf = VpBaseFig();
-    if (e <= nf) {
+    if (v.real->exponent <= 0) return INT2FIX(0);
+    if (v.real->exponent == 1) {
         ret = LONG2NUM((long)(VpGetSign(v.real) * (DECDIG_DBL_SIGNED)v.real->frac[0]));
     }
     else {
-	VALUE a = BigDecimal_split(self);
-	VALUE digits = RARRAY_AREF(a, 1);
-	VALUE numerator = rb_funcall(digits, rb_intern("to_i"), 0);
-	ssize_t dpower = e - (ssize_t)RSTRING_LEN(digits);
+        VALUE fix = (ssize_t)v.real->Prec > v.real->exponent ? BigDecimal_fix(self) : self;
+        VALUE digits = RARRAY_AREF(BigDecimal_split(fix), 1);
+        ssize_t dpower = VpExponent10(v.real) - (ssize_t)RSTRING_LEN(digits);
+        ret = rb_funcall(digits, rb_intern("to_i"), 0);
 
-	if (BIGDECIMAL_NEGATIVE_P(v.real)) {
-	    numerator = rb_funcall(numerator, '*', 1, INT2FIX(-1));
-	}
-	if (dpower < 0) {
-	    ret = rb_funcall(numerator, rb_intern("div"), 1,
-			      rb_funcall(INT2FIX(10), rb_intern("**"), 1,
-					 INT2FIX(-dpower)));
-	}
-	else {
-	    ret = rb_funcall(numerator, '*', 1,
-			     rb_funcall(INT2FIX(10), rb_intern("**"), 1,
-					INT2FIX(dpower)));
-	}
-	if (RB_TYPE_P(ret, T_FLOAT)) {
-	    rb_raise(rb_eFloatDomainError, "Infinity");
-	}
+        if (BIGDECIMAL_NEGATIVE_P(v.real)) {
+            ret = rb_funcall(ret, '*', 1, INT2FIX(-1));
+        }
+        if (dpower) {
+            VALUE pow10 = rb_funcall(INT2FIX(10), rb_intern("**"), 1, SSIZET2NUM(dpower));
+            // In Ruby < 3.4, int**int may return Float::INFINITY
+            if (RB_TYPE_P(pow10, T_FLOAT)) rb_raise(rb_eFloatDomainError, "Infinity");
+
+            ret = rb_funcall(ret, '*', 1, pow10);
+        }
     }
 
     RB_GC_GUARD(v.bigdecimal);
