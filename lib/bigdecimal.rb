@@ -21,9 +21,13 @@ class BigDecimal
       raise ArgumentError, "#{x.inspect} can't be coerced into BigDecimal"
     end
 
-    def self.validate_prec(prec, method_name) # :nodoc:
+    def self.validate_prec(prec, method_name, accept_zero: false) # :nodoc:
       raise ArgumentError, 'precision must be an Integer' unless Integer === prec
-      raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
+      if accept_zero
+        raise ArgumentError, "Negative precision for #{method_name}" if prec < 0
+      else
+        raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
+      end
     end
 
     def self.infinity_computation_result # :nodoc:
@@ -172,6 +176,37 @@ class BigDecimal
     end
     ans.mult(1, prec)
   end
+
+  # Returns the square root of the value.
+  #
+  # Result has at least prec significant digits.
+  #
+  def sqrt(prec)
+    Internal.validate_prec(prec, :sqrt, accept_zero: true)
+    return Internal.infinity_computation_result if infinite? == 1
+
+    raise FloatDomainError, 'sqrt of negative value' if self < 0
+    raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
+    return self if zero?
+
+    limit = BigDecimal.limit.nonzero? if prec == 0
+
+    # BigDecimal#sqrt calculates at least n_significant_digits precision.
+    # This feature maybe problematic for some cases.
+    n_digits = n_significant_digits
+    prec = [prec, n_digits].max
+
+    ex = exponent / 2
+    x = self.mult(BigDecimal("1e#{-ex * 2}"), n_significant_digits)
+    y = BigDecimal(Math.sqrt(x.to_f))
+    precs = [prec + BigDecimal.double_fig]
+    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
+    precs.reverse_each do |p|
+      y = y.add(x.div(y, p), p).div(2, p)
+    end
+    y = y.mult(1, limit) if limit
+    y.mult(BigDecimal("1e#{ex}"), precs.first)
+  end
 end
 
 # Core BigMath methods for BigDecimal (log, exp) are defined here.
@@ -217,12 +252,7 @@ module BigMath
       prec += BigDecimal.double_fig
 
       # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
-      sqrt_steps = [2 * Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
-
-      # Reduce sqrt_step until sqrt gets fast
-      # https://github.com/ruby/bigdecimal/pull/323
-      # https://github.com/ruby/bigdecimal/pull/343
-      sqrt_steps /= 10
+      sqrt_steps = [Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
 
       lg2 = 0.3010299956639812
       prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil

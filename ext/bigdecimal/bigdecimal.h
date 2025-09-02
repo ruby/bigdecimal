@@ -195,7 +195,6 @@ typedef struct {
  */
 
 #define VpBaseFig() BIGDECIMAL_COMPONENT_FIGURES
-#define VpDblFig() BIGDECIMAL_DOUBLE_FIGURES
 
 /* Zero,Inf,NaN (isinf(),isnan() used to check) */
 VP_EXPORT double VpGetDoubleNaN(void);
@@ -229,8 +228,6 @@ VP_EXPORT void VpToString(Real *a, char *buf, size_t bufsize, size_t fFmt, int f
 VP_EXPORT void VpToFString(Real *a, char *buf, size_t bufsize, size_t fFmt, int fPlus);
 VP_EXPORT int VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne);
 VP_EXPORT int VpVtoD(double *d, SIGNED_VALUE *e, Real *m);
-VP_EXPORT void VpDtoV(Real *m,double d);
-VP_EXPORT int VpSqrt(Real *y,Real *x);
 VP_EXPORT int VpActiveRound(Real *y, Real *x, unsigned short f, ssize_t il);
 VP_EXPORT int VpMidRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT int VpLeftRound(Real *y, unsigned short f, ssize_t nf);
