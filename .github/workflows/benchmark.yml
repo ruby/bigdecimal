@@ -53,7 +53,7 @@ jobs:
     - name: Install dependencies
       run: |
         bundle install
-        gem install bigdecimal -v 3.0.0
+        gem install bigdecimal -v 3.1.1
 
     - run: rake compile
 
