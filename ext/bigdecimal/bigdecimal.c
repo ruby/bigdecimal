@@ -207,6 +207,7 @@ rbd_allocate_struct_zero(int sign, size_t const digits)
 static unsigned short VpGetException(void);
 static void  VpSetException(unsigned short f);
 static void VpCheckException(Real *p, bool always);
+static int AddExponent(Real *a, SIGNED_VALUE n);
 static VALUE CheckGetValue(BDVALUE v);
 static void  VpInternalRound(Real *c, size_t ixDigit, DECDIG vPrev, DECDIG v);
 static int   VpLimitRound(Real *c, size_t ixDigit);
@@ -2453,6 +2454,63 @@ BigDecimal_inspect(VALUE self)
     return str;
 }
 
+/* Returns self * 10**v without changing the precision.
+ *   This method is currently for internal use.
+ *
+ *   BigDecimal("0.123e10")._decimal_shift(20) #=> "0.123e30"
+ *   BigDecimal("0.123e10")._decimal_shift(-20) #=> "0.123e-10"
+ */
+static VALUE
+BigDecimal_decimal_shift(VALUE self, VALUE v)
+{
+    BDVALUE a, c;
+    ssize_t shift, exponentShift;
+    bool shiftDown;
+    size_t prec;
+    DECDIG ex, iex;
+
+    a = GetBDValueMust(self);
+    shift = NUM2SSIZET(rb_to_int(v));
+
+    if (VpIsZero(a.real) || VpIsNaN(a.real) || VpIsInf(a.real) || shift == 0) return CheckGetValue(a);
+
+    exponentShift = shift > 0 ? shift / BASE_FIG : (shift + 1) / BASE_FIG - 1;
+    shift -= exponentShift * BASE_FIG;
+    ex = 1;
+    for (int i = 0; i < shift; i++) ex *= 10;
+    shiftDown = a.real->frac[0] * (DECDIG_DBL)ex >= BASE;
+    iex = BASE / ex;
+
+    prec = a.real->Prec + shiftDown;
+    c = NewZeroWrap(1, prec * BASE_FIG);
+    if (shift == 0) {
+        VpAsgn(c.real, a.real, 1);
+    } else if (shiftDown) {
+        DECDIG carry = 0;
+        exponentShift++;
+        for (size_t i = 0; i < a.real->Prec; i++) {
+            DECDIG v = a.real->frac[i];
+            c.real->frac[i] = carry * ex + v / iex;
+            carry = v % iex;
+        }
+        c.real->frac[a.real->Prec] = carry * ex;
+    } else {
+        DECDIG carry = 0;
+        for (ssize_t i = a.real->Prec - 1; i >= 0; i--) {
+            DECDIG v = a.real->frac[i];
+            c.real->frac[i] = v % iex * ex + carry;
+            carry = v / iex;
+        }
+    }
+    while (c.real->frac[prec - 1] == 0) prec--;
+    c.real->Prec = prec;
+    c.real->sign = a.real->sign;
+    c.real->exponent = a.real->exponent;
+    AddExponent(c.real, exponentShift);
+    RB_GC_GUARD(a.bigdecimal);
+    return CheckGetValue(c);
+}
+
 inline static int
 is_zero(VALUE x)
 {
@@ -3564,6 +3622,7 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "infinite?", BigDecimal_IsInfinite, 0);
     rb_define_method(rb_cBigDecimal, "finite?",   BigDecimal_IsFinite, 0);
     rb_define_method(rb_cBigDecimal, "truncate",  BigDecimal_truncate, -1);
+    rb_define_method(rb_cBigDecimal, "_decimal_shift",  BigDecimal_decimal_shift, 1);
     rb_define_method(rb_cBigDecimal, "_dump", BigDecimal_dump, -1);
 
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
@@ -3621,7 +3680,6 @@ enum op_sw {
 };
 
 static int VpIsDefOP(Real *c, Real *a, Real *b, enum op_sw sw);
-static int AddExponent(Real *a, SIGNED_VALUE n);
 static DECDIG VpAddAbs(Real *a,Real *b,Real *c);
 static DECDIG VpSubAbs(Real *a,Real *b,Real *c);
 static size_t VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos, DECDIG *av, DECDIG *bv);

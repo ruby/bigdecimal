@@ -197,7 +197,7 @@ class BigDecimal
     prec = [prec, n_digits].max
 
     ex = exponent / 2
-    x = self.mult(BigDecimal("1e#{-ex * 2}"), n_significant_digits)
+    x = _decimal_shift(-2 * ex)
     y = BigDecimal(Math.sqrt(x.to_f))
     precs = [prec + BigDecimal.double_fig]
     precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
@@ -205,7 +205,7 @@ class BigDecimal
       y = y.add(x.div(y, p), p).div(2, p)
     end
     y = y.mult(1, limit) if limit
-    y.mult(BigDecimal("1e#{ex}"), precs.first)
+    y._decimal_shift(ex)
   end
 end
 
@@ -240,7 +240,7 @@ module BigMath
       if x > 10 || x < 0.1
         log10 = log(BigDecimal(10), prec)
         exponent = x.exponent
-        x *= BigDecimal("1e#{-x.exponent}")
+        x = x._decimal_shift(-exponent)
         if x < 0.3
           x *= 10
           exponent -= 1
@@ -299,33 +299,30 @@ module BigMath
     return BigDecimal(1) if x.zero?
     return BigDecimal(1).div(exp(-x, prec), prec) if x < 0
 
-    BigDecimal.save_limit do
-      BigDecimal.limit(0)
-      # exp(x * 10**cnt) = exp(x)**(10**cnt)
-      cnt = x > 1 ? x.exponent : 0
-      prec2 = prec + BigDecimal.double_fig + cnt
-      x *= BigDecimal("1e-#{cnt}")
-      xn = BigDecimal(1)
-      y = BigDecimal(1)
+    # exp(x * 10**cnt) = exp(x)**(10**cnt)
+    cnt = x > 1 ? x.exponent : 0
+    prec2 = prec + BigDecimal.double_fig + cnt
+    x = x._decimal_shift(-cnt)
+    xn = BigDecimal(1)
+    y = BigDecimal(1)
 
-      # Taylor series for exp(x) around 0
-      1.step do |i|
-        n = prec2 + xn.exponent
-        break if n <= 0 || xn.zero?
-        x = x.mult(1, n)
-        xn = xn.mult(x, n).div(i, n)
-        y = y.add(xn, prec2)
-      end
-
-      # calculate exp(x * 10**cnt) from exp(x)
-      # exp(x * 10**k) = exp(x * 10**(k - 1)) ** 10
-      cnt.times do
-        y2 = y.mult(y, prec2)
-        y5 = y2.mult(y2, prec2).mult(y, prec2)
-        y = y5.mult(y5, prec2)
-      end
-
-      y.mult(1, prec)
+    # Taylor series for exp(x) around 0
+    1.step do |i|
+      n = prec2 + xn.exponent
+      break if n <= 0 || xn.zero?
+      x = x.mult(1, n)
+      xn = xn.mult(x, n).div(i, n)
+      y = y.add(xn, prec2)
     end
+
+    # calculate exp(x * 10**cnt) from exp(x)
+    # exp(x * 10**k) = exp(x * 10**(k - 1)) ** 10
+    cnt.times do
+      y2 = y.mult(y, prec2)
+      y5 = y2.mult(y2, prec2).mult(y, prec2)
+      y = y5.mult(y5, prec2)
+    end
+
+    y.mult(1, prec)
   end
 end
