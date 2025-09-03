@@ -7,6 +7,7 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
+#   tan (x, prec)
 #   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
@@ -135,6 +136,36 @@ module BigMath
   end
 
   # call-seq:
+  #   tan(decimal, numeric) -> BigDecimal
+  #
+  # Computes the tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is Infinity or NaN, returns NaN.
+  #
+  #   BigMath.tan(BigDecimal("0.0"), 4).to_s
+  #   #=> "0.0"
+  #
+  #   BigMath.tan(BigMath.PI(4) / 4, 4).to_s
+  #   #=> "0.999999999999999999999955588155008544487055622030633191403625599381672572e0"
+  #
+  def tan(x, prec)
+    raise ArgumentError, "Zero or negative precision for tan" if prec <= 0
+    return BigDecimal("NaN") if x.infinite? || x.nan?
+
+    x_adjusted, sign = adjust_x_and_detect_sign_of_tangent(x, prec)
+
+    t = guarantee_precision(prec) do |n|
+      c = cos(x_adjusted, n)
+      s = sqrt(1 - c**2, n)
+      s = -s if x_adjusted < 0
+      s.div(c, n)
+    end
+
+    sign >= 0 ? t : -t
+  end
+
+  # call-seq:
   #   atan(decimal, numeric) -> BigDecimal
   #
   # Computes the arctangent of +decimal+ to the specified number of digits of
@@ -230,5 +261,36 @@ module BigMath
   def E(prec)
     raise ArgumentError, "Zero or negative precision for E" if prec <= 0
     BigMath.exp(1, prec)
+  end
+
+  private
+
+  # Adjusts x to be within [-π, π] and returns the adjusted value and sign
+  def adjust_x_and_detect_sign_of_tangent(x, prec)
+    pi = PI(prec)
+    sign = 1
+
+    if x.abs > pi
+      n = (x / pi).round
+      x = x - n * pi
+      sign = -1 if n.odd?
+    end
+
+    [x, sign]
+  end
+
+  # Performs Ziv's loop to ensure the result has the desired precision
+  def guarantee_precision(prec)
+    n = prec + BigDecimal.double_fig
+    max_iterations = 5
+
+    max_iterations.times do
+      result = yield(n)
+      return result if result.precs[0] >= prec
+
+      n += BigDecimal.double_fig
+    end
+
+    yield(n)
   end
 end
