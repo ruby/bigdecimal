@@ -10,6 +10,13 @@ class TestJRuby < Test::Unit::TestCase
 
   N = 20
 
+  def test_decimal_shift_polyfill
+    assert_equal(BigDecimal('123.45e2'), BigDecimal('123.45')._decimal_shift(2))
+    assert_equal(BigDecimal('123.45e-2'), BigDecimal('123.45')._decimal_shift(-2))
+    assert_equal(BigDecimal('123.45e10000'), BigDecimal('123.45')._decimal_shift(10000))
+    assert_equal(BigDecimal('123.45e-10000'), BigDecimal('123.45')._decimal_shift(-10000))
+  end
+
   def test_sqrt
     sqrt2 = BigDecimal(2).sqrt(N)
     assert_in_delta(Math.sqrt(2), sqrt2)
@@ -35,10 +42,10 @@ class TestJRuby < Test::Unit::TestCase
     expected = 2 ** 2.5
     assert_in_delta(expected, x ** BigDecimal('2.5'))
     assert_in_delta(expected, x.sqrt(N) ** 5)
-    # assert_in_delta(expected, x ** 2.5)
+    assert_in_delta(expected, x ** 2.5)
     assert_in_delta(expected, x ** 2.5r)
     assert_in_delta(expected, x.power(BigDecimal('2.5'), N))
-    # assert_in_delta(expected, x.power(2.5, N))
+    assert_in_delta(expected, x.power(2.5, N))
     assert_in_delta(expected, x.sqrt(N).power(5, N))
     assert_in_delta(expected, x.power(2.5r, N))
   end

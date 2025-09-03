@@ -1,6 +1,17 @@
 if RUBY_ENGINE == 'jruby'
   JRuby::Util.load_ext("org.jruby.ext.bigdecimal.BigDecimalLibrary")
-  return
+
+  class BigDecimal
+    def _decimal_shift(i) # :nodoc:
+      # Creating a large exponent number with move_point_left/right is slow.
+      # Avoid it by multiplying/dividing with small exponent number.
+      if i < 0
+        mult(BigDecimal(1).to_java.move_point_left(-i).to_d, n_significant_digits)
+      else
+        div(BigDecimal(1).to_java.move_point_left(i).to_d, n_significant_digits)
+      end
+    end
+  end
 else
   require 'bigdecimal.so'
 end
@@ -15,7 +26,7 @@ class BigDecimal
       when BigDecimal
         return x
       when Integer, Float
-        return BigDecimal(x)
+        return BigDecimal(x, 0)
       when Rational
         return BigDecimal(x, [prec, 2 * BigDecimal.double_fig].max)
       end
@@ -199,7 +210,7 @@ class BigDecimal
 
     ex = exponent / 2
     x = _decimal_shift(-2 * ex)
-    y = BigDecimal(Math.sqrt(x.to_f))
+    y = BigDecimal(Math.sqrt(x.to_f), 0)
     precs = [prec + BigDecimal.double_fig]
     precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
     precs.reverse_each do |p|
