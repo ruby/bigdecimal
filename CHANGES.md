@@ -1,5 +1,21 @@
 # CHANGES
 
+## 3.2.3
+
+* Allow BigDecimal accept Float without precision [GH-314]
+
+  **@mrzasa**
+
+* Ruby implementation pow, log, exp and sqrt [GH-347] [GH-381]
+
+  **@tompng**
+
+* Update document [GH-348] [GH-360] [GH-365]
+
+  **@timcraft** **@dduugg** **@mame**
+
+* Lots of bug fixes and refactoring
+
 ## 3.2.2
 
 * Make precision calculation in bigdecimal.div(value, 0) gc-compaction safe. [GH-340]
