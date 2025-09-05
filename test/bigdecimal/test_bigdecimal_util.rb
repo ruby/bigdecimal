@@ -84,6 +84,11 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert(355.quo(113).to_d(digits).frozen?)
   end
 
+  def test_Rational_to_d_without_precision
+    assert_equal(BigDecimal("1.25"), Rational(5, 4).to_d)
+    assert_equal(BigDecimal(355.quo(113), 0), 355.quo(113).to_d)
+  end
+
   def test_Rational_to_d_with_zero_precision
     assert_equal(BigDecimal(355.quo(113), 0), 355.quo(113).to_d(0))
   end
@@ -102,7 +107,7 @@ class TestBigDecimalUtil < Test::Unit::TestCase
       assert_equal(BigDecimal("0.1234567"), Complex(0.1234567, 0).to_d)
       assert_equal(BigDecimal("0.1235"), Complex(0.1234567, 0).to_d(4))
 
-      assert_raise_with_message(ArgumentError, "can't omit precision for a Rational.") { Complex(1.quo(3), 0).to_d }
+      assert_equal(BigDecimal("0.5"), Complex(1.quo(2), 0).to_d)
 
       assert_raise_with_message(ArgumentError, "Unable to make a BigDecimal from non-zero imaginary number") { Complex(1, 1).to_d }
     end
