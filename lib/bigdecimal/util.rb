@@ -119,8 +119,11 @@ class Rational < Numeric
   #
   # Returns the value as a BigDecimal.
   #
-  # The required +precision+ parameter is used to determine the number of
-  # significant digits for the result.
+  # The +precision+ parameter is used to determine the number of
+  # significant digits for the result. When +precision+ is set to +0+,
+  # the number of digits to represent the float being converted is determined
+  # automatically.
+  # The default +precision+ is +0+.
   #
   #     require 'bigdecimal'
   #     require 'bigdecimal/util'
@@ -129,7 +132,7 @@ class Rational < Numeric
   #
   # See also Kernel.BigDecimal.
   #
-  def to_d(precision)
+  def to_d(precision=0)
     BigDecimal(self, precision)
   end
 end

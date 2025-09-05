@@ -84,6 +84,11 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert(355.quo(113).to_d(digits).frozen?)
   end
 
+  def test_Rational_to_d_without_precision
+    assert_equal(BigDecimal("1.25"), Rational(5, 4).to_d)
+    assert_equal(BigDecimal(355.quo(113), 0), 355.quo(113).to_d)
+  end
+
   def test_Rational_to_d_with_zero_precision
     assert_equal(BigDecimal(355.quo(113), 0), 355.quo(113).to_d(0))
   end
