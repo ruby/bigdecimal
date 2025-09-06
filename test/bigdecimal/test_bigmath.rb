@@ -16,7 +16,7 @@ class TestBigMath < Test::Unit::TestCase
   def test_pi
     assert_equal(
       BigDecimal("3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068"),
-      PI(100).round(100)
+      PI(100)
     )
     assert_converge_in_precision {|n| PI(n) }
   end
@@ -37,8 +37,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_raise(FloatDomainError) {sqrt(BigDecimal("-1.0"), N)}
     assert_raise(FloatDomainError) {sqrt(NAN, N)}
     assert_raise(FloatDomainError) {sqrt(PINF, N)}
-    assert_in_delta(SQRT2, sqrt(BigDecimal("2"), 100), BigDecimal("1e-100"))
-    assert_in_delta(SQRT3, sqrt(BigDecimal("3"), 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(SQRT2, sqrt(BigDecimal("2"), 100), 100)
+    assert_in_exact_precision(SQRT3, sqrt(BigDecimal("3"), 100), 100)
     assert_converge_in_precision {|n| sqrt(BigDecimal("2"), n) }
     assert_converge_in_precision {|n| sqrt(BigDecimal("2e-50"), n) }
     assert_converge_in_precision {|n| sqrt(BigDecimal("2e50"), n) }
@@ -56,9 +56,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(0.0, sin(PI(N) * 21, N))
     assert_in_delta(0.0, sin(PI(N) * 30, N))
     assert_in_delta(-1.0, sin(PI(N) * BigDecimal("301.5"), N))
-    assert_in_delta(BigDecimal('0.5'), sin(PI(100) / 6, 100), BigDecimal("1e-100"))
-    assert_in_delta(SQRT3 / 2, sin(PI(100) / 3, 100), BigDecimal("1e-100"))
-    assert_in_delta(SQRT2 / 2, sin(PI(100) / 4, 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(BigDecimal('0.5'), sin(PI(100) / 6, 100), 100)
+    assert_in_exact_precision(SQRT3 / 2, sin(PI(100) / 3, 100), 100)
+    assert_in_exact_precision(SQRT2 / 2, sin(PI(100) / 4, 100), 100)
     assert_converge_in_precision {|n| sin(BigDecimal("1"), n) }
     assert_converge_in_precision {|n| sin(BigDecimal("1e50"), n) }
     assert_converge_in_precision {|n| sin(BigDecimal("1e-30"), n) }
@@ -80,9 +80,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(-1.0, cos(PI(N) * 21, N))
     assert_in_delta(1.0, cos(PI(N) * 30, N))
     assert_in_delta(0.0, cos(PI(N) * BigDecimal("301.5"), N))
-    assert_in_delta(BigDecimal('0.5'), cos(PI(100) / 3, 100), BigDecimal("1e-100"))
-    assert_in_delta(SQRT3 / 2, cos(PI(100) / 6, 100), BigDecimal("1e-100"))
-    assert_in_delta(SQRT2 / 2, cos(PI(100) / 4, 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(BigDecimal('0.5'), cos(PI(100) / 3, 100), 100)
+    assert_in_exact_precision(SQRT3 / 2, cos(PI(100) / 6, 100), 100)
+    assert_in_exact_precision(SQRT2 / 2, cos(PI(100) / 4, 100), 100)
     assert_converge_in_precision {|n| cos(BigDecimal("1"), n) }
     assert_converge_in_precision {|n| cos(BigDecimal("1e50"), n) }
     assert_converge_in_precision {|n| cos(BigDecimal(PI(50) / 2), n) }
@@ -100,6 +100,10 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(0.0, tan(-PI(N), N))
     assert_in_delta(-1.0, tan(-PI(N) / 4, N))
     assert_in_delta(-sqrt(BigDecimal(3), N), tan(-PI(N) / 3, N))
+    assert_in_exact_precision(SQRT3, tan(PI(100) / 3, 100), 100)
+    assert_converge_in_precision {|n| tan(1, n) }
+    assert_converge_in_precision {|n| tan(BigMath::PI(50) / 2, n) }
+    assert_converge_in_precision {|n| tan(BigMath::PI(50), n) }
   end
 
   def test_atan
@@ -107,7 +111,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_delta(Math::PI/4, atan(BigDecimal("1.0"), N))
     assert_in_delta(Math::PI/6, atan(sqrt(BigDecimal("3.0"), N) / 3, N))
     assert_in_delta(Math::PI/2, atan(PINF, N))
-    assert_in_delta(PI(100) / 3, atan(SQRT3, 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(PI(100) / 3, atan(SQRT3, 100), 100)
     assert_equal(BigDecimal("0.823840753418636291769355073102514088959345624027952954058347023122539489"),
                  atan(BigDecimal("1.08"), 72).round(72), '[ruby-dev:41257]')
     assert_converge_in_precision {|n| atan(BigDecimal("2"), n)}
@@ -120,8 +124,11 @@ class TestBigMath < Test::Unit::TestCase
       assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))
     end
     assert_equal(1, BigMath.exp(BigDecimal("0"), N))
-    assert_in_epsilon(BigDecimal("4.48168907033806482260205546011927581900574986836966705677265008278593667446671377298105383138245339138861635065183019577"),
-                      BigMath.exp(BigDecimal("1.5"), 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(
+      BigDecimal("4.48168907033806482260205546011927581900574986836966705677265008278593667446671377298105383138245339138861635065183019577"),
+      BigMath.exp(BigDecimal("1.5"), 100),
+      100
+    )
     assert_converge_in_precision {|n| BigMath.exp(BigDecimal("1"), n) }
     assert_converge_in_precision {|n| BigMath.exp(BigDecimal("-2"), n) }
     assert_converge_in_precision {|n| BigMath.exp(BigDecimal("-34"), n) }
@@ -132,8 +139,11 @@ class TestBigMath < Test::Unit::TestCase
   def test_log
     assert_equal(0, BigMath.log(BigDecimal("1.0"), 10))
     assert_in_epsilon(Math.log(10)*1000, BigMath.log(BigDecimal("1e1000"), 10))
-    assert_in_epsilon(BigDecimal("2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862"),
-                      BigMath.log(BigDecimal("10"), 100), BigDecimal("1e-100"))
+    assert_in_exact_precision(
+      BigDecimal("2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862"),
+      BigMath.log(BigDecimal("10"), 100),
+      100
+    )
     assert_converge_in_precision {|n| BigMath.log(BigDecimal("2"), n) }
     assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e-30") + 1, n) }
     assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e-30"), n) }

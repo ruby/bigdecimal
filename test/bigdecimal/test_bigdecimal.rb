@@ -1439,7 +1439,7 @@ class TestBigDecimal < Test::Unit::TestCase
     x = BigDecimal("-" + (2**100).to_s)
     assert_raise_with_message(FloatDomainError, "sqrt of negative value") { x.sqrt(1) }
     x = BigDecimal((2**200).to_s)
-    assert_equal(2**100, x.sqrt(1))
+    assert_equal(BigDecimal(2 ** 100).mult(1, 1), x.sqrt(1))
 
     assert_in_delta(BigDecimal("4.0000000000000000000125"), BigDecimal("16.0000000000000000001").sqrt(100), BigDecimal("1e-40"))
 
@@ -1457,37 +1457,22 @@ class TestBigDecimal < Test::Unit::TestCase
 
     sqrt2_300 = BigDecimal(2).sqrt(300)
     (250..270).each do |prec|
-      sqrt_prec = prec + BigDecimal.double_fig - 1
-      assert_in_delta(sqrt2_300, BigDecimal(2).sqrt(prec), BigDecimal("1e#{-sqrt_prec}"))
+      assert_in_exact_precision(sqrt2_300, BigDecimal(2).sqrt(prec), prec)
     end
   end
 
   def test_sqrt_5266
     x = BigDecimal('2' + '0'*100)
-    assert_equal('0.14142135623730950488016887242096980785696718753769480731',
-                 x.sqrt(56).to_s(56).split(' ')[0])
-    assert_equal('0.1414213562373095048801688724209698078569671875376948073',
-                 x.sqrt(55).to_s(55).split(' ')[0])
+    assert_equal('0.14142135623730950488016887242096980785696718753769480732e51',
+                 x.sqrt(56).to_s)
+    assert_equal('0.1414213562373095048801688724209698078569671875376948073e51',
+                 x.sqrt(55).to_s)
 
     x = BigDecimal('2' + '0'*200)
-    assert_equal('0.14142135623730950488016887242096980785696718753769480731766797379907324784621070388503875343276415727350138462',
-                 x.sqrt(110).to_s(110).split(' ')[0])
-    assert_equal('0.1414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641572735013846',
-                 x.sqrt(109).to_s(109).split(' ')[0])
-  end
-
-  def test_sqrt_minimum_precision
-    x = BigDecimal((2**200).to_s)
-    assert_equal(2**100, x.sqrt(1))
-
-    x = BigDecimal('1' * 60 + '.' + '1' * 40)
-    assert_in_delta(BigDecimal('3' * 30 + '.' + '3' * 70), x.sqrt(1), BigDecimal('1e-70'))
-
-    x = BigDecimal('1' * 40 + '.' + '1' * 60)
-    assert_in_delta(BigDecimal('3' * 20 + '.' + '3' * 80), x.sqrt(1), BigDecimal('1e-80'))
-
-    x = BigDecimal('0.' + '0' * 50 + '1' * 100)
-    assert_in_delta(BigDecimal('0.' + '0' * 25 + '3' * 100), x.sqrt(1), BigDecimal('1e-125'))
+    assert_equal('0.14142135623730950488016887242096980785696718753769480731766797379907324784621070388503875343276415727350138462e101',
+                 x.sqrt(110).to_s)
+    assert_equal('0.1414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641572735013846e101',
+                 x.sqrt(109).to_s)
   end
 
   def test_internal_use_decimal_shift
@@ -2430,9 +2415,8 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_BigMath_log_with_high_precision_case
     e   = BigDecimal('2.71828182845904523536028747135266249775724709369996')
-    e_3 = e.mult(e, 50).mult(e, 50)
-    log_3 = BigMath.log(e_3, 50)
-    assert_in_delta(3, log_3, 0.0000000000_0000000000_0000000000_0000000000_0000000001)
+    e_3 = e.mult(e, 60).mult(e, 60)
+    assert_in_exact_precision(3, BigMath.log(e_3, 50), 50)
   end
 
   def test_BigMath_log_with_42
