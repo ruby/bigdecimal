@@ -22,6 +22,8 @@ require 'bigdecimal'
 #   atanh(x, prec)
 #   log2 (x, prec)
 #   log10(x, prec)
+#   log1p(x, prec)
+#   expm1(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -523,6 +525,49 @@ module BigMath
     v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
     v.mult(1, prec)
   end
+
+  # call-seq:
+  #   BigMath.log1p(decimal, numeric)    -> BigDecimal
+  #
+  # Computes log(1 + decimal) to the specified number of digits of precision, +numeric+.
+  #
+  #   BigMath.log1p(BigDecimal('0.1'), 32).to_s
+  #   #=> "0.95310179804324860043952123280765e-1"
+  #
+  def log1p(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :log1p)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log1p)
+    raise Math::DomainError, 'Out of domain argument for log1p' if x < -1
+
+    return BigMath.log(x + 1, prec)
+  end
+
+  # call-seq:
+  #   BigMath.expm1(decimal, numeric)    -> BigDecimal
+  #
+  # Computes exp(decimal) - 1 to the specified number of digits of precision, +numeric+.
+  #
+  #   BigMath.expm1(BigDecimal('0.1'), 32).to_s
+  #   #=> "0.10517091807564762481170782649025e0"
+  #
+  def expm1(x, prec)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :expm1)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :expm1)
+    return BigDecimal(-1) if x.infinite? == -1
+
+    exp_prec = prec
+    if x < -1
+      # log10(exp(x)) = x * log10(e)
+      lg_e = 0.4342944819032518
+      exp_prec = prec + (lg_e * x).ceil + 2
+    elsif x < 1
+      exp_prec = prec - x.exponent + 2
+    else
+      exp_prec = prec
+    end
+    exp_prec > 0 ? BigMath.exp(x, exp_prec).sub(1, prec) : BigDecimal(-1)
+  end
+
 
   # call-seq:
   #   PI(numeric) -> BigDecimal

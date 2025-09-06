@@ -408,4 +408,24 @@ class TestBigMath < Test::Unit::TestCase
       end
     end
   end
+
+  def test_log1p
+    assert_raise(Math::DomainError) { log1p(MINF, N) }
+    assert_raise(Math::DomainError) { log1p(BigDecimal("-1.01"), N) }
+    assert_in_epsilon(Math.log(0.01), log1p(BigDecimal("-0.99"), N))
+    assert_positive_infinite_calculation { log1p(PINF, N) }
+    assert_in_exact_precision(BigMath.log(1 + BigDecimal("1e-20"), 100), log1p(BigDecimal("1e-20"), 100), 100)
+  end
+
+  def test_expm1
+    assert_equal(-1, expm1(MINF, N))
+    assert_positive_infinite_calculation { expm1(PINF, N) }
+    assert_equal(-1, expm1(BigDecimal("-400"), 100))
+    assert_equal(-1, expm1(BigDecimal("-231"), 100))
+    assert_not_equal(-1, expm1(BigDecimal("-229"), 100))
+    assert_in_exact_precision(BigMath.exp(-220, 100) - 1, expm1(BigDecimal("-220"), 100), 100)
+    assert_in_exact_precision(BigMath.exp(-3, 100) - 1, expm1(BigDecimal("-3"), 100), 100)
+    assert_in_exact_precision(BigMath.exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
+    assert_in_exact_precision(BigMath.exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
+  end
 end
