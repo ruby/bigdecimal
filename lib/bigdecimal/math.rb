@@ -43,6 +43,33 @@ module BigMath
     x.sqrt(prec)
   end
 
+
+  # Returns [sign, reduced_x] where reduced_x is in -pi/2..pi/2
+  # and satisfies sin(x) = sign * sin(reduced_x)
+  # If add_half_pi is true, adds pi/2 to x before reduction.
+  # Precision of pi is adjusted to ensure reduced_x has the required precision.
+  private def _sin_periodic_reduction(x, prec, add_half_pi: false)
+    return [1, x] if -Math::PI/2 <= x && x <= Math::PI/2 && !add_half_pi
+
+    mod_prec = prec + BigDecimal.double_fig
+    pi_extra_prec = [x.exponent, 0].max + BigDecimal.double_fig
+    while true
+      pi = PI(mod_prec + pi_extra_prec)
+      half_pi = pi / 2
+      div, mod = (add_half_pi ? x + pi : x + half_pi).divmod(pi)
+      mod -= half_pi
+      if mod.zero? || mod_prec + mod.exponent <= 0
+        # mod is too small to estimate required pi precision
+        mod_prec = mod_prec * 3 / 2 + BigDecimal.double_fig
+      elsif mod_prec + mod.exponent < prec
+        # Estimate required precision of pi
+        mod_prec = prec - mod.exponent + BigDecimal.double_fig
+      else
+        return [div % 2 == 0 ? 1 : -1, mod.mult(1, prec)]
+      end
+    end
+  end
+
   # call-seq:
   #   sin(decimal, numeric) -> BigDecimal
   #
@@ -60,33 +87,23 @@ module BigMath
     n    = prec + BigDecimal.double_fig
     one  = BigDecimal("1")
     two  = BigDecimal("2")
-    x = -x if neg = x < 0
-    if x > 6
-      twopi = two * BigMath.PI(prec + x.exponent)
-      if x > 30
-        x %= twopi
-      else
-        x -= twopi while x > twopi
-      end
-    end
+    sign, x = _sin_periodic_reduction(x, n)
     x1   = x
     x2   = x.mult(x,n)
-    sign = 1
     y    = x
     d    = y
     i    = one
     z    = one
     while d.nonzero? && ((m = n - (y.exponent - d.exponent).abs) > 0)
       m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      sign = -sign
-      x1  = x2.mult(x1,n)
+      x1  = -x2.mult(x1,n)
       i  += two
       z  *= (i-one) * i
-      d   = sign * x1.div(z,m)
+      d   = x1.div(z,m)
       y  += d
     end
-    y = BigDecimal("1") if y > 1
-    neg ? -y : y
+    y *= sign
+    y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
   end
 
   # call-seq:
@@ -103,35 +120,8 @@ module BigMath
   def cos(x, prec)
     raise ArgumentError, "Zero or negative precision for cos" if prec <= 0
     return BigDecimal("NaN") if x.infinite? || x.nan?
-    n    = prec + BigDecimal.double_fig
-    one  = BigDecimal("1")
-    two  = BigDecimal("2")
-    x = -x if x < 0
-    if x > 6
-      twopi = two * BigMath.PI(prec + x.exponent)
-      if x > 30
-        x %= twopi
-      else
-        x -= twopi while x > twopi
-      end
-    end
-    x1 = one
-    x2 = x.mult(x,n)
-    sign = 1
-    y = one
-    d = y
-    i = BigDecimal("0")
-    z = one
-    while d.nonzero? && ((m = n - (y.exponent - d.exponent).abs) > 0)
-      m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      sign = -sign
-      x1  = x2.mult(x1,n)
-      i  += two
-      z  *= (i-one) * i
-      d   = sign * x1.div(z,m)
-      y  += d
-    end
-    y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
+    sign, x = _sin_periodic_reduction(x, prec + BigDecimal.double_fig, add_half_pi: true)
+    sign * sin(x, prec)
   end
 
   # call-seq:
