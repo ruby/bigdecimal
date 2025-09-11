@@ -40,7 +40,7 @@ module TestBigDecimalBase
   # Asserts that the calculation of the given block converges to some value
   # with precision specified by block parameter.
 
-  def assert_relative_precision(&block)
+  def assert_converge_in_precision(&block)
     expected = yield(200)
     [50, 100, 150].each do |n|
       value = yield(n)
