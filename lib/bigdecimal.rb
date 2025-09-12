@@ -261,9 +261,6 @@ module BigMath
 
       sqrt_steps.times do
         x = x.sqrt(sqrt_prec)
-
-        # Workaround for https://github.com/ruby/bigdecimal/issues/354
-        x = x.mult(1, sqrt_prec + BigDecimal.double_fig)
       end
 
       # Taylor series for log(x) around 1
