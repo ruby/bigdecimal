@@ -56,4 +56,55 @@ module TestBigDecimalBase
       assert_in_exact_precision(expected, value, n)
     end
   end
+
+
+  def assert_nan(x)
+    assert(x.nan?, "Expected #{x.inspect} to be NaN")
+  end
+
+  def assert_positive_infinite(x)
+    assert(x.infinite?, "Expected #{x.inspect} to be positive infinite")
+    assert_operator(x, :>, 0)
+  end
+
+  def assert_negative_infinite(x)
+    assert(x.infinite?, "Expected #{x.inspect} to be negative infinite")
+    assert_operator(x, :<, 0)
+  end
+
+  def assert_infinite_calculation(positive:)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+      positive ? assert_positive_infinite(yield) : assert_negative_infinite(yield)
+      BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+      assert_raise_with_message(FloatDomainError, /Infinity/) { yield }
+    end
+  end
+
+  def assert_positive_infinite_calculation(&block)
+    assert_infinite_calculation(positive: true, &block)
+  end
+
+  def assert_negative_infinite_calculation(&block)
+    assert_infinite_calculation(positive: false, &block)
+  end
+
+  def assert_nan_calculation(&block)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+      assert_nan(yield)
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, true)
+      assert_raise_with_message(FloatDomainError, /NaN/) { yield }
+    end
+  end
+
+  def assert_positive_zero(x)
+    assert_equal(BigDecimal::SIGN_POSITIVE_ZERO, x.sign,
+                 "Expected #{x.inspect} to be positive zero")
+  end
+
+  def assert_negative_zero(x)
+    assert_equal(BigDecimal::SIGN_NEGATIVE_ZERO, x.sign,
+                 "Expected #{x.inspect} to be negative zero")
+  end
 end
