@@ -240,35 +240,4 @@ module BigMath
     raise ArgumentError, "Zero or negative precision for E" if prec <= 0
     BigMath.exp(1, prec)
   end
-
-  private
-
-  # Adjusts x to be within [-π, π] and returns the adjusted value and sign
-  def adjust_x_and_detect_sign_of_tangent(x, prec)
-    pi = PI(prec)
-    sign = 1
-
-    if x.abs > pi
-      n = (x / pi).round
-      x = x - n * pi
-      sign = -1 if n.odd?
-    end
-
-    [x, sign]
-  end
-
-  # Performs Ziv's loop to ensure the result has the desired precision
-  def guarantee_precision(prec)
-    n = prec + BigDecimal.double_fig
-    max_iterations = 5
-
-    max_iterations.times do
-      result = yield(n)
-      return result if result.precs[0] >= prec
-
-      n += BigDecimal.double_fig
-    end
-
-    yield(n)
-  end
 end
