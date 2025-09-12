@@ -2011,21 +2011,21 @@ class TestBigDecimal < Test::Unit::TestCase
     y = BigDecimal("3.14159265358979323846264338327950288419716939937511")
     small = x * BigDecimal("1e-30")
     large = y * BigDecimal("1e+30")
-    assert_relative_precision {|n| small.power(small, n) }
-    assert_relative_precision {|n| large.power(small, n) }
-    assert_relative_precision {|n| x.power(small, n) }
-    assert_relative_precision {|n| small.power(y, n) }
-    assert_relative_precision {|n| small.power(small + 1, n) }
-    assert_relative_precision {|n| x.power(small + 1, n) }
-    assert_relative_precision {|n| (small + 1).power(small, n) }
-    assert_relative_precision {|n| (small + 1).power(large, n) }
-    assert_relative_precision {|n| (small + 1).power(y, n) }
-    assert_relative_precision {|n| x.power(y, n) }
-    assert_relative_precision {|n| x.power(-y, n) }
-    assert_relative_precision {|n| x.power(123, n) }
-    assert_relative_precision {|n| x.power(-456, n) }
-    assert_relative_precision {|n| (x + 12).power(y + 34, n) }
-    assert_relative_precision {|n| (x + 56).power(y - 78, n) }
+    assert_converge_in_precision {|n| small.power(small, n) }
+    assert_converge_in_precision {|n| large.power(small, n) }
+    assert_converge_in_precision {|n| x.power(small, n) }
+    assert_converge_in_precision {|n| small.power(y, n) }
+    assert_converge_in_precision {|n| small.power(small + 1, n) }
+    assert_converge_in_precision {|n| x.power(small + 1, n) }
+    assert_converge_in_precision {|n| (small + 1).power(small, n) }
+    assert_converge_in_precision {|n| (small + 1).power(large, n) }
+    assert_converge_in_precision {|n| (small + 1).power(y, n) }
+    assert_converge_in_precision {|n| x.power(y, n) }
+    assert_converge_in_precision {|n| x.power(-y, n) }
+    assert_converge_in_precision {|n| x.power(123, n) }
+    assert_converge_in_precision {|n| x.power(-456, n) }
+    assert_converge_in_precision {|n| (x + 12).power(y + 34, n) }
+    assert_converge_in_precision {|n| (x + 56).power(y - 78, n) }
   end
 
   def test_limit
