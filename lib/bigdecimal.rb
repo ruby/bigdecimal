@@ -195,12 +195,9 @@ class BigDecimal
     raise FloatDomainError, "sqrt of 'NaN'(Not a Number)" if nan?
     return self if zero?
 
-    limit = BigDecimal.limit.nonzero? if prec == 0
-
-    # BigDecimal#sqrt calculates at least n_significant_digits precision.
-    # This feature maybe problematic for some cases.
-    n_digits = n_significant_digits
-    prec = [prec, n_digits].max
+    if prec == 0
+      prec = BigDecimal.limit.nonzero? || n_significant_digits + BigDecimal.double_fig
+    end
 
     ex = exponent / 2
     x = _decimal_shift(-2 * ex)
@@ -210,8 +207,7 @@ class BigDecimal
     precs.reverse_each do |p|
       y = y.add(x.div(y, p), p).div(2, p)
     end
-    y = y.mult(1, limit) if limit
-    y._decimal_shift(ex)
+    y._decimal_shift(ex).mult(1, prec)
   end
 end
 
@@ -241,46 +237,43 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 
+    prec2 = prec + BigDecimal.double_fig
     BigDecimal.save_limit do
       BigDecimal.limit(0)
       if x > 10 || x < 0.1
-        log10 = log(BigDecimal(10), prec)
+        log10 = log(BigDecimal(10), prec2)
         exponent = x.exponent
         x = x._decimal_shift(-exponent)
         if x < 0.3
           x *= 10
           exponent -= 1
         end
-        return log10 * exponent + log(x, prec)
+        return (log10 * exponent).add(log(x, prec2), prec)
       end
 
       x_minus_one_exponent = (x - 1).exponent
-      prec += BigDecimal.double_fig
 
       # log(x) = log(sqrt(sqrt(sqrt(sqrt(x))))) * 2**sqrt_steps
-      sqrt_steps = [Integer.sqrt(prec) + 3 * x_minus_one_exponent, 0].max
+      sqrt_steps = [Integer.sqrt(prec2) + 3 * x_minus_one_exponent, 0].max
 
       lg2 = 0.3010299956639812
-      prec2 = prec + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
+      sqrt_prec = prec2 + [-x_minus_one_exponent, 0].max + (sqrt_steps * lg2).ceil
 
       sqrt_steps.times do
-        x = x.sqrt(prec2)
-
-        # Workaround for https://github.com/ruby/bigdecimal/issues/354
-        x = x.mult(1, prec2 + BigDecimal.double_fig)
+        x = x.sqrt(sqrt_prec)
       end
 
       # Taylor series for log(x) around 1
       # log(x) = -log((1 + X) / (1 - X)) where X = (x - 1) / (x + 1)
       # log(x) = 2 * (X + X**3 / 3 + X**5 / 5 + X**7 / 7 + ...)
-      x = (x - 1).div(x + 1, prec2)
+      x = (x - 1).div(x + 1, sqrt_prec)
       y = x
-      x2 = x.mult(x, prec)
+      x2 = x.mult(x, prec2)
       1.step do |i|
-        n = prec + x.exponent - y.exponent + x2.exponent
+        n = prec2 + x.exponent - y.exponent + x2.exponent
         break if n <= 0 || x.zero?
         x = x.mult(x2.round(n - x2.exponent), n)
-        y = y.add(x.div(2 * i + 1, n), prec)
+        y = y.add(x.div(2 * i + 1, n), prec2)
       end
 
       y.mult(2 ** (sqrt_steps + 1), prec)

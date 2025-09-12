@@ -106,8 +106,8 @@ module BigMath
       d   = x1.div(z,m)
       y  += d
     end
-    y *= sign
-    y < -1 ? BigDecimal("-1") : y > 1 ? BigDecimal("1") : y
+    y = BigDecimal("1") if y > 1
+    y.mult(sign, prec)
   end
 
   # call-seq:
@@ -145,7 +145,7 @@ module BigMath
   #
   def tan(x, prec)
     BigDecimal::Internal.validate_prec(prec, :tan)
-    sin(x, prec) / cos(x, prec)
+    sin(x, prec + BigDecimal.double_fig).div(cos(x, prec + BigDecimal.double_fig), prec)
   end
 
   # call-seq:
@@ -163,11 +163,11 @@ module BigMath
     BigDecimal::Internal.validate_prec(prec, :atan)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan)
     return BigDecimal::Internal.nan_computation_result if x.nan?
-    pi = PI(prec)
+    n = prec + BigDecimal.double_fig
+    pi = PI(n)
     x = -x if neg = x < 0
     return pi.div(neg ? -2 : 2, prec) if x.infinite?
-    return pi / (neg ? -4 : 4) if x.round(prec) == 1
-    n = prec + BigDecimal.double_fig
+    return pi.div(neg ? -4 : 4, prec) if x.round(prec) == 1
     x = BigDecimal("1").div(x, n) if inv = x > 1
     x = (-1 + sqrt(1 + x.mult(x, n), n)).div(x, n) if dbl = x > 0.5
     y = x
@@ -185,7 +185,7 @@ module BigMath
     y *= 2 if dbl
     y = pi / 2 - y if inv
     y = -y if neg
-    y
+    y.mult(1, prec)
   end
 
   # call-seq:
@@ -230,7 +230,7 @@ module BigMath
       pi  = pi + d
       k   = k+two
     end
-    pi
+    pi.mult(1, prec)
   end
 
   # call-seq:

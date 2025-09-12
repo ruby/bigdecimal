@@ -37,16 +37,23 @@ module TestBigDecimalBase
     GC.stress = stress
   end
 
-  # Asserts that the calculation of the given block converges to some value
-  # with precision specified by block parameter.
+  # Asserts that +actual+ is calculated with exactly the given +precision+.
+  # No extra digits are allowed. Only the last digit may differ at most by one.
+  def assert_in_exact_precision(expected, actual, precision)
+    expected = BigDecimal(expected)
+    delta = BigDecimal(1)._decimal_shift(expected.exponent - precision)
+    assert actual.n_significant_digits <= precision, "Too many significant digits: #{actual.n_significant_digits} > #{precision}"
+    assert_in_delta(expected.mult(1, precision), actual, delta)
+  end
 
+  # Asserts that the calculation of the given block converges to some value
+  # with exactly the given +precision+.
   def assert_converge_in_precision(&block)
     expected = yield(200)
     [50, 100, 150].each do |n|
       value = yield(n)
-      precision = 1 - (value.div(expected, expected.precision) - 1).exponent
       assert(value != expected, "Unable to estimate precision for exact value")
-      assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
+      assert_in_exact_precision(expected, value, n)
     end
   end
 end
