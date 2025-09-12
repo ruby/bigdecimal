@@ -7,6 +7,7 @@ require 'bigdecimal'
 #   sqrt(x, prec)
 #   sin (x, prec)
 #   cos (x, prec)
+#   tan (x, prec)
 #   atan(x, prec)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
@@ -122,6 +123,24 @@ module BigMath
     return BigDecimal("NaN") if x.infinite? || x.nan?
     sign, x = _sin_periodic_reduction(x, prec + BigDecimal.double_fig, add_half_pi: true)
     sign * sin(x, prec)
+  end
+
+  # call-seq:
+  #   tan(decimal, numeric) -> BigDecimal
+  #
+  # Computes the tangent of +decimal+ to the specified number of digits of
+  # precision, +numeric+.
+  #
+  # If +decimal+ is Infinity or NaN, returns NaN.
+  #
+  #   BigMath.tan(BigDecimal("0.0"), 4).to_s
+  #   #=> "0.0"
+  #
+  #   BigMath.tan(BigMath.PI(4) / 4, 4).to_s
+  #   #=> "0.99999999999999999999419869652481995799388629632650769e0"
+  #
+  def tan(x, prec)
+    sin(x, prec) / cos(x, prec)
   end
 
   # call-seq:
