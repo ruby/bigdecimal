@@ -137,22 +137,10 @@ module BigMath
   #   #=> "0.0"
   #
   #   BigMath.tan(BigMath.PI(4) / 4, 4).to_s
-  #   #=> "0.999999999999999999999955588155008544487055622030633191403625599381672572e0"
+  #   #=> "0.99999999999999999999419869652481995799388629632650769e0"
   #
   def tan(x, prec)
-    raise ArgumentError, "Zero or negative precision for tan" if prec <= 0
-    return BigDecimal("NaN") if x.infinite? || x.nan?
-
-    x_adjusted, sign = adjust_x_and_detect_sign_of_tangent(x, prec)
-
-    t = guarantee_precision(prec) do |n|
-      c = cos(x_adjusted, n)
-      s = sqrt(1 - c**2, n)
-      s = -s if x_adjusted < 0
-      s.div(c, n)
-    end
-
-    sign >= 0 ? t : -t
+    sin(x, prec) / cos(x, prec)
   end
 
   # call-seq:
