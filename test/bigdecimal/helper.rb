@@ -4,13 +4,13 @@ require "bigdecimal"
 require 'rbconfig/sizeof'
 
 module TestBigDecimalBase
-  if RbConfig::SIZEOF.key?("int64_t")
+  BASE = BigDecimal::BASE
+  case BASE
+  when 1000000000
     SIZEOF_DECDIG = RbConfig::SIZEOF["int32_t"]
-    BASE = 1_000_000_000
     BASE_FIG = 9
-  else
+  when 10000
     SIZEOF_DECDIG = RbConfig::SIZEOF["int16_t"]
-    BASE = 1000
     BASE_FIG = 4
   end
 
@@ -40,25 +40,11 @@ module TestBigDecimalBase
   # Asserts that the calculation of the given block converges to some value
   # with precision specified by block parameter.
 
-  def assert_fixed_point_precision(&block)
-    _assert_precision(:fixed_point, &block)
-  end
-
-  def assert_relative_precision(&block)
-    _assert_precision(:relative, &block)
-  end
-
-  def _assert_precision(mode)
+  def assert_converge_in_precision(&block)
     expected = yield(200)
     [50, 100, 150].each do |n|
       value = yield(n)
-      if mode == :fixed_point
-        precision = -(value - expected).exponent
-      elsif mode == :relative
-        precision = -(value.div(expected, expected.precision) - 1).exponent
-      else
-        raise ArgumentError, "Unknown mode: #{mode}"
-      end
+      precision = 1 - (value.div(expected, expected.precision) - 1).exponent
       assert(value != expected, "Unable to estimate precision for exact value")
       assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
     end

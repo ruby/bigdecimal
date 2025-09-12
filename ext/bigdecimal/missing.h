@@ -8,14 +8,6 @@ extern "C" {
 #endif
 #endif
 
-#ifdef HAVE_STDLIB_H
-# include <stdlib.h>
-#endif
-
-#ifdef HAVE_MATH_H
-# include <math.h>
-#endif
-
 #ifndef RB_UNUSED_VAR
 # if defined(_MSC_VER) && _MSC_VER >= 1911
 #  define RB_UNUSED_VAR(x) x [[maybe_unused]]
@@ -55,96 +47,12 @@ extern "C" {
 
 /* bool */
 
-#if defined(__bool_true_false_are_defined)
-# /* Take that. */
-
-#elif defined(HAVE_STDBOOL_H)
+#ifndef __bool_true_false_are_defined
 # include <stdbool.h>
-
-#else
-typedef unsigned char _Bool;
-# define bool _Bool
-# define true  ((_Bool)+1)
-# define false ((_Bool)-1)
-# define __bool_true_false_are_defined
-#endif
-
-/* abs */
-
-#ifndef HAVE_LABS
-static inline long
-labs(long const x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-#endif
-
-#ifndef HAVE_LLABS
-static inline LONG_LONG
-llabs(LONG_LONG const x)
-{
-    if (x < 0) return -x;
-    return x;
-}
-#endif
-
-#ifdef vabs
-# undef vabs
-#endif
-#if SIZEOF_VALUE <= SIZEOF_INT
-# define vabs abs
-#elif SIZEOF_VALUE <= SIZEOF_LONG
-# define vabs labs
-#elif SIZEOF_VALUE <= SIZEOF_LONG_LONG
-# define vabs llabs
-#endif
-
-/* finite */
-
-#ifndef HAVE_FINITE
-static int
-finite(double)
-{
-    return !isnan(n) && !isinf(n);
-}
-#endif
-
-#ifndef isfinite
-# ifndef HAVE_ISFINITE
-#  define HAVE_ISFINITE 1
-#  define isfinite(x) finite(x)
-# endif
 #endif
 
 /* dtoa */
 char *BigDecimal_dtoa(double d_, int mode, int ndigits, int *decpt, int *sign, char **rve);
-
-/* rational */
-
-#ifndef HAVE_RB_RATIONAL_NUM
-static inline VALUE
-rb_rational_num(VALUE rat)
-{
-#ifdef RRATIONAL
-    return RRATIONAL(rat)->num;
-#else
-    return rb_funcall(rat, rb_intern("numerator"), 0);
-#endif
-}
-#endif
-
-#ifndef HAVE_RB_RATIONAL_DEN
-static inline VALUE
-rb_rational_den(VALUE rat)
-{
-#ifdef RRATIONAL
-    return RRATIONAL(rat)->den;
-#else
-    return rb_funcall(rat, rb_intern("denominator"), 0);
-#endif
-}
-#endif
 
 /* complex */
 

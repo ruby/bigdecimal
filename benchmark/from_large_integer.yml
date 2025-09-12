@@ -2,7 +2,7 @@ loop_count: 1000
 
 contexts:
 - gems:
-    bigdecimal: 3.0.0
+    bigdecimal: 3.1.1
 - name: "master"
   prelude: |-
     $LOAD_PATH.unshift(File.expand_path("lib"))
