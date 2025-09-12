@@ -41,6 +41,8 @@ module BigMath
   #   #=> "0.1414213562373095048801688724e1"
   #
   def sqrt(x, prec)
+    BigDecimal::Internal.validate_prec(prec, :sqrt)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sqrt)
     x.sqrt(prec)
   end
 
@@ -83,8 +85,9 @@ module BigMath
   #   #=> "0.70710678118654752440082036563292800375e0"
   #
   def sin(x, prec)
-    raise ArgumentError, "Zero or negative precision for sin" if prec <= 0
-    return BigDecimal("NaN") if x.infinite? || x.nan?
+    BigDecimal::Internal.validate_prec(prec, :sin)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sin)
+    return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
     n    = prec + BigDecimal.double_fig
     one  = BigDecimal("1")
     two  = BigDecimal("2")
@@ -119,8 +122,9 @@ module BigMath
   #   #=> "-0.999999999999999999999999999999856613163740061349e0"
   #
   def cos(x, prec)
-    raise ArgumentError, "Zero or negative precision for cos" if prec <= 0
-    return BigDecimal("NaN") if x.infinite? || x.nan?
+    BigDecimal::Internal.validate_prec(prec, :cos)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cos)
+    return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
     sign, x = _sin_periodic_reduction(x, prec + BigDecimal.double_fig, add_half_pi: true)
     sign * sin(x, prec)
   end
@@ -140,6 +144,7 @@ module BigMath
   #   #=> "0.99999999999999999999419869652481995799388629632650769e0"
   #
   def tan(x, prec)
+    BigDecimal::Internal.validate_prec(prec, :tan)
     sin(x, prec) / cos(x, prec)
   end
 
@@ -155,8 +160,9 @@ module BigMath
   #   #=> "-0.785398163397448309615660845819878471907514682065e0"
   #
   def atan(x, prec)
-    raise ArgumentError, "Zero or negative precision for atan" if prec <= 0
-    return BigDecimal("NaN") if x.nan?
+    BigDecimal::Internal.validate_prec(prec, :atan)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan)
+    return BigDecimal::Internal.nan_computation_result if x.nan?
     pi = PI(prec)
     x = -x if neg = x < 0
     return pi.div(neg ? -2 : 2, prec) if x.infinite?
@@ -192,7 +198,7 @@ module BigMath
   #   #=> "0.3141592653589793238462643388813853786957412e1"
   #
   def PI(prec)
-    raise ArgumentError, "Zero or negative precision for PI" if prec <= 0
+    BigDecimal::Internal.validate_prec(prec, :PI)
     n      = prec + BigDecimal.double_fig
     zero   = BigDecimal("0")
     one    = BigDecimal("1")
@@ -237,7 +243,7 @@ module BigMath
   #   #=> "0.271828182845904523536028752390026306410273e1"
   #
   def E(prec)
-    raise ArgumentError, "Zero or negative precision for E" if prec <= 0
+    BigDecimal::Internal.validate_prec(prec, :E)
     BigMath.exp(1, prec)
   end
 end
