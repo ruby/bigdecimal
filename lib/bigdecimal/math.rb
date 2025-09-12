@@ -25,8 +25,8 @@ require 'bigdecimal'
 #
 #   include BigMath
 #
-#   a = BigDecimal((PI(100)/2).to_s)
-#   puts sin(a,100) # => 0.99999999999999999999......e0
+#   a = BigDecimal((PI(49)/2).to_s)
+#   puts sin(a,100) # => 0.9999999999...9999999986e0
 #
 module BigMath
   module_function
@@ -37,8 +37,8 @@ module BigMath
   # Computes the square root of +decimal+ to the specified number of digits of
   # precision, +numeric+.
   #
-  #   BigMath.sqrt(BigDecimal('2'), 16).to_s
-  #   #=> "0.1414213562373095048801688724e1"
+  #   BigMath.sqrt(BigDecimal('2'), 32).to_s
+  #   #=> "0.14142135623730950488016887242097e1"
   #
   def sqrt(x, prec)
     BigDecimal::Internal.validate_prec(prec, :sqrt)
@@ -81,8 +81,8 @@ module BigMath
   #
   # If +decimal+ is Infinity or NaN, returns NaN.
   #
-  #   BigMath.sin(BigMath.PI(5)/4, 5).to_s
-  #   #=> "0.70710678118654752440082036563292800375e0"
+  #   BigMath.sin(BigMath.PI(5)/4, 32).to_s
+  #   #=> "0.70710807985947359435812921837984e0"
   #
   def sin(x, prec)
     BigDecimal::Internal.validate_prec(prec, :sin)
@@ -118,8 +118,8 @@ module BigMath
   #
   # If +decimal+ is Infinity or NaN, returns NaN.
   #
-  #   BigMath.cos(BigMath.PI(4), 16).to_s
-  #   #=> "-0.999999999999999999999999999999856613163740061349e0"
+  #   BigMath.cos(BigMath.PI(16), 32).to_s
+  #   #=> "-0.99999999999999999999999999999997e0"
   #
   def cos(x, prec)
     BigDecimal::Internal.validate_prec(prec, :cos)
@@ -140,8 +140,8 @@ module BigMath
   #   BigMath.tan(BigDecimal("0.0"), 4).to_s
   #   #=> "0.0"
   #
-  #   BigMath.tan(BigMath.PI(4) / 4, 4).to_s
-  #   #=> "0.99999999999999999999419869652481995799388629632650769e0"
+  #   BigMath.tan(BigMath.PI(24) / 4, 32).to_s
+  #   #=> "0.99999999999999999999999830836025e0"
   #
   def tan(x, prec)
     BigDecimal::Internal.validate_prec(prec, :tan)
@@ -156,8 +156,8 @@ module BigMath
   #
   # If +decimal+ is NaN, returns NaN.
   #
-  #   BigMath.atan(BigDecimal('-1'), 16).to_s
-  #   #=> "-0.785398163397448309615660845819878471907514682065e0"
+  #   BigMath.atan(BigDecimal('-1'), 32).to_s
+  #   #=> "-0.78539816339744830961566084581988e0"
   #
   def atan(x, prec)
     BigDecimal::Internal.validate_prec(prec, :atan)
@@ -194,8 +194,8 @@ module BigMath
   # Computes the value of pi to the specified number of digits of precision,
   # +numeric+.
   #
-  #   BigMath.PI(10).to_s
-  #   #=> "0.3141592653589793238462643388813853786957412e1"
+  #   BigMath.PI(32).to_s
+  #   #=> "0.31415926535897932384626433832795e1"
   #
   def PI(prec)
     BigDecimal::Internal.validate_prec(prec, :PI)
@@ -239,8 +239,8 @@ module BigMath
   # Computes e (the base of natural logarithms) to the specified number of
   # digits of precision, +numeric+.
   #
-  #   BigMath.E(10).to_s
-  #   #=> "0.271828182845904523536028752390026306410273e1"
+  #   BigMath.E(32).to_s
+  #   #=> "0.27182818284590452353602874713527e1"
   #
   def E(prec)
     BigDecimal::Internal.validate_prec(prec, :E)
