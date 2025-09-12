@@ -53,7 +53,7 @@ class TestBigMath < Test::Unit::TestCase
   end
 
   def test_consistent_precision_acceptance
-    x = BigDecimal('1.23456789')
+    x = BigDecimal('0.123456789')
     # Exclude div because div(x, nil) is a special case
     assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.add(x, prec) }
     assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.sub(x, prec) }
@@ -66,9 +66,50 @@ class TestBigMath < Test::Unit::TestCase
     assert_consistent_precision_acceptance {|prec| BigMath.sin(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.cos(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.tan(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.asin(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.acos(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.atan(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.atan2(x, x + 1, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.sinh(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.cosh(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.tanh(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.asinh(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.acosh(x + 1, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.atanh(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.log2(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.log10(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.log1p(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.expm1(x, prec) }
+
     assert_consistent_precision_acceptance {|prec| BigMath.E(prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.PI(prec) }
+  end
+
+  def test_coerce_argument
+    f = 0.8
+    bd = BigDecimal(f)
+    assert_equal(BigMath.exp(bd, N), BigMath.exp(f, N))
+    assert_equal(BigMath.log(bd, N), BigMath.log(f, N))
+    assert_equal(sqrt(bd, N), sqrt(f, N))
+    assert_equal(cbrt(bd, N), cbrt(f, N))
+    assert_equal(hypot(bd, bd, N), hypot(f, f, N))
+    assert_equal(sin(bd, N), sin(f, N))
+    assert_equal(cos(bd, N), cos(f, N))
+    assert_equal(tan(bd, N), tan(f, N))
+    assert_equal(asin(bd, N), asin(f, N))
+    assert_equal(acos(bd, N), acos(f, N))
+    assert_equal(atan(bd, N), atan(f, N))
+    assert_equal(atan2(bd, bd, N), atan2(f, f, N))
+    assert_equal(sinh(bd, N), sinh(f, N))
+    assert_equal(cosh(bd, N), cosh(f, N))
+    assert_equal(tanh(bd, N), tanh(f, N))
+    assert_equal(asinh(bd, N), asinh(f, N))
+    assert_equal(acosh(bd * 2, N), acosh(f * 2, N))
+    assert_equal(atanh(bd, N), atanh(f, N))
+    assert_equal(log2(bd, N), log2(f, N))
+    assert_equal(log10(bd, N), log10(f, N))
+    assert_equal(log1p(bd, N), log1p(f, N))
+    assert_equal(expm1(bd, N), expm1(f, N))
   end
 
   def test_sqrt
