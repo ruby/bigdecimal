@@ -1733,15 +1733,24 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
         goto Done;
     }
-    if (VpIsInf(b.real)) {
-        VALUE zero = BigDecimal_positive_zero();
-        *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
-        *mod = bdvalue_nullable(a);
-        goto Done;
-    }
     if (VpIsZero(a.real)) {
         VALUE zero = BigDecimal_positive_zero();
         *div = *mod = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+        goto Done;
+    }
+    if (VpIsInf(b.real)) {
+        if (!truncate && VpGetSign(a.real) * VpGetSign(b.real) < 0) {
+            BDVALUE minus_one = NewZeroWrap(1, BASE_FIG);
+            VpSetOne(minus_one.real);
+            VpSetSign(minus_one.real, -1);
+            RB_GC_GUARD(minus_one.bigdecimal);
+            *div = bdvalue_nullable(minus_one);
+            *mod = bdvalue_nullable(b);
+        } else {
+            VALUE zero = BigDecimal_positive_zero();
+            *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+            *mod = bdvalue_nullable(a);
+        }
         goto Done;
     }
 
