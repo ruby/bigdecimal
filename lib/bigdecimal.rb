@@ -233,7 +233,8 @@ module BigMath
 
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log)
     return BigDecimal::Internal.nan_computation_result if x.nan?
-    raise Math::DomainError, 'Zero or negative argument for log' if x <= 0
+    raise Math::DomainError, 'Negative argument for log' if x < 0
+    return -BigDecimal::Internal.infinity_computation_result if x.zero?
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 

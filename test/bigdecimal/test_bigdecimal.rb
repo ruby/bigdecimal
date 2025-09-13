@@ -2352,8 +2352,9 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_BigMath_log_with_zero_arg
-    assert_raise(Math::DomainError) do
-      BigMath.log(0, 20)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+      assert_equal(Math.log(0), BigMath.log(0, 20))
     end
   end
 
