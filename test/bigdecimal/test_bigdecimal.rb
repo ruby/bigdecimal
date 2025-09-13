@@ -2697,14 +2697,24 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal(minus_ullong_max.to_s), BigDecimal(minus_ullong_max), "[GH-200]")
   end
 
-  def test_reminder_infinity_gh_187
-    # https://github.com/ruby/bigdecimal/issues/187
+  def test_divmod_modulo_remainder_infinity
+    pend '-4.2.divmod(Float::INFINITY) is not [-1, Infinity]' if RUBY_ENGINE == 'truffleruby'
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
       BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
-      bd = BigDecimal("4.2")
-      assert_equal(bd.remainder(BigDecimal("+Infinity")), bd)
-      assert_equal(bd.remainder(BigDecimal("-Infinity")), bd)
+      pinf = BigDecimal("+Infinity")
+      minf = BigDecimal("-Infinity")
+      assert_nan(pinf.modulo(pinf))
+      assert_nan(pinf.remainder(pinf))
+      [BigDecimal("-4.2"), BigDecimal(0), BigDecimal("4.2")].each do |x|
+        assert_equal(x.to_f.divmod(pinf.to_f), x.divmod(pinf))
+        assert_equal(x.to_f.divmod(minf.to_f), x.divmod(minf))
+        assert_equal(x.to_f.modulo(pinf.to_f), x.modulo(pinf))
+        assert_equal(x.to_f.modulo(minf.to_f), x.modulo(minf))
+        # Float#remainder(plus_or_minus_infinity) returns itself in Ruby >= 3.1
+        assert_equal(x, x.remainder(pinf))
+        assert_equal(x, x.remainder(minf))
+      end
     end
   end
 
