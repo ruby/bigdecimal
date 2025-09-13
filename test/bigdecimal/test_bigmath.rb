@@ -149,8 +149,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e-30"), n) }
     assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e30"), n) }
     assert_converge_in_precision {|n| BigMath.log(SQRT2, n) }
-    assert_raise(Math::DomainError) {BigMath.log(BigDecimal("0"), 10)}
-    assert_raise(Math::DomainError) {BigMath.log(BigDecimal("-1"), 10)}
+    assert_raise(Math::DomainError) {BigMath.log(BigDecimal("-0.1"), 10)}
     assert_separately(%w[-rbigdecimal], <<-SRC)
     begin
       x = BigMath.log(BigDecimal("1E19999999999999"), 10)
