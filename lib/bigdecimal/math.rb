@@ -51,7 +51,7 @@ module BigMath
   # and satisfies sin(x) = sign * sin(reduced_x)
   # If add_half_pi is true, adds pi/2 to x before reduction.
   # Precision of pi is adjusted to ensure reduced_x has the required precision.
-  private def _sin_periodic_reduction(x, prec, add_half_pi: false)
+  private_class_method def _sin_periodic_reduction(x, prec, add_half_pi: false) # :nodoc:
     return [1, x] if -Math::PI/2 <= x && x <= Math::PI/2 && !add_half_pi
 
     mod_prec = prec + BigDecimal.double_fig
