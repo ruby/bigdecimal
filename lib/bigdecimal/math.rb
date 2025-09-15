@@ -94,6 +94,37 @@ module BigMath
     end
   end
 
+  private_class_method def _sin_binary_splitting(x, prec) # :nodoc:
+    return x if x.zero?
+    x2 = x.mult(x, prec)
+    # Find k that satisfies x2**k / (2k+1)! < 10**(-prec)
+    log10 = Math.log(10)
+    logx = BigDecimal::Internal.float_log(x.abs)
+    step = (1..).bsearch { |k| Math.lgamma(2 * k + 1)[0] - 2 * k * logx > prec * log10 }
+    # Construct denominator sequence for binary splitting
+    # sin(x) = x*(1-x2/(2*3)*(1-x2/(4*5)*(1-x2/(6*7)*(1-x2/(8*9)*(1-...)))))
+    ds = (1..step).map {|i| -(2 * i) * (2 * i + 1) }
+    x.mult(1 + BigDecimal::Internal.taylor_sum_binary_splitting(x2, ds, prec), prec)
+  end
+
+  private_class_method def _sin_around_zero(x, prec) # :nodoc:
+    # Divide x into several parts
+    # sin(x.xxxxxxxx...) = sin(x.xx + 0.00xx + 0.0000xxxx + ...)
+    # Calculate sin of each part and restore sin(0.xxxxxxxx...) using addition theorem.
+    sin = BigDecimal(0)
+    cos = BigDecimal(1)
+    n = 2
+    while x != 0 do
+      partial_x = x.truncate(n)
+      x -= partial_x
+      s = _sin_binary_splitting(partial_x, prec)
+      c = (1 - s * s).sqrt(prec)
+      sin, cos = (sin * c).add(cos * s, prec), (cos * c).sub(sin * s, prec)
+      n *= 2
+    end
+    sin.clamp(BigDecimal(-1), BigDecimal(1))
+  end
+
   # call-seq:
   #   cbrt(decimal, numeric) -> BigDecimal
   #
@@ -156,26 +187,9 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :sin)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sin)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
-    n    = prec + BigDecimal.double_fig
-    one  = BigDecimal("1")
-    two  = BigDecimal("2")
+    n = prec + BigDecimal.double_fig
     sign, x = _sin_periodic_reduction(x, n)
-    x1   = x
-    x2   = x.mult(x,n)
-    y    = x
-    d    = y
-    i    = one
-    z    = one
-    while d.nonzero? && ((m = n - (y.exponent - d.exponent).abs) > 0)
-      m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      x1  = -x2.mult(x1,n)
-      i  += two
-      z  *= (i-one) * i
-      d   = x1.div(z,m)
-      y  += d
-    end
-    y = BigDecimal("1") if y > 1
-    y.mult(sign, prec)
+    _sin_around_zero(x, n).mult(sign, prec)
   end
 
   # call-seq:
@@ -193,8 +207,9 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :cos)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cos)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
-    sign, x = _sin_periodic_reduction(x, prec + BigDecimal.double_fig, add_half_pi: true)
-    sign * sin(x, prec)
+    n = prec + BigDecimal.double_fig
+    sign, x = _sin_periodic_reduction(x, n, add_half_pi: true)
+    _sin_around_zero(x, n).mult(sign, prec)
   end
 
   # call-seq:
@@ -283,28 +298,21 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     n = prec + BigDecimal.double_fig
-    pi = PI(n)
+    return PI(n).div(2 * x.infinite?, prec) if x.infinite?
+
     x = -x if neg = x < 0
-    return pi.div(neg ? -2 : 2, prec) if x.infinite?
-    return pi.div(neg ? -4 : 4, prec) if x.round(n) == 1
-    x = BigDecimal("1").div(x, n) if inv = x > 1
-    x = (-1 + sqrt(1 + x.mult(x, n), n)).div(x, n) if dbl = x > 0.5
-    y = x
-    d = y
-    t = x
-    r = BigDecimal("3")
-    x2 = x.mult(x,n)
-    while d.nonzero? && ((m = n - (y.exponent - d.exponent).abs) > 0)
-      m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      t = -t.mult(x2,n)
-      d = t.div(r,m)
-      y += d
-      r += 2
+    x = BigDecimal(1).div(x, n) if inv = x < -1 || x > 1
+
+    # Solve tan(y) - x = 0 with Newton's method
+    # Repeat: y -= (tan(y) - x) * cos(y)**2
+    y = BigDecimal(Math.atan(x.to_f), 0)
+    BigDecimal::Internal.newton_loop(n) do |p|
+      s = sin(y, p)
+      c = (1 - s * s).sqrt(p)
+      y = y.sub(c * (s.sub(c * x.mult(1, p), p)), p)
     end
-    y *= 2 if dbl
-    y = pi / 2 - y if inv
-    y = -y if neg
-    y.mult(1, prec)
+    y = PI(n) / 2 - y if inv
+    y.mult(neg ? -1 : 1, prec)
   end
 
   # call-seq:
@@ -804,7 +812,7 @@ module BigMath
     loggamma_k = 0
     ck_exponents = (1..a-1).map do |k|
       loggamma_k += Math.log10(k - 1) if k > 1
-      -loggamma_k - k / log10f + (k - 0.5) * Math.log10(a - k) - BigMath.log10(x_low_prec.add(k, low_prec), low_prec)
+      -loggamma_k - k / log10f + (k - 0.5) * Math.log10(a - k) - BigDecimal::Internal.float_log(x_low_prec.add(k, low_prec)) / log10f
     end
 
     # Estimate exponent of sum by Stirling's approximation
