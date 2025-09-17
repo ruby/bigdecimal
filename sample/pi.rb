@@ -2,7 +2,7 @@
 # pi.rb
 #
 # Calculates 3.1415.... (the number of times that a circle's diameter
-# will fit around the circle) using J. Machin's formula.
+# will fit around the circle)
 #
 
 require "bigdecimal"
