@@ -1991,6 +1991,11 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_in_epsilon(z2, x2 ** y, 1e-99)
   end
 
+  def test_power_with_huge_value
+    n = BigDecimal('7e+10000')
+    assert_equal(BigMath.exp(1, 100), (1 + BigDecimal(1).div(n, 120)).power(n, 100))
+  end
+
   def test_power_precision
     x = BigDecimal("1.41421356237309504880168872420969807856967187537695")
     y = BigDecimal("3.14159265358979323846264338327950288419716939937511")
