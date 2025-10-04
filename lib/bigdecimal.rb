@@ -165,20 +165,32 @@ class BigDecimal
       return BigDecimal(1).div(inv, prec)
     end
 
-    int_part = y.fix.to_i
-    prec2 = prec + BigDecimal.double_fig
-    pow_prec = prec2 + (int_part > 0 ? y.exponent : 0)
-    ans = BigDecimal(1)
-    n = 1
-    xn = x
-    while true
-      ans = ans.mult(xn, pow_prec) if int_part.allbits?(n)
-      n <<= 1
-      break if n > int_part
-      xn = xn.mult(xn, pow_prec)
+    if y.exponent > Math.log(prec) * 5 + 20
+      # x**int_part calculation is slow when y.exponent is large, so skip it
+      int_part = 0
+      rest_part = y
+    else
+      int_part = y.fix.to_i
+      rest_part = frac_part
     end
-    unless frac_part.zero?
-      ans = ans.mult(BigMath.exp(BigMath.log(x, prec2).mult(frac_part, prec2), prec2), prec2)
+
+    prec2 = prec + BigDecimal.double_fig
+    ans = BigDecimal(1)
+
+    if int_part > 0
+      pow_prec = prec2 + y.exponent
+      n = 1
+      xn = x
+      while true
+        ans = ans.mult(xn, pow_prec) if int_part.allbits?(n)
+        n <<= 1
+        break if n > int_part
+        xn = xn.mult(xn, pow_prec)
+      end
+    end
+
+    unless rest_part.zero?
+      ans = ans.mult(BigMath.exp(BigMath.log(x, prec2).mult(rest_part, prec2), prec2), prec2)
     end
     ans.mult(1, prec)
   end
