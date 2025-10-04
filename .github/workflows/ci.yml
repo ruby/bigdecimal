@@ -58,7 +58,7 @@ jobs:
 
       - run: rake compile
 
-      - run: rake test
+      - run: bundle exec rake test
 
       - run: rake build
 
