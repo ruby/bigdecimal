@@ -1,5 +1,27 @@
 # CHANGES
 
+## 3.3.0
+
+* Allow calling to_d without arguments [GH-421]
+
+  **@fsateler**
+
+* Calculate BigMath.sin and cos in relative precision [GH-422]
+
+  **@tompng**
+
+* Add support for tangent function [GH-231]
+
+  **@rhannequin**
+
+* BigMath methods accepts numeric as an argument [GH-415]
+
+  **@tompng**
+
+* Round result of sqrt and BigMath methods [GH-427]
+
+  **@tompng**
+
 ## 3.2.3
 
 * Allow BigDecimal accept Float without precision [GH-314]
