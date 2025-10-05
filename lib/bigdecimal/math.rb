@@ -28,6 +28,8 @@ require 'bigdecimal'
 #   erfc(x, prec)
 #   gamma(x, prec)
 #   lgamma(x, prec)
+#   frexp(x)
+#   ldexp(x, exponent)
 #   PI  (prec)
 #   E   (prec) == exp(1.0,prec)
 #
@@ -854,6 +856,36 @@ module BigMath
     x %= 1
     x = 1 - x if x > 0.5 # to avoid sin(pi*x) loss of precision for x close to 1
     sign * sin(x.mult(pi, prec), prec)
+  end
+
+  # call-seq:
+  #   frexp(x) -> [BigDecimal, Integer]
+  #
+  # Decomposes +x+ into a normalized fraction and an integral power of ten.
+  #
+  #   BigMath.frexp(BigDecimal(123.456))
+  #   #=> [0.123456e0, 3]
+  #
+  def frexp(x)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, 0, :frexp)
+    return [x, 0] unless x.finite?
+
+    exponent = x.exponent
+    [x._decimal_shift(-exponent), exponent]
+  end
+
+  # call-seq:
+  #   ldexp(fraction, exponent) -> BigDecimal
+  #
+  # Inverse of +frexp+.
+  # Returns the value of fraction * 10**exponent.
+  #
+  #   BigMath.ldexp(BigDecimal("0.123456e0"), 3)
+  #   #=> 0.123456e3
+  #
+  def ldexp(x, exponent)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, 0, :frexp)
+    x.finite? ? x._decimal_shift(exponent) : x
   end
 
   # call-seq:
