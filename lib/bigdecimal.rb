@@ -165,22 +165,25 @@ class BigDecimal
       return BigDecimal(1).div(inv, prec)
     end
 
-    int_part = y.fix.to_i
     prec2 = prec + BigDecimal.double_fig
-    pow_prec = prec2 + (int_part > 0 ? y.exponent : 0)
-    ans = BigDecimal(1)
-    n = 1
-    xn = x
-    while true
-      ans = ans.mult(xn, pow_prec) if int_part.allbits?(n)
-      n <<= 1
-      break if n > int_part
-      xn = xn.mult(xn, pow_prec)
+
+    if frac_part.zero? && y.exponent < Math.log(prec) * 5 + 20
+      # Use exponentiation by squaring if y is an integer and not too large
+      pow_prec = prec2 + y.exponent
+      n = 1
+      xn = x
+      ans = BigDecimal(1)
+      int_part = y.fix.to_i
+      while true
+        ans = ans.mult(xn, pow_prec) if int_part.allbits?(n)
+        n <<= 1
+        break if n > int_part
+        xn = xn.mult(xn, pow_prec)
+      end
+      ans.mult(1, prec)
+    else
+      BigMath.exp(BigMath.log(x, prec2).mult(y, prec2), prec)
     end
-    unless frac_part.zero?
-      ans = ans.mult(BigMath.exp(BigMath.log(x, prec2).mult(frac_part, prec2), prec2), prec2)
-    end
-    ans.mult(1, prec)
   end
 
   # Returns the square root of the value.
