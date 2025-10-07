@@ -182,6 +182,13 @@ class BigDecimal
       end
       ans.mult(1, prec)
     else
+      if x > 1
+        # To calculate exp(z, prec), z needs prec+max(z.exponent, 0) precision if z > 0.
+        # Estimate (y*log(x)).exponent
+        logx_exponent = x < 2 ? (x - 1).exponent : Math.log10(x.exponent).round
+        ylogx_exponent = y.exponent + logx_exponent
+        prec2 += [ylogx_exponent, 0].max
+      end
       BigMath.exp(BigMath.log(x, prec2).mult(y, prec2), prec)
     end
   end

@@ -1996,6 +1996,22 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigMath.exp(1, 100), (1 + BigDecimal(1).div(n, 120)).power(n, 100))
   end
 
+  def test_power_almost_infinite
+    omit if EXPONENT_MAX < 9e+18
+
+    x = BigDecimal(1.9)
+    y = BigDecimal('1e+18') + 0.1
+    assert_equal(x.power(y, 120).mult(1, 100), x.power(y, 100))
+
+    x = BigDecimal("9e+#{10**17}").div(7, 100)
+    y = BigDecimal(1.9)
+    assert_equal(x.power(y, 120).mult(1, 100), x.power(y, 100))
+
+    x = BigDecimal("9e+#{10**9}").div(7, 100)
+    y = BigDecimal('1e+8') + 0.1
+    assert_equal(x.power(y, 120).mult(1, 100), x.power(y, 100))
+  end
+
   def test_power_precision
     x = BigDecimal("1.41421356237309504880168872420969807856967187537695")
     y = BigDecimal("3.14159265358979323846264338327950288419716939937511")
