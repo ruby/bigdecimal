@@ -1735,7 +1735,8 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     }
     if (VpIsZero(a.real)) {
         VALUE zero = BigDecimal_positive_zero();
-        *div = *mod = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+        *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+        *mod = bdvalue_nullable(a);
         goto Done;
     }
     if (VpIsInf(b.real)) {
