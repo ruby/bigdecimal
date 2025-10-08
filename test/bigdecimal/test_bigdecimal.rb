@@ -2740,6 +2740,16 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
+  def test_signed_zero_modulo_remainder
+    [-0.0, +0.0].each do |a|
+      [-1.0, +1.0].each do |b|
+        assert_equal(BigDecimal(a.remainder(b)).to_s, BigDecimal(a).remainder(BigDecimal(b)).to_s)
+        assert_equal(BigDecimal(a.modulo(b)).to_s, BigDecimal(a).modulo(BigDecimal(b)).to_s)
+        assert_equal(a.divmod(b).map {|x| BigDecimal(x)}.inspect, BigDecimal(a).divmod(BigDecimal(b)).inspect)
+      end
+    end
+  end
+
   def test_bsearch_for_bigdecimal
     assert_raise(TypeError) {
       (BigDecimal('0.5')..BigDecimal('2.25')).bsearch
