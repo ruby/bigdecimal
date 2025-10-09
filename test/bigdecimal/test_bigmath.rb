@@ -29,6 +29,47 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| E(n) }
   end
 
+  def assert_consistent_precision_acceptance(accept_zero: false)
+    value = yield 5
+    assert_equal(value, yield(5.9))
+
+    obj_with_to_int = Object.new
+    obj_with_to_int.define_singleton_method(:to_int) { 5 }
+    assert_equal(value, yield(obj_with_to_int))
+
+    wrong_to_int = Object.new
+    wrong_to_int.define_singleton_method(:to_int) { 5.5 }
+    assert_raise(TypeError) { yield wrong_to_int }
+
+    assert_raise(TypeError) { yield nil }
+    assert_raise(TypeError) { yield '5' }
+    assert_raise(ArgumentError) { yield(-1) }
+    if accept_zero
+      assert_nothing_raised { yield 0 }
+    else
+      assert_raise(ArgumentError) { yield 0 }
+    end
+  end
+
+  def test_consistent_precision_acceptance
+    x = BigDecimal('1.23456789')
+    # Exclude div because div(x, nil) is a special case
+    assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.add(x, prec) }
+    assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.sub(x, prec) }
+    assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.mult(x, prec) }
+    assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.power(x, prec) }
+    assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.sqrt(prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.sqrt(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.exp(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.log(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.sin(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.cos(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.tan(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.atan(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.E(prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.PI(prec) }
+  end
+
   def test_sqrt
     assert_in_delta(2**0.5, sqrt(BigDecimal("2"), N))
     assert_equal(10, sqrt(BigDecimal("100"), N))

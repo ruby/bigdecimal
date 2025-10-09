@@ -41,7 +41,7 @@ module BigMath
   #   #=> "0.14142135623730950488016887242097e1"
   #
   def sqrt(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :sqrt)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :sqrt)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sqrt)
     x.sqrt(prec)
   end
@@ -85,7 +85,7 @@ module BigMath
   #   #=> "0.70710807985947359435812921837984e0"
   #
   def sin(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :sin)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :sin)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sin)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
     n    = prec + BigDecimal.double_fig
@@ -122,7 +122,7 @@ module BigMath
   #   #=> "-0.99999999999999999999999999999997e0"
   #
   def cos(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :cos)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :cos)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cos)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
     sign, x = _sin_periodic_reduction(x, prec + BigDecimal.double_fig, add_half_pi: true)
@@ -144,7 +144,7 @@ module BigMath
   #   #=> "0.99999999999999999999999830836025e0"
   #
   def tan(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :tan)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :tan)
     sin(x, prec + BigDecimal.double_fig).div(cos(x, prec + BigDecimal.double_fig), prec)
   end
 
@@ -160,7 +160,7 @@ module BigMath
   #   #=> "-0.78539816339744830961566084581988e0"
   #
   def atan(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :atan)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :atan)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     n = prec + BigDecimal.double_fig
@@ -198,7 +198,7 @@ module BigMath
   #   #=> "0.31415926535897932384626433832795e1"
   #
   def PI(prec)
-    BigDecimal::Internal.validate_prec(prec, :PI)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :PI)
     n      = prec + BigDecimal.double_fig
     zero   = BigDecimal("0")
     one    = BigDecimal("1")
@@ -243,7 +243,7 @@ module BigMath
   #   #=> "0.27182818284590452353602874713527e1"
   #
   def E(prec)
-    BigDecimal::Internal.validate_prec(prec, :E)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :E)
     BigMath.exp(1, prec)
   end
 end
