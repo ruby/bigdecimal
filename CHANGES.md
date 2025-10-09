@@ -1,5 +1,11 @@
 # CHANGES
 
+## 3.3.1
+
+* All BigMath methods converts non integer precision with to_int
+
+  **@tompng**
+
 ## 3.3.0
 
 * Allow calling to_d without arguments [GH-421]
