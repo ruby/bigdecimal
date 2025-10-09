@@ -27,13 +27,24 @@ class BigDecimal
       raise ArgumentError, "#{x.inspect} can't be coerced into BigDecimal"
     end
 
-    def self.validate_prec(prec, method_name, accept_zero: false) # :nodoc:
-      raise ArgumentError, 'precision must be an Integer' unless Integer === prec
+    def self.coerce_validate_prec(prec, method_name, accept_zero: false) # :nodoc:
+      unless Integer === prec
+        original = prec
+        # Emulate Integer.try_convert for ruby < 3.1
+        if prec.respond_to?(:to_int)
+          prec = prec.to_int
+        else
+          raise TypeError, "no implicit conversion of #{original.class} into Integer"
+        end
+        raise TypeError, "can't convert #{original.class} to Integer" unless Integer === prec
+      end
+
       if accept_zero
         raise ArgumentError, "Negative precision for #{method_name}" if prec < 0
       else
         raise ArgumentError, "Zero or negative precision for #{method_name}" if prec <= 0
       end
+      prec
     end
 
     def self.infinity_computation_result # :nodoc:
@@ -83,10 +94,10 @@ class BigDecimal
   #
   # Also available as the operator **.
   #
-  def power(y, prec = nil)
-    Internal.validate_prec(prec, :power) if prec
+  def power(y, prec = 0)
+    prec = Internal.coerce_validate_prec(prec, :power, accept_zero: true)
     x = self
-    y = Internal.coerce_to_bigdecimal(y, prec || n_significant_digits, :power)
+    y = Internal.coerce_to_bigdecimal(y, prec.nonzero? || n_significant_digits, :power)
 
     return Internal.nan_computation_result if x.nan? || y.nan?
     return BigDecimal(1) if y.zero?
@@ -133,10 +144,10 @@ class BigDecimal
       return BigDecimal(1)
     end
 
-    prec ||= BigDecimal.limit.nonzero?
+    prec = BigDecimal.limit if prec.zero?
     frac_part = y.frac
 
-    if frac_part.zero? && !prec
+    if frac_part.zero? && prec.zero?
       # Infinite precision calculation for `x ** int` and `x.power(int)`
       int_part = y.fix.to_i
       int_part = -int_part if (neg = int_part < 0)
@@ -156,7 +167,7 @@ class BigDecimal
       return neg ? BigDecimal(1) / ans : ans
     end
 
-    prec ||= [x.n_significant_digits, y.n_significant_digits, BigDecimal.double_fig].max + BigDecimal.double_fig
+    prec = [x.n_significant_digits, y.n_significant_digits, BigDecimal.double_fig].max + BigDecimal.double_fig if prec.zero?
 
     if y < 0
       inv = x.power(-y, prec)
@@ -198,7 +209,7 @@ class BigDecimal
   # Result has at least prec significant digits.
   #
   def sqrt(prec)
-    Internal.validate_prec(prec, :sqrt, accept_zero: true)
+    prec = Internal.coerce_validate_prec(prec, :sqrt, accept_zero: true)
     return Internal.infinity_computation_result if infinite? == 1
 
     raise FloatDomainError, 'sqrt of negative value' if self < 0
@@ -238,7 +249,7 @@ module BigMath
   # If +decimal+ is NaN, returns NaN.
   #
   def self.log(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :log)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :log)
     raise Math::DomainError, 'Complex argument for BigMath.log' if Complex === x
 
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log)
@@ -315,7 +326,7 @@ module BigMath
   # If +decimal+ is NaN, returns NaN.
   #
   def self.exp(x, prec)
-    BigDecimal::Internal.validate_prec(prec, :exp)
+    prec = BigDecimal::Internal.coerce_validate_prec(prec, :exp)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :exp)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return x.positive? ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0) if x.infinite?

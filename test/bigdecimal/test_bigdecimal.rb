@@ -1813,6 +1813,10 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_power_with_intger_infinite_precision
     assert_equal(1234 ** 100, (BigDecimal("12.34") ** 100) * BigDecimal("1e200"))
     assert_in_delta(1234 ** 100, 1 / (BigDecimal("12.34") ** -100) * BigDecimal("1e200"), 1)
+    BigDecimal.save_limit do
+      BigDecimal.limit 10
+      assert_equal(BigDecimal("0.1353679867e110"), BigDecimal("12.34") ** 100)
+    end
   end
 
   def test_power_with_BigDecimal
@@ -2351,18 +2355,6 @@ class TestBigDecimal < Test::Unit::TestCase
   def test_BigMath_log_with_nil
     assert_raise(ArgumentError) do
       BigMath.log(nil, 20)
-    end
-  end
-
-  def test_BigMath_log_with_non_integer_precision
-    assert_raise(ArgumentError) do
-      BigMath.log(1, 0.5)
-    end
-  end
-
-  def test_BigMath_log_with_nil_precision
-    assert_raise(ArgumentError) do
-      BigMath.log(1, nil)
     end
   end
 
