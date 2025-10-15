@@ -144,10 +144,10 @@ class BigDecimal
       return BigDecimal(1)
     end
 
-    prec = BigDecimal.limit if prec.zero?
+    limit = BigDecimal.limit
     frac_part = y.frac
 
-    if frac_part.zero? && prec.zero?
+    if frac_part.zero? && prec.zero? && limit.zero?
       # Infinite precision calculation for `x ** int` and `x.power(int)`
       int_part = y.fix.to_i
       int_part = -int_part if (neg = int_part < 0)
@@ -167,18 +167,19 @@ class BigDecimal
       return neg ? BigDecimal(1) / ans : ans
     end
 
-    prec = [x.n_significant_digits, y.n_significant_digits, BigDecimal.double_fig].max + BigDecimal.double_fig if prec.zero?
+    result_prec = prec.nonzero? || [x.n_significant_digits, y.n_significant_digits, BigDecimal.double_fig].max + BigDecimal.double_fig
+    result_prec = [result_prec, limit].min if prec.zero? && limit.nonzero?
+
+    prec2 = result_prec + BigDecimal.double_fig
 
     if y < 0
-      inv = x.power(-y, prec)
+      inv = x.power(-y, prec2)
       return BigDecimal(0) if inv.infinite?
       return BigDecimal::Internal.infinity_computation_result if inv.zero?
-      return BigDecimal(1).div(inv, prec)
+      return BigDecimal(1).div(inv, result_prec)
     end
 
-    prec2 = prec + BigDecimal.double_fig
-
-    if frac_part.zero? && y.exponent < Math.log(prec) * 5 + 20
+    if frac_part.zero? && y.exponent < Math.log(result_prec) * 5 + 20
       # Use exponentiation by squaring if y is an integer and not too large
       pow_prec = prec2 + y.exponent
       n = 1
@@ -191,7 +192,7 @@ class BigDecimal
         break if n > int_part
         xn = xn.mult(xn, pow_prec)
       end
-      ans.mult(1, prec)
+      ans.mult(1, result_prec)
     else
       if x > 1
         # To calculate exp(z, prec), z needs prec+max(z.exponent, 0) precision if z > 0.
@@ -200,7 +201,7 @@ class BigDecimal
         ylogx_exponent = y.exponent + logx_exponent
         prec2 += [ylogx_exponent, 0].max
       end
-      BigMath.exp(BigMath.log(x, prec2).mult(y, prec2), prec)
+      BigMath.exp(BigMath.log(x, prec2).mult(y, prec2), result_prec)
     end
   end
 
@@ -217,7 +218,9 @@ class BigDecimal
     return self if zero?
 
     if prec == 0
-      prec = BigDecimal.limit.nonzero? || n_significant_digits + BigDecimal.double_fig
+      limit = BigDecimal.limit
+      prec = n_significant_digits + BigDecimal.double_fig
+      prec = [limit, prec].min if limit.nonzero?
     end
 
     ex = exponent / 2
