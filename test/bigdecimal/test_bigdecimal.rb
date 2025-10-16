@@ -2072,14 +2072,17 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_equal(BigDecimal('0.889'), (BigDecimal('0.8888') - BigDecimal('0')))
       assert_equal(BigDecimal('2.66'), (BigDecimal('0.888') * BigDecimal('3')))
       assert_equal(BigDecimal('0.296'), (BigDecimal('0.8888') / BigDecimal('3')))
+      assert_equal(BigDecimal('0.222e109'), BigDecimal('98.76') ** BigDecimal('54.32'))
       assert_equal(BigDecimal('0.889'), BigDecimal('0.8888').add(BigDecimal('0'), 0))
       assert_equal(BigDecimal('0.889'), BigDecimal('0.8888').sub(BigDecimal('0'), 0))
       assert_equal(BigDecimal('2.66'), BigDecimal('0.888').mult(BigDecimal('3'), 0))
       assert_equal(BigDecimal('0.296'), BigDecimal('0.8888').div(BigDecimal('3'), 0))
+      assert_equal(BigDecimal('0.222e109'), BigDecimal('98.76').power(BigDecimal('54.32'), 0))
       assert_equal(BigDecimal('0.8888'), BigDecimal('0.8888').add(BigDecimal('0'), 5))
       assert_equal(BigDecimal('0.8888'), BigDecimal('0.8888').sub(BigDecimal('0'), 5))
       assert_equal(BigDecimal('2.664'), BigDecimal('0.888').mult(BigDecimal('3'), 5))
       assert_equal(BigDecimal('0.29627'), BigDecimal('0.8888').div(BigDecimal('3'), 5))
+      assert_equal(BigDecimal('0.22164e109'), BigDecimal('98.76').power(BigDecimal('54.32'), 5))
     end
   end
 
@@ -2089,6 +2092,26 @@ class TestBigDecimal < Test::Unit::TestCase
       div = x / y
       BigDecimal.limit(1000)
       assert_equal(div, x / y)
+    end
+  end
+
+  def test_sqrt_with_huge_limit
+    BigDecimal.save_limit do
+      x = BigDecimal("12.34")
+      sqrt = x.sqrt(0)
+      BigDecimal.limit(1000)
+      assert_equal(sqrt, x.sqrt(0))
+    end
+  end
+
+def test_power_with_huge_limit
+    BigDecimal.save_limit do
+      x = BigDecimal("12.34")
+      y = BigDecimal("56.78")
+      pow = x ** y
+      BigDecimal.limit(1000)
+      assert_equal(pow, x ** y)
+      assert_equal(pow, x.power(y, 0))
     end
   end
 
