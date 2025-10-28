@@ -1440,6 +1440,11 @@ class TestBigDecimal < Test::Unit::TestCase
         assert_equal(num / 10**shift, num._decimal_shift(-shift))
       end
     end
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(BigDecimal('123456789e4'), BigDecimal('123456789')._decimal_shift(4))
+      assert_equal(BigDecimal('123456789e9'), BigDecimal('123456789')._decimal_shift(9))
+    end
   end
 
   def test_fix
@@ -1454,6 +1459,11 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(0.1, BigDecimal("0.1").frac)
     BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
     assert_nan(BigDecimal("NaN").frac)
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(BigDecimal('0.456789'), BigDecimal('123.456789').frac)
+      assert_equal(BigDecimal('0.0123456789'), BigDecimal('0.0123456789').frac)
+    end
   end
 
   def test_round
