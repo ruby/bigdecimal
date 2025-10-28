@@ -2507,7 +2507,7 @@ BigDecimal_decimal_shift(VALUE self, VALUE v)
     prec = a.real->Prec + shiftDown;
     c = NewZeroWrap(1, prec * BASE_FIG);
     if (shift == 0) {
-        VpAsgn(c.real, a.real, 1);
+        VpAsgn(c.real, a.real, 10);
     } else if (shiftDown) {
         DECDIG carry = 0;
         exponentShift++;
@@ -6166,7 +6166,7 @@ VpFrac(Real *y, Real *x)
     size_t my, ind_y, ind_x;
 
     if (!VpHasVal(x)) {
-	VpAsgn(y, x, 1);
+	VpAsgn(y, x, 10);
 	goto Exit;
     }
 
@@ -6175,7 +6175,7 @@ VpFrac(Real *y, Real *x)
 	goto Exit;
     }
     else if (x->exponent <= 0) {
-	VpAsgn(y, x, 1);
+	VpAsgn(y, x, 10);
 	goto Exit;
     }
 
