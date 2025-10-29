@@ -60,9 +60,11 @@ class TestBigMath < Test::Unit::TestCase
     assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.mult(x, prec) }
     assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.power(x, prec) }
     assert_consistent_precision_acceptance(accept_zero: true) {|prec| x.sqrt(prec) }
-    assert_consistent_precision_acceptance {|prec| BigMath.sqrt(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.exp(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.log(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.sqrt(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.cbrt(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.hypot(x, x + 1, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.sin(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.cos(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.tan(x, prec) }

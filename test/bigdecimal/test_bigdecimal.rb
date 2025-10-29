@@ -2064,7 +2064,7 @@ class TestBigDecimal < Test::Unit::TestCase
     end
   end
 
-def test_power_with_huge_limit
+  def test_power_with_huge_limit
     BigDecimal.save_limit do
       x = BigDecimal("12.34")
       y = BigDecimal("56.78")
