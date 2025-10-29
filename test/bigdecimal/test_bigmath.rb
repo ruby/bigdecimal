@@ -471,4 +471,28 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_exact_precision(BigMath.exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
     assert_in_exact_precision(BigMath.exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
   end
+
+  def test_frexp
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal([BigDecimal("-0.123456"), 10], BigMath.frexp(BigDecimal("-0.123456e10")))
+      assert_equal([BigDecimal("0.123456"), -10], BigMath.frexp(BigDecimal("0.123456e-10")))
+      assert_equal([BigDecimal("0.123456789"), 9], BigMath.frexp(123456789))
+      assert_equal([BigDecimal(0), 0], BigMath.frexp(BigDecimal(0)))
+      assert_equal([BigDecimal::NAN, 0], BigMath.frexp(BigDecimal::NAN))
+      assert_equal([BigDecimal::INFINITY, 0], BigMath.frexp(BigDecimal::INFINITY))
+    end
+  end
+
+  def test_ldexp
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(BigDecimal("-0.123456e10"), BigMath.ldexp(BigDecimal("-0.123456"), 10))
+      assert_equal(BigDecimal("0.123456e20"), BigMath.ldexp(BigDecimal("0.123456e10"), 10.9))
+      assert_equal(BigDecimal("0.123456e-10"), BigMath.ldexp(BigDecimal("0.123456"), -10))
+      assert_equal(BigDecimal("0.123456789e19"), BigMath.ldexp(123456789, 10))
+      assert(BigMath.ldexp(BigDecimal::NAN, 10).nan?)
+      assert_equal(BigDecimal::INFINITY, BigMath.ldexp(BigDecimal::INFINITY, 10))
+    end
+  end
 end
