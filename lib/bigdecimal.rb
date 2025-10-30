@@ -238,6 +238,7 @@ end
 # Core BigMath methods for BigDecimal (log, exp) are defined here.
 # Other methods (sin, cos, atan) are defined in 'bigdecimal/math.rb'.
 module BigMath
+  module_function
 
   # call-seq:
   #   BigMath.log(decimal, numeric)    -> BigDecimal
@@ -251,7 +252,7 @@ module BigMath
   #
   # If +decimal+ is NaN, returns NaN.
   #
-  def self.log(x, prec)
+  def log(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :log)
     raise Math::DomainError, 'Complex argument for BigMath.log' if Complex === x
 
@@ -306,7 +307,7 @@ module BigMath
   end
 
   # Taylor series for exp(x) around 0
-  private_class_method def self._exp_taylor(x, prec) # :nodoc:
+  private_class_method def _exp_taylor(x, prec) # :nodoc:
     xn = BigDecimal(1)
     y = BigDecimal(1)
     1.step do |i|
@@ -328,7 +329,7 @@ module BigMath
   #
   # If +decimal+ is NaN, returns NaN.
   #
-  def self.exp(x, prec)
+  def exp(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :exp)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :exp)
     return BigDecimal::Internal.nan_computation_result if x.nan?
