@@ -355,7 +355,7 @@ module BigMath
 
     prec2 = prec + BigDecimal.double_fig
     prec2 -= x.exponent if x.exponent < 0
-    e = BigMath.exp(x, prec2)
+    e = exp(x, prec2)
     (e - BigDecimal(1).div(e, prec2)).div(2, prec)
   end
 
@@ -377,7 +377,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
 
     prec2 = prec + BigDecimal.double_fig
-    e = BigMath.exp(x, prec2)
+    e = exp(x, prec2)
     (e + BigDecimal(1).div(e, prec2)).div(2, prec)
   end
 
@@ -399,7 +399,7 @@ module BigMath
     return BigDecimal(x.infinite?) if x.infinite?
 
     prec2 = prec + BigDecimal.double_fig + [-x.exponent, 0].max
-    e = BigMath.exp(x, prec2)
+    e = exp(x, prec2)
     einv = BigDecimal(1).div(e, prec2)
     (e - einv).div(e + einv, prec)
   end
@@ -423,7 +423,7 @@ module BigMath
     return -asinh(-x, prec) if x < 0
 
     sqrt_prec = prec + [-x.exponent, 0].max + BigDecimal.double_fig
-    BigMath.log(x + sqrt(x**2 + 1, sqrt_prec), prec)
+    log(x + sqrt(x**2 + 1, sqrt_prec), prec)
   end
 
   # call-seq:
@@ -444,7 +444,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal::Internal.nan_computation_result if x.nan?
 
-    BigMath.log(x + sqrt(x**2 - 1, prec + BigDecimal.double_fig), prec)
+    log(x + sqrt(x**2 - 1, prec + BigDecimal.double_fig), prec)
   end
 
   # call-seq:
@@ -467,7 +467,7 @@ module BigMath
     return -BigDecimal::Internal.infinity_computation_result if x == -1
 
     prec2 = prec + BigDecimal.double_fig
-    (BigMath.log(x + 1, prec2) - BigMath.log(1 - x, prec2)).div(2, prec)
+    (log(x + 1, prec2) - log(1 - x, prec2)).div(2, prec)
   end
 
   # call-seq:
@@ -492,7 +492,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
 
     prec2 = prec + BigDecimal.double_fig * 3 / 2
-    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(2), prec2), prec2)
+    v = log(x, prec2).div(log(BigDecimal(2), prec2), prec2)
     # Perform half-up rounding to calculate log2(2**n)==n correctly in every rounding mode
     v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
     v.mult(1, prec)
@@ -520,7 +520,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
 
     prec2 = prec + BigDecimal.double_fig * 3 / 2
-    v = BigMath.log(x, prec2).div(BigMath.log(BigDecimal(10), prec2), prec2)
+    v = log(x, prec2).div(log(BigDecimal(10), prec2), prec2)
     # Perform half-up rounding to calculate log10(10**n)==n correctly in every rounding mode
     v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
     v.mult(1, prec)
@@ -539,7 +539,7 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log1p)
     raise Math::DomainError, 'Out of domain argument for log1p' if x < -1
 
-    return BigMath.log(x + 1, prec)
+    return log(x + 1, prec)
   end
 
   # call-seq:
@@ -565,7 +565,7 @@ module BigMath
     else
       exp_prec = prec
     end
-    exp_prec > 0 ? BigMath.exp(x, exp_prec).sub(1, prec) : BigDecimal(-1)
+    exp_prec > 0 ? exp(x, exp_prec).sub(1, prec) : BigDecimal(-1)
   end
 
 
@@ -625,6 +625,6 @@ module BigMath
   #
   def E(prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :E)
-    BigMath.exp(1, prec)
+    exp(1, prec)
   end
 end

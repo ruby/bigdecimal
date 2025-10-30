@@ -90,8 +90,8 @@ class TestBigMath < Test::Unit::TestCase
   def test_coerce_argument
     f = 0.8
     bd = BigDecimal(f)
-    assert_equal(BigMath.exp(bd, N), BigMath.exp(f, N))
-    assert_equal(BigMath.log(bd, N), BigMath.log(f, N))
+    assert_equal(exp(bd, N), exp(f, N))
+    assert_equal(log(bd, N), log(f, N))
     assert_equal(sqrt(bd, N), sqrt(f, N))
     assert_equal(cbrt(bd, N), cbrt(f, N))
     assert_equal(hypot(bd, bd, N), hypot(f, f, N))
@@ -371,35 +371,35 @@ class TestBigMath < Test::Unit::TestCase
 
   def test_exp
     [-100, -2, 0.5, 10, 100].each do |x|
-      assert_in_epsilon(Math.exp(x), BigMath.exp(BigDecimal(x, 0), N))
+      assert_in_epsilon(Math.exp(x), exp(BigDecimal(x, 0), N))
     end
-    assert_equal(1, BigMath.exp(BigDecimal("0"), N))
+    assert_equal(1, exp(BigDecimal("0"), N))
     assert_in_exact_precision(
       BigDecimal("4.48168907033806482260205546011927581900574986836966705677265008278593667446671377298105383138245339138861635065183019577"),
-      BigMath.exp(BigDecimal("1.5"), 100),
+      exp(BigDecimal("1.5"), 100),
       100
     )
-    assert_converge_in_precision {|n| BigMath.exp(BigDecimal("1"), n) }
-    assert_converge_in_precision {|n| BigMath.exp(BigDecimal("-2"), n) }
-    assert_converge_in_precision {|n| BigMath.exp(BigDecimal("-34"), n) }
-    assert_converge_in_precision {|n| BigMath.exp(BigDecimal("567"), n) }
-    assert_converge_in_precision {|n| BigMath.exp(SQRT2, n) }
+    assert_converge_in_precision {|n| exp(BigDecimal("1"), n) }
+    assert_converge_in_precision {|n| exp(BigDecimal("-2"), n) }
+    assert_converge_in_precision {|n| exp(BigDecimal("-34"), n) }
+    assert_converge_in_precision {|n| exp(BigDecimal("567"), n) }
+    assert_converge_in_precision {|n| exp(SQRT2, n) }
   end
 
   def test_log
-    assert_equal(0, BigMath.log(BigDecimal("1.0"), 10))
-    assert_in_epsilon(Math.log(10)*1000, BigMath.log(BigDecimal("1e1000"), 10))
+    assert_equal(0, log(BigDecimal("1.0"), 10))
+    assert_in_epsilon(Math.log(10)*1000, log(BigDecimal("1e1000"), 10))
     assert_in_exact_precision(
       BigDecimal("2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862"),
-      BigMath.log(BigDecimal("10"), 100),
+      log(BigDecimal("10"), 100),
       100
     )
-    assert_converge_in_precision {|n| BigMath.log(BigDecimal("2"), n) }
-    assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e-30") + 1, n) }
-    assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e-30"), n) }
-    assert_converge_in_precision {|n| BigMath.log(BigDecimal("1e30"), n) }
-    assert_converge_in_precision {|n| BigMath.log(SQRT2, n) }
-    assert_raise(Math::DomainError) {BigMath.log(BigDecimal("-0.1"), 10)}
+    assert_converge_in_precision {|n| log(BigDecimal("2"), n) }
+    assert_converge_in_precision {|n| log(BigDecimal("1e-30") + 1, n) }
+    assert_converge_in_precision {|n| log(BigDecimal("1e-30"), n) }
+    assert_converge_in_precision {|n| log(BigDecimal("1e30"), n) }
+    assert_converge_in_precision {|n| log(SQRT2, n) }
+    assert_raise(Math::DomainError) {log(BigDecimal("-0.1"), 10)}
     assert_separately(%w[-rbigdecimal], <<-SRC)
     begin
       x = BigMath.log(BigDecimal("1E19999999999999"), 10)
@@ -457,7 +457,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_raise(Math::DomainError) { log1p(BigDecimal("-1.01"), N) }
     assert_in_epsilon(Math.log(0.01), log1p(BigDecimal("-0.99"), N))
     assert_positive_infinite_calculation { log1p(PINF, N) }
-    assert_in_exact_precision(BigMath.log(1 + BigDecimal("1e-20"), 100), log1p(BigDecimal("1e-20"), 100), 100)
+    assert_in_exact_precision(log(1 + BigDecimal("1e-20"), 100), log1p(BigDecimal("1e-20"), 100), 100)
   end
 
   def test_expm1
@@ -466,9 +466,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(-1, expm1(BigDecimal("-400"), 100))
     assert_equal(-1, expm1(BigDecimal("-231"), 100))
     assert_not_equal(-1, expm1(BigDecimal("-229"), 100))
-    assert_in_exact_precision(BigMath.exp(-220, 100) - 1, expm1(BigDecimal("-220"), 100), 100)
-    assert_in_exact_precision(BigMath.exp(-3, 100) - 1, expm1(BigDecimal("-3"), 100), 100)
-    assert_in_exact_precision(BigMath.exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
-    assert_in_exact_precision(BigMath.exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
+    assert_in_exact_precision(exp(-220, 100) - 1, expm1(BigDecimal("-220"), 100), 100)
+    assert_in_exact_precision(exp(-3, 100) - 1, expm1(BigDecimal("-3"), 100), 100)
+    assert_in_exact_precision(exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
+    assert_in_exact_precision(exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
   end
 end
