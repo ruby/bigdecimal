@@ -197,7 +197,7 @@ class BigDecimal
       if x > 1
         # To calculate exp(z, prec), z needs prec+max(z.exponent, 0) precision if z > 0.
         # Estimate (y*log(x)).exponent
-        logx_exponent = x < 2 ? (x - 1).exponent : Math.log10(x.exponent).round
+        logx_exponent = x < 2 ? (x - 1).exponent : Math.log10(x.exponent).then { _1.finite? ? _1.round : _1 }
         ylogx_exponent = y.exponent + logx_exponent
         prec2 += [ylogx_exponent, 0].max
       end
