@@ -786,15 +786,14 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_precs
-    assert_separately(["-rbigdecimal"], "#{<<~"begin;"}\n#{<<~'end;'}")
-    begin;
-      $VERBOSE = nil
-      a = BigDecimal("1").precs
-      assert_instance_of(Array, a)
-      assert_equal(2, a.size)
-      assert_kind_of(Integer, a[0])
-      assert_kind_of(Integer, a[1])
-    end;
+    $VERBOSE, verbose = nil, $VERBOSE
+    a = BigDecimal("1").precs
+    assert_instance_of(Array, a)
+    assert_equal(2, a.size)
+    assert_kind_of(Integer, a[0])
+    assert_kind_of(Integer, a[1])
+  ensure
+    $VERBOSE = verbose
   end
 
   def test_hash

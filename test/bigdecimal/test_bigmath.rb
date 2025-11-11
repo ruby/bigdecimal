@@ -400,16 +400,14 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| log(BigDecimal("1e30"), n) }
     assert_converge_in_precision {|n| log(SQRT2, n) }
     assert_raise(Math::DomainError) {log(BigDecimal("-0.1"), 10)}
-    assert_separately(%w[-rbigdecimal], <<-SRC)
     begin
-      x = BigMath.log(BigDecimal("1E19999999999999"), 10)
+      x = BigDecimal("1E19999999999999")
     rescue FloatDomainError
     else
       unless x.infinite?
-        assert_in_epsilon(Math.log(10)*19999999999999, x)
+        assert_in_epsilon(Math.log(10) * 19999999999999, BigMath.log(x, 10))
       end
     end
-    SRC
   end
 
   def test_log2
