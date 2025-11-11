@@ -1851,10 +1851,16 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_positive_infinite_calculation { BigDecimal::INFINITY ** 1.quo(1) }
     assert_positive_infinite_calculation { BigDecimal::INFINITY ** 1.0 }
     assert_positive_infinite_calculation { BigDecimal::INFINITY ** BigDecimal(1) }
+    assert_positive_infinite_calculation { BigDecimal::INFINITY ** 1.quo(2) }
+    assert_positive_infinite_calculation { BigDecimal::INFINITY ** 0.5 }
+    assert_positive_infinite_calculation { BigDecimal::INFINITY ** BigDecimal(0.5) }
     assert_equal(1, BigDecimal::INFINITY ** 0)
     assert_equal(1, BigDecimal::INFINITY ** 0.quo(1))
     assert_equal(1, BigDecimal::INFINITY ** 0.0)
     assert_equal(1, BigDecimal::INFINITY ** BigDecimal(0))
+    assert_positive_zero(BigDecimal::INFINITY ** -1.quo(2))
+    assert_positive_zero(BigDecimal::INFINITY ** -0.5)
+    assert_positive_zero(BigDecimal::INFINITY ** BigDecimal(-0.5))
     assert_positive_zero(BigDecimal::INFINITY ** -1)
     assert_positive_zero(BigDecimal::INFINITY ** -1.quo(1))
     assert_positive_zero(BigDecimal::INFINITY ** -1.0)
