@@ -194,10 +194,10 @@ class BigDecimal
       end
       ans.mult(1, result_prec)
     else
-      if x > 1
+      if x > 1 && x.finite?
         # To calculate exp(z, prec), z needs prec+max(z.exponent, 0) precision if z > 0.
         # Estimate (y*log(x)).exponent
-        logx_exponent = x < 2 ? (x - 1).exponent : Math.log10(x.exponent).then { _1.finite? ? _1.round : _1 }
+        logx_exponent = x < 2 ? (x - 1).exponent : Math.log10(x.exponent).round
         ylogx_exponent = y.exponent + logx_exponent
         prec2 += [ylogx_exponent, 0].max
       end
