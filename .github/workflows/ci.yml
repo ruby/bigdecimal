@@ -47,7 +47,7 @@ jobs:
       BIGDECIMAL_USE_VP_TEST_METHODS: true
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
