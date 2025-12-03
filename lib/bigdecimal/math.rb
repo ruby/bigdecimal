@@ -107,7 +107,7 @@ module BigMath
     x = -x if neg = x < 0
     ex = x.exponent / 3
     x = x._decimal_shift(-3 * ex)
-    y = BigDecimal(Math.cbrt(x.to_f))
+    y = BigDecimal(Math.cbrt(x.to_f), 0)
     precs = [prec + BigDecimal.double_fig]
     precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
     precs.reverse_each do |p|
