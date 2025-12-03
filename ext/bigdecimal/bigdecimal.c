@@ -1867,7 +1867,7 @@ BigDecimal_divmod(VALUE self, VALUE r)
     NULLABLE_BDVALUE div, mod;
 
     if (BigDecimal_DoDivmod(self, r, &div, &mod, false)) {
-        return rb_assoc_new(CheckGetValue(bdvalue_nonnullable(div)), CheckGetValue(bdvalue_nonnullable(mod)));
+        return rb_assoc_new(BigDecimal_to_i(CheckGetValue(bdvalue_nonnullable(div))), CheckGetValue(bdvalue_nonnullable(mod)));
     }
     return DoSomeOne(self,r,rb_intern("divmod"));
 }
