@@ -182,8 +182,13 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| sin(BigDecimal("1e-30"), n) }
     assert_converge_in_precision {|n| sin(BigDecimal(PI(50)), n) }
     assert_converge_in_precision {|n| sin(BigDecimal(PI(50) * 100), n) }
-    assert_operator(sin(PI(30) / 2, 30), :<=, 1)
-    assert_operator(sin(-PI(30) / 2, 30), :>=, -1)
+    [:up, :down].each do |mode|
+      BigDecimal.save_rounding_mode do
+        BigDecimal.mode(BigDecimal::ROUND_MODE, mode)
+        assert_operator(sin(PI(30) / 2, 30), :<=, 1)
+        assert_operator(sin(-PI(30) / 2, 30), :>=, -1)
+      end
+    end
   end
 
   def test_cos
@@ -205,8 +210,13 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| cos(BigDecimal("1e50"), n) }
     assert_converge_in_precision {|n| cos(BigDecimal(PI(50) / 2), n) }
     assert_converge_in_precision {|n| cos(BigDecimal(PI(50) * 201 / 2), n) }
-    assert_operator(cos(PI(30), 30), :>=, -1)
-    assert_operator(cos(PI(30) * 2, 30), :<=, 1)
+    [:up, :down].each do |mode|
+      BigDecimal.save_rounding_mode do
+        BigDecimal.mode(BigDecimal::ROUND_MODE, mode)
+        assert_operator(cos(PI(30), 30), :>=, -1)
+        assert_operator(cos(PI(30) * 2, 30), :<=, 1)
+      end
+    end
   end
 
   def test_tan
@@ -388,26 +398,20 @@ class TestBigMath < Test::Unit::TestCase
 
   def test_log
     assert_equal(0, log(BigDecimal("1.0"), 10))
-    assert_in_epsilon(Math.log(10)*1000, log(BigDecimal("1e1000"), 10))
+    assert_in_epsilon(1000 * Math.log(10), log(BigDecimal("1e1000"), 10))
+    assert_in_epsilon(19999999999999 * Math.log(10), log(BigDecimal("1E19999999999999"), 10))
+    assert_in_epsilon(-19999999999999 * Math.log(10), log(BigDecimal("1E-19999999999999"), 10))
     assert_in_exact_precision(
       BigDecimal("2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862"),
       log(BigDecimal("10"), 100),
       100
     )
     assert_converge_in_precision {|n| log(BigDecimal("2"), n) }
-    assert_converge_in_precision {|n| log(BigDecimal("1e-30") + 1, n) }
-    assert_converge_in_precision {|n| log(BigDecimal("1e-30"), n) }
+    assert_converge_in_precision {|n| log(1 + SQRT2 * BigDecimal("1e-30"), n) }
+    assert_converge_in_precision {|n| log(SQRT2 * BigDecimal("1e-30"), n) }
     assert_converge_in_precision {|n| log(BigDecimal("1e30"), n) }
     assert_converge_in_precision {|n| log(SQRT2, n) }
     assert_raise(Math::DomainError) {log(BigDecimal("-0.1"), 10)}
-    begin
-      x = BigDecimal("1E19999999999999")
-    rescue FloatDomainError
-    else
-      unless x.infinite?
-        assert_in_epsilon(Math.log(10) * 19999999999999, BigMath.log(x, 10))
-      end
-    end
   end
 
   def test_log2
@@ -468,5 +472,66 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_exact_precision(exp(-3, 100) - 1, expm1(BigDecimal("-3"), 100), 100)
     assert_in_exact_precision(exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
     assert_in_exact_precision(exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
+  end
+
+  def test_erf
+    [-0.5, 0.1, 0.3, 2.1, 3.3].each do |x|
+      assert_in_epsilon(Math.erf(x), BigMath.erf(BigDecimal(x.to_s), N))
+    end
+    assert_equal(1, BigMath.erf(PINF, N))
+    assert_equal(-1, BigMath.erf(MINF, N))
+    assert_equal(1, BigMath.erf(BigDecimal(1000), 100))
+    assert_equal(-1, BigMath.erf(BigDecimal(-1000), 100))
+    assert_not_equal(1, BigMath.erf(BigDecimal(10), 45))
+    assert_not_equal(1, BigMath.erf(BigDecimal(15), 100))
+    assert_equal(1, BigMath.erf(BigDecimal('1e400'), 10))
+    assert_equal(-1, BigMath.erf(BigDecimal('-1e400'), 10))
+    assert_equal(
+      BigDecimal("0.9953222650189527341620692563672529286108917970400600767383523262004372807199951773676290080196806805"),
+      BigMath.erf(BigDecimal("2"), 100)
+    )
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("1e-30"), n) }
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("0.3"), n) }
+    assert_converge_in_precision {|n| BigMath.erf(SQRT2, n) }
+  end
+
+  def test_erfc
+    [-0.5, 0.1, 0.3, 2.1, 3.3].each do |x|
+      assert_in_epsilon(Math.erfc(x), BigMath.erfc(BigDecimal(x.to_s), N))
+    end
+    assert_equal(0, BigMath.erfc(PINF, N))
+    assert_equal(2, BigMath.erfc(MINF, N))
+    assert_equal(0, BigMath.erfc(BigDecimal('1e400'), 10))
+    assert_equal(2, BigMath.erfc(BigDecimal('-1e400'), 10))
+
+    # erfc with taylor series
+    assert_equal(
+      BigDecimal("2.088487583762544757000786294957788611560818119321163727012213713938174695833440290610766384285723554e-45"),
+      BigMath.erfc(BigDecimal("10"), 100)
+    )
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(0.3), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(8), n) }
+    # erfc with asymptotic expansion
+    assert_equal(
+      BigDecimal("1.896961059966276509268278259713415434936907563929186183462834752900411805205111886605256690776760041e-697"),
+      BigMath.erfc(BigDecimal("40"), 100)
+    )
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(30), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(30 * SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(50), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(60000), n) }
+    # Near crossover point between taylor series and asymptotic expansion around prec=150
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(19.5), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
+  end
+
+  def test_erf_erfc_consistency_large_prec
+    [BigDecimal(34.5), 34 + BigDecimal(4).div(7, 1200)].each do |x|
+      erf = BigMath.erf(x, 1200) # Calculated with taylor series of erf
+      erfc = BigMath.erfc(x, 400) # Calculated with asymptotic expansion
+      erfc2 = 1 - erf
+      assert_equal(erfc, erfc2.mult(1, 400))
+    end
   end
 end
