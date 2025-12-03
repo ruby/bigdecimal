@@ -119,8 +119,11 @@ class Rational < Numeric
   #
   # Returns the value as a BigDecimal.
   #
-  # The required +precision+ parameter is used to determine the number of
-  # significant digits for the result.
+  # The +precision+ parameter is used to determine the number of
+  # significant digits for the result. When +precision+ is set to +0+,
+  # the number of digits to represent the float being converted is determined
+  # automatically.
+  # The default +precision+ is +0+.
   #
   #     require 'bigdecimal'
   #     require 'bigdecimal/util'
@@ -129,7 +132,7 @@ class Rational < Numeric
   #
   # See also Kernel.BigDecimal.
   #
-  def to_d(precision)
+  def to_d(precision=0)
     BigDecimal(self, precision)
   end
 end
@@ -141,29 +144,27 @@ class Complex < Numeric
   #     cmp.to_d(precision)  -> bigdecimal
   #
   # Returns the value as a BigDecimal.
+  # If the imaginary part is not +0+, an error is raised
   #
-  # The +precision+ parameter is required for a rational complex number.
-  # This parameter is used to determine the number of significant digits
-  # for the result.
+  # The +precision+ parameter is used to determine the number of
+  # significant digits for the result. When +precision+ is set to +0+,
+  # the number of digits to represent the float being converted is determined
+  # automatically.
+  # The default +precision+ is +0+.
   #
   #     require 'bigdecimal'
   #     require 'bigdecimal/util'
   #
   #     Complex(0.1234567, 0).to_d(4)   # => 0.1235e0
   #     Complex(Rational(22, 7), 0).to_d(3)   # => 0.314e1
+  #     Complex(1, 1).to_d   # raises ArgumentError
   #
   # See also Kernel.BigDecimal.
   #
-  def to_d(*args)
+  def to_d(precision=0)
     BigDecimal(self) unless self.imag.zero? # to raise error
 
-    if args.length == 0
-      case self.real
-      when Rational
-        BigDecimal(self.real) # to raise error
-      end
-    end
-    self.real.to_d(*args)
+    BigDecimal(self.real, precision)
   end
 end
 

@@ -1,0 +1,40 @@
+name: JRuby-test
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+
+jobs:
+  host:
+    name: ${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby:
+          - jruby
+          - jruby-head
+
+    steps:
+      - uses: actions/checkout@v6.0.0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - run: bundle install
+
+      - run: rake compile
+
+      - run: rake test TEST=test/bigdecimal/test_jruby.rb
+
+      - run: rake build
+
+      - run: gem install pkg/*.gem

@@ -20,7 +20,7 @@ jobs:
 
   host:
     needs: ruby-versions
-    name: ${{ matrix.os }} ${{ matrix.ruby }}
+    name: ${{ matrix.os }} ${{ matrix.ruby }} decdig-${{ matrix.decdig_bits }}bit
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,7 +31,9 @@ jobs:
         - macos-14
         - windows-latest
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
+        decdig_bits: [32]
         include:
+        - { os: ubuntu-latest, ruby: "3.4", decdig_bits: 16 }
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
@@ -40,9 +42,12 @@ jobs:
         - { os: windows-latest , ruby: debug }
         - { os: windows-latest , ruby: truffleruby }
         - { os: windows-latest , ruby: truffleruby-head }
+    env:
+      BIGDECIMAL_USE_DECDIG_UINT16_T: ${{ matrix.decdig_bits == 16 }}
+      BIGDECIMAL_USE_VP_TEST_METHODS: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1

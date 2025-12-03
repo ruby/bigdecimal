@@ -36,17 +36,10 @@ if have_header("intrin.h")
   have_func("_BitScanReverse64", "intrin.h")
 end
 
-have_func("labs", "stdlib.h")
-have_func("llabs", "stdlib.h")
-have_func("finite", "math.h")
-have_func("isfinite", "math.h")
-
 have_header("ruby/atomic.h")
 have_header("ruby/internal/has/builtin.h")
 have_header("ruby/internal/static_assert.h")
 
-have_func("rb_rational_num", "ruby.h")
-have_func("rb_rational_den", "ruby.h")
 have_func("rb_complex_real", "ruby.h")
 have_func("rb_complex_imag", "ruby.h")
 have_func("rb_opts_exception_p", "ruby.h")
@@ -58,6 +51,9 @@ if File.file?(File.expand_path('../lib/bigdecimal.rb', __FILE__))
 else
   bigdecimal_rb = "$(srcdir)/../../lib/bigdecimal.rb"
 end
+
+$defs.push '-DBIGDECIMAL_USE_DECDIG_UINT16_T' if ENV['BIGDECIMAL_USE_DECDIG_UINT16_T'] == 'true'
+$defs.push '-DBIGDECIMAL_USE_VP_TEST_METHODS' if ENV['BIGDECIMAL_USE_VP_TEST_METHODS'] == 'true'
 
 create_makefile('bigdecimal') {|mf|
   mf << "BIGDECIMAL_RB = #{bigdecimal_rb}\n"

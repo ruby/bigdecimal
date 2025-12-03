@@ -17,7 +17,7 @@
 # include <float.h>
 #endif
 
-#ifdef HAVE_INT64_T
+#if defined(HAVE_INT64_T) && !defined(BIGDECIMAL_USE_DECDIG_UINT16_T)
 # define DECDIG uint32_t
 # define DECDIG_DBL uint64_t
 # define DECDIG_DBL_SIGNED int64_t
@@ -167,7 +167,6 @@ enum rbd_rounding_mode {
  *  r = 0.xxxxxxxxx *BASE**exponent
  */
 typedef struct {
-    VALUE  obj;     /* Back pointer(VALUE) for Ruby object.     */
     size_t MaxPrec; /* Maximum precision size                   */
                     /* This is the actual size of frac[]        */
                     /*(frac[0] to frac[MaxPrec] are available). */
@@ -195,13 +194,7 @@ typedef struct {
  *  ------------------
  */
 
-VP_EXPORT Real *VpNewRbClass(size_t mx, char const *str, VALUE klass, bool strict_p, bool raise_exception);
-
-VP_EXPORT Real *VpCreateRbObject(size_t mx, const char *str, bool raise_exception);
-
 #define VpBaseFig() BIGDECIMAL_COMPONENT_FIGURES
-#define VpDblFig() BIGDECIMAL_DOUBLE_FIGURES
-#define VpBaseVal() BIGDECIMAL_BASE
 
 /* Zero,Inf,NaN (isinf(),isnan() used to check) */
 VP_EXPORT double VpGetDoubleNaN(void);
@@ -211,7 +204,7 @@ VP_EXPORT double VpGetDoubleNegZero(void);
 
 /* These 2 functions added at v1.1.7 */
 VP_EXPORT size_t VpGetPrecLimit(void);
-VP_EXPORT size_t VpSetPrecLimit(size_t n);
+VP_EXPORT void VpSetPrecLimit(size_t n);
 
 /* Round mode */
 VP_EXPORT int            VpIsRoundMode(unsigned short n);
@@ -219,16 +212,14 @@ VP_EXPORT unsigned short VpGetRoundMode(void);
 VP_EXPORT unsigned short VpSetRoundMode(unsigned short n);
 
 VP_EXPORT int VpException(unsigned short f,const char *str,int always);
-#if 0  /* unused */
-VP_EXPORT int VpIsNegDoubleZero(double v);
-#endif
 VP_EXPORT size_t VpNumOfChars(Real *vp,const char *pszFmt);
 VP_EXPORT size_t VpInit(DECDIG BaseVal);
-VP_EXPORT Real *VpAlloc(size_t mx, const char *szVal, int strict_p, int exc);
+VP_EXPORT Real *VpAlloc(const char *szVal, int strict_p, int exc);
 VP_EXPORT size_t VpAsgn(Real *c, Real *a, int isw);
 VP_EXPORT size_t VpAddSub(Real *c,Real *a,Real *b,int operation);
 VP_EXPORT size_t VpMult(Real *c,Real *a,Real *b);
 VP_EXPORT size_t VpDivd(Real *c,Real *r,Real *a,Real *b);
+VP_EXPORT int VpNmlz(Real *a);
 VP_EXPORT int VpComp(Real *a,Real *b);
 VP_EXPORT ssize_t VpExponent10(Real *a);
 VP_EXPORT void VpSzMantissa(Real *a, char *buf, size_t bufsize);
@@ -237,17 +228,10 @@ VP_EXPORT void VpToString(Real *a, char *buf, size_t bufsize, size_t fFmt, int f
 VP_EXPORT void VpToFString(Real *a, char *buf, size_t bufsize, size_t fFmt, int fPlus);
 VP_EXPORT int VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne);
 VP_EXPORT int VpVtoD(double *d, SIGNED_VALUE *e, Real *m);
-VP_EXPORT void VpDtoV(Real *m,double d);
-#if 0  /* unused */
-VP_EXPORT void VpItoV(Real *m,S_INT ival);
-#endif
-VP_EXPORT int VpSqrt(Real *y,Real *x);
 VP_EXPORT int VpActiveRound(Real *y, Real *x, unsigned short f, ssize_t il);
 VP_EXPORT int VpMidRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT int VpLeftRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT void VpFrac(Real *y, Real *x);
-VP_EXPORT int VpPowerByInt(Real *y, Real *x, SIGNED_VALUE n);
-#define VpPower VpPowerByInt
 
 /* VP constants */
 VP_EXPORT Real *VpOne(void);
@@ -260,10 +244,6 @@ VP_EXPORT Real *VpOne(void);
 #define Abs(a)     (((a)>= 0)?(a):(-(a)))
 #define Max(a, b)  (((a)>(b))?(a):(b))
 #define Min(a, b)  (((a)>(b))?(b):(a))
-
-#define VpMaxPrec(a)   ((a)->MaxPrec)
-#define VpPrec(a)      ((a)->Prec)
-#define VpGetFlag(a)   ((a)->flag)
 
 /* Sign */
 
@@ -299,7 +279,6 @@ VP_EXPORT Real *VpOne(void);
 #define VpSetInf(a,s)   (void)(((s)>0)?VpSetPosInf(a):VpSetNegInf(a))
 #define VpHasVal(a)     (a->frac[0])
 #define VpIsOne(a)      ((a->Prec==1)&&(a->frac[0]==1)&&(a->exponent==1))
-#define VpExponent(a)   (a->exponent)
 #ifdef BIGDECIMAL_DEBUG
 int VpVarCheck(Real * v);
 #endif /* BIGDECIMAL_DEBUG */

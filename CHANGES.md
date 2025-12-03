@@ -1,5 +1,49 @@
 # CHANGES
 
+## 3.3.1
+
+* All BigMath methods converts non integer precision with to_int
+
+  **@tompng**
+
+## 3.3.0
+
+* Allow calling to_d without arguments [GH-421]
+
+  **@fsateler**
+
+* Calculate BigMath.sin and cos in relative precision [GH-422]
+
+  **@tompng**
+
+* Add support for tangent function [GH-231]
+
+  **@rhannequin**
+
+* BigMath methods accepts numeric as an argument [GH-415]
+
+  **@tompng**
+
+* Round result of sqrt and BigMath methods [GH-427]
+
+  **@tompng**
+
+## 3.2.3
+
+* Allow BigDecimal accept Float without precision [GH-314]
+
+  **@mrzasa**
+
+* Ruby implementation pow, log, exp and sqrt [GH-347] [GH-381]
+
+  **@tompng**
+
+* Update document [GH-348] [GH-360] [GH-365]
+
+  **@timcraft** **@dduugg** **@mame**
+
+* Lots of bug fixes and refactoring
+
 ## 3.2.2
 
 * Make precision calculation in bigdecimal.div(value, 0) gc-compaction safe. [GH-340]

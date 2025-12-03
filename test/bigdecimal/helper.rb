@@ -4,13 +4,13 @@ require "bigdecimal"
 require 'rbconfig/sizeof'
 
 module TestBigDecimalBase
-  if RbConfig::SIZEOF.key?("int64_t")
+  BASE = BigDecimal::BASE
+  case BASE
+  when 1000000000
     SIZEOF_DECDIG = RbConfig::SIZEOF["int32_t"]
-    BASE = 1_000_000_000
     BASE_FIG = 9
-  else
+  when 10000
     SIZEOF_DECDIG = RbConfig::SIZEOF["int16_t"]
-    BASE = 1000
     BASE_FIG = 4
   end
 
@@ -37,30 +37,74 @@ module TestBigDecimalBase
     GC.stress = stress
   end
 
+  # Asserts that +actual+ is calculated with exactly the given +precision+.
+  # No extra digits are allowed. Only the last digit may differ at most by one.
+  def assert_in_exact_precision(expected, actual, precision)
+    expected = BigDecimal(expected)
+    delta = BigDecimal(1)._decimal_shift(expected.exponent - precision)
+    assert actual.n_significant_digits <= precision, "Too many significant digits: #{actual.n_significant_digits} > #{precision}"
+    assert_in_delta(expected.mult(1, precision), actual, delta)
+  end
+
   # Asserts that the calculation of the given block converges to some value
-  # with precision specified by block parameter.
-
-  def assert_fixed_point_precision(&block)
-    _assert_precision(:fixed_point, &block)
-  end
-
-  def assert_relative_precision(&block)
-    _assert_precision(:relative, &block)
-  end
-
-  def _assert_precision(mode)
+  # with exactly the given +precision+.
+  def assert_converge_in_precision(&block)
     expected = yield(200)
     [50, 100, 150].each do |n|
       value = yield(n)
-      if mode == :fixed_point
-        precision = -(value - expected).exponent
-      elsif mode == :relative
-        precision = -(value.div(expected, expected.precision) - 1).exponent
-      else
-        raise ArgumentError, "Unknown mode: #{mode}"
-      end
       assert(value != expected, "Unable to estimate precision for exact value")
-      assert(precision >= n, "Precision is not enough: #{precision} < #{n}")
+      assert_in_exact_precision(expected, value, n)
     end
+  end
+
+
+  def assert_nan(x)
+    assert(x.nan?, "Expected #{x.inspect} to be NaN")
+  end
+
+  def assert_positive_infinite(x)
+    assert(x.infinite?, "Expected #{x.inspect} to be positive infinite")
+    assert_operator(x, :>, 0)
+  end
+
+  def assert_negative_infinite(x)
+    assert(x.infinite?, "Expected #{x.inspect} to be negative infinite")
+    assert_operator(x, :<, 0)
+  end
+
+  def assert_infinite_calculation(positive:)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
+      positive ? assert_positive_infinite(yield) : assert_negative_infinite(yield)
+      BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
+      assert_raise_with_message(FloatDomainError, /Infinity/) { yield }
+    end
+  end
+
+  def assert_positive_infinite_calculation(&block)
+    assert_infinite_calculation(positive: true, &block)
+  end
+
+  def assert_negative_infinite_calculation(&block)
+    assert_infinite_calculation(positive: false, &block)
+  end
+
+  def assert_nan_calculation(&block)
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, false)
+      assert_nan(yield)
+      BigDecimal.mode(BigDecimal::EXCEPTION_NaN, true)
+      assert_raise_with_message(FloatDomainError, /NaN/) { yield }
+    end
+  end
+
+  def assert_positive_zero(x)
+    assert_equal(BigDecimal::SIGN_POSITIVE_ZERO, x.sign,
+                 "Expected #{x.inspect} to be positive zero")
+  end
+
+  def assert_negative_zero(x)
+    assert_equal(BigDecimal::SIGN_NEGATIVE_ZERO, x.sign,
+                 "Expected #{x.inspect} to be negative zero")
   end
 end
