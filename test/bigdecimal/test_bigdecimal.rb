@@ -2725,7 +2725,7 @@ class TestBigDecimal < Test::Unit::TestCase
       [-1.0, +1.0].each do |b|
         assert_equal(BigDecimal(a.remainder(b)).to_s, BigDecimal(a).remainder(BigDecimal(b)).to_s)
         assert_equal(BigDecimal(a.modulo(b)).to_s, BigDecimal(a).modulo(BigDecimal(b)).to_s)
-        assert_equal(a.divmod(b).map {|x| BigDecimal(x)}.inspect, BigDecimal(a).divmod(BigDecimal(b)).inspect)
+        assert_equal(a.divmod(b).map {|x| BigDecimal(x)}.inspect, BigDecimal(a).divmod(BigDecimal(b)).map {|x| BigDecimal(x)}.inspect)
       end
     end
   end
