@@ -52,9 +52,25 @@ class TestJRuby < Test::Unit::TestCase
 
   def test_bigmath
     assert_in_delta(Math.sqrt(2), BigMath.sqrt(BigDecimal(2), N))
+    assert_in_delta(Math.cbrt(2), BigMath.cbrt(BigDecimal(2), N))
+    assert_in_delta(Math.hypot(2, 3), BigMath.hypot(BigDecimal(2), BigDecimal(3), N))
     assert_in_delta(Math.sin(1), BigMath.sin(BigDecimal(1), N))
     assert_in_delta(Math.cos(1), BigMath.cos(BigDecimal(1), N))
+    assert_in_delta(Math.tan(1), BigMath.tan(BigDecimal(1), N))
+    assert_in_delta(Math.asin(0.5), BigMath.asin(BigDecimal('0.5'), N))
+    assert_in_delta(Math.acos(0.5), BigMath.acos(BigDecimal('0.5'), N))
     assert_in_delta(Math.atan(1), BigMath.atan(BigDecimal(1), N))
+    assert_in_delta(Math.atan2(1, 2), BigMath.atan2(BigDecimal(1), BigDecimal(2), N))
+    assert_in_delta(Math.sinh(1), BigMath.sinh(BigDecimal(1), N))
+    assert_in_delta(Math.cosh(1), BigMath.cosh(BigDecimal(1), N))
+    assert_in_delta(Math.tanh(1), BigMath.tanh(BigDecimal(1), N))
+    assert_in_delta(Math.asinh(1), BigMath.asinh(BigDecimal(1), N))
+    assert_in_delta(Math.acosh(2), BigMath.acosh(BigDecimal(2), N))
+    assert_in_delta(Math.atanh(0.5), BigMath.atanh(BigDecimal('0.5'), N))
+    assert_in_delta(Math.log2(3), BigMath.log2(BigDecimal(3), N))
+    assert_in_delta(Math.log10(3), BigMath.log10(BigDecimal(3), N))
+    assert_in_delta(Math.log1p(0.1), BigMath.log1p(BigDecimal('0.1'), N)) if defined? Math.log1p
+    assert_in_delta(Math.expm1(0.1), BigMath.expm1(BigDecimal('0.1'), N)) if defined? Math.expm1
     assert_in_delta(Math::PI, BigMath.PI(N))
     assert_in_delta(Math::E, BigMath.E(N))
   end
