@@ -29,18 +29,14 @@
 #endif
 
 #include "bits.h"
+#include "ntt.h"
 #include "div.h"
 #include "static_assert.h"
 
 #define BIGDECIMAL_VERSION "4.0.1"
 
-#if SIZEOF_DECDIG == 4
-#define USE_NTT_MULTIPLICATION 1
-#include "ntt.h"
 #define NTT_MULTIPLICATION_THRESHOLD 100
 #define NEWTON_RAPHSON_DIVISION_THRESHOLD 200
-#endif
-
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
@@ -3279,7 +3275,6 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
     return c.bigdecimal;
 }
 
-#if SIZEOF_DECDIG == 4
 VALUE
 BigDecimal_nttmult(VALUE self, VALUE v) {
     BDVALUE a,b,c;
@@ -3295,7 +3290,6 @@ BigDecimal_nttmult(VALUE self, VALUE v) {
     RB_GC_GUARD(b.bigdecimal);
     return c.bigdecimal;
 }
-#endif
 
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
@@ -3670,9 +3664,7 @@ Init_bigdecimal(void)
     rb_define_method(rb_cBigDecimal, "vpdivd_newton", BigDecimal_vpdivd_newton, 2);
     rb_define_method(rb_cBigDecimal, "newton_raphson_inverse", BigDecimal_newton_raphson_inverse, 1);
     rb_define_method(rb_cBigDecimal, "vpmult", BigDecimal_vpmult, 1);
-#ifdef USE_NTT_MULTIPLICATION
     rb_define_method(rb_cBigDecimal, "nttmult", BigDecimal_nttmult, 1);
-#endif
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
 #define ROUNDING_MODE(i, name, value) \
@@ -4956,13 +4948,11 @@ VpMult(Real *c, Real *a, Real *b)
     VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     if (!AddExponent(c, b->exponent)) return 0;
 
-#ifdef USE_NTT_MULTIPLICATION
     if (b->Prec >= NTT_MULTIPLICATION_THRESHOLD) {
         ntt_multiply((uint32_t)a->Prec, (uint32_t)b->Prec, a->frac, b->frac, c->frac);
         c->Prec = a->Prec + b->Prec;
         goto Cleanup;
     }
-#endif
 
     carry = 0;
     nc = ind_c = MxIndAB;
@@ -5059,13 +5049,11 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 
     if (word_a > word_r || word_b + word_c - 2 >= word_r) goto space_error;
 
-#ifdef USE_NTT_MULTIPLICATION
     // Newton-Raphson division requires multiplication to be faster than O(n^2)
     if (word_c >= NEWTON_RAPHSON_DIVISION_THRESHOLD && word_b >= NEWTON_RAPHSON_DIVISION_THRESHOLD) {
         VpDivdNewton(c, r, a, b);
         goto Exit;
     }
-#endif
 
     for (i = 0; i < word_a; ++i) r->frac[i] = a->frac[i];
     for (i = word_a; i < word_r; ++i) r->frac[i] = 0;

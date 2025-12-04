@@ -13,10 +13,6 @@ class TestVpOperation < Test::Unit::TestCase
     end
   end
 
-  def ntt_mult_available?
-    BASE_FIG == 9
-  end
-
   def test_vpmult
     assert_equal(BigDecimal('121932631112635269'), BigDecimal('123456789').vpmult(BigDecimal('987654321')))
     assert_equal(BigDecimal('12193263.1112635269'), BigDecimal('123.456789').vpmult(BigDecimal('98765.4321')))
@@ -26,7 +22,6 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_nttmult
-    omit 'NTT multiplication is only available for 32-bit DECDIG' unless ntt_mult_available?
     [*1..32].repeated_permutation(2) do |a, b|
       x = BigDecimal(10 ** (BASE_FIG * a) / 7)
       y = BigDecimal(10 ** (BASE_FIG * b) / 13)
@@ -68,10 +63,8 @@ class TestVpOperation < Test::Unit::TestCase
       BigDecimal.limit 3
       assert_equal(xy, x.vpmult(y))
       assert_equal(3, BigDecimal.limit)
-      if ntt_mult_available?
-        assert_equal(xy, x.nttmult(y))
-        assert_equal(3, BigDecimal.limit)
-      end
+      assert_equal(xy, x.nttmult(y))
+      assert_equal(3, BigDecimal.limit)
 
       prec = (z.exponent - 1) / BASE_FIG - (y.exponent - 1) / BASE_FIG + 1
       assert_equal([x, mod], z.vpdivd(y, prec))
@@ -176,16 +169,9 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_vpdivd_intermediate_zero
-    if BASE_FIG == 9
-      x = BigDecimal('123456789.246913578000000000123456789')
-      y = BigDecimal('123456789')
-      assert_vpdivd_equal([BigDecimal('1.000000002000000000000000001'), BigDecimal(0)], [x, y, 4])
-      assert_vpdivd_equal([BigDecimal('1.000000000049999999'), BigDecimal('1e-18')], [BigDecimal("2.000000000099999999"), 2, 3])
-    else
-      x = BigDecimal('1234.246800001234')
-      y = BigDecimal('1234')
-      assert_vpdivd_equal([BigDecimal('1.000200000001'), BigDecimal(0)], [x, y, 4])
-      assert_vpdivd_equal([BigDecimal('1.00000499'), BigDecimal('1e-8')], [BigDecimal("2.00000999"), 2, 3])
-    end
+    x = BigDecimal('123456789.246913578000000000123456789')
+    y = BigDecimal('123456789')
+    assert_vpdivd_equal([BigDecimal('1.000000002000000000000000001'), BigDecimal(0)], [x, y, 4])
+    assert_vpdivd_equal([BigDecimal('1.000000000049999999'), BigDecimal('1e-18')], [BigDecimal("2.000000000099999999"), 2, 3])
   end
 end

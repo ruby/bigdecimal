@@ -17,24 +17,15 @@
 # include <float.h>
 #endif
 
-#if defined(HAVE_INT64_T) && !defined(BIGDECIMAL_USE_DECDIG_UINT16_T)
-# define DECDIG uint32_t
-# define DECDIG_DBL uint64_t
-# define DECDIG_DBL_SIGNED int64_t
-# define SIZEOF_DECDIG 4
-# define PRI_DECDIG_PREFIX ""
-# ifdef PRI_LL_PREFIX
-#  define PRI_DECDIG_DBL_PREFIX PRI_LL_PREFIX
-# else
-#  define PRI_DECDIG_DBL_PREFIX "l"
-# endif
+#define DECDIG uint32_t
+#define DECDIG_DBL uint64_t
+#define DECDIG_DBL_SIGNED int64_t
+#define SIZEOF_DECDIG 4
+#define PRI_DECDIG_PREFIX ""
+#ifdef PRI_LL_PREFIX
+# define PRI_DECDIG_DBL_PREFIX PRI_LL_PREFIX
 #else
-# define DECDIG uint16_t
-# define DECDIG_DBL uint32_t
-# define DECDIG_DBL_SIGNED int32_t
-# define SIZEOF_DECDIG 2
-# define PRI_DECDIG_PREFIX "h"
-# define PRI_DECDIG_DBL_PREFIX ""
+# define PRI_DECDIG_DBL_PREFIX "l"
 #endif
 
 #define PRIdDECDIG PRI_DECDIG_PREFIX"d"
@@ -51,31 +42,15 @@
 #define PRIxDECDIG_DBL PRI_DECDIG_DBL_PREFIX"x"
 #define PRIXDECDIG_DBL PRI_DECDIG_DBL_PREFIX"X"
 
-#if SIZEOF_DECDIG == 4
-# define BIGDECIMAL_BASE ((DECDIG)1000000000U)
-# define BIGDECIMAL_COMPONENT_FIGURES 9
+#define BIGDECIMAL_BASE ((DECDIG)1000000000U)
+#define BIGDECIMAL_COMPONENT_FIGURES 9
 /*
  * The number of components required for a 64-bit integer.
  *
  *   INT64_MAX:   9_223372036_854775807
  *   UINT64_MAX: 18_446744073_709551615
  */
-# define BIGDECIMAL_INT64_MAX_LENGTH 3
-
-#elif SIZEOF_DECDIG == 2
-# define BIGDECIMAL_BASE ((DECDIG)10000U)
-# define BIGDECIMAL_COMPONENT_FIGURES 4
-/*
- * The number of components required for a 64-bit integer.
- *
- *   INT64_MAX:   922_3372_0368_5477_5807
- *   UINT64_MAX: 1844_6744_0737_0955_1615
- */
-# define BIGDECIMAL_INT64_MAX_LENGTH 5
-
-#else
-# error Unknown size of DECDIG
-#endif
+#define BIGDECIMAL_INT64_MAX_LENGTH 3
 
 #define BIGDECIMAL_DOUBLE_FIGURES (1+DBL_DIG)
 
