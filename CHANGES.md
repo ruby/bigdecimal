@@ -80,7 +80,7 @@
 
 * Fix memory leak in VpAlloc [GH-294] [GH-290]
 
-  Reoprted by **@MaxLap**
+  Reported by **@MaxLap**
 
 ## 3.1.7
 
@@ -211,7 +211,7 @@
 
   **Kenta Murata**
 
-* FIx the defaullt precision of `Float#to_d`.
+* Fix the default precision of `Float#to_d`.
   [Bug #13331]
 
   **Kenta Murata**
