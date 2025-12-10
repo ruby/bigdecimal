@@ -73,6 +73,8 @@ class TestJRuby < Test::Unit::TestCase
     assert_in_delta(Math.expm1(0.1), BigMath.expm1(BigDecimal('0.1'), N)) if defined? Math.expm1
     assert_in_delta(Math.erf(1), BigMath.erf(BigDecimal(1), N))
     assert_in_delta(Math.erfc(10), BigMath.erfc(BigDecimal(10), N))
+    assert_in_delta(Math.gamma(0.5), BigMath.gamma(BigDecimal('0.5'), N))
+    assert_in_delta(Math.lgamma(0.5).first, BigMath.lgamma(BigDecimal('0.5'), N).first)
     assert_in_delta(Math::PI, BigMath.PI(N))
     assert_in_delta(Math::E, BigMath.E(N))
   end

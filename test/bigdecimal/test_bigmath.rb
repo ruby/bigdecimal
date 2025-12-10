@@ -84,6 +84,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_consistent_precision_acceptance {|prec| BigMath.expm1(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.erf(x, prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.erfc(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.gamma(x, prec) }
+    assert_consistent_precision_acceptance {|prec| BigMath.lgamma(x, prec) }
 
     assert_consistent_precision_acceptance {|prec| BigMath.E(prec) }
     assert_consistent_precision_acceptance {|prec| BigMath.PI(prec) }
@@ -116,6 +118,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(expm1(bd, N), expm1(f, N))
     assert_equal(erf(bd, N), erf(f, N))
     assert_equal(erfc(bd, N), erfc(f, N))
+    assert_equal(gamma(bd, N), gamma(f, N))
+    assert_equal(lgamma(bd, N), lgamma(f, N))
   end
 
   def test_sqrt
@@ -526,5 +530,48 @@ class TestBigMath < Test::Unit::TestCase
     # Near crossover point between taylor series and asymptotic expansion around prec=150
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(19.5), n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
+  end
+
+  def test_gamma
+    [-1.8, -0.7, 0.6, 1.5, 2.4].each do |x|
+      assert_in_epsilon(Math.gamma(x), gamma(BigDecimal(x.to_s), N))
+    end
+    [1, 2, 3, 10, 16].each do |x|
+      assert_equal(Math.gamma(x).round, gamma(BigDecimal(x), N))
+    end
+    sqrt_pi = PI(120).sqrt(120)
+    assert_equal(sqrt_pi.mult(1, 100), gamma(BigDecimal("0.5"), 100))
+    assert_equal((sqrt_pi * 4).div(3, 100), gamma(BigDecimal("-1.5"), 100))
+    assert_equal(
+      BigDecimal('0.28242294079603478742934215780245355184774949260912e456569'),
+      BigMath.gamma(100000, 50)
+    )
+    assert_converge_in_precision {|n| gamma(BigDecimal("0.3"), n) }
+    assert_converge_in_precision {|n| gamma(BigDecimal("-1.9" + "9" * 30), n) }
+    assert_converge_in_precision {|n| gamma(BigDecimal("1234.56789"), n) }
+    assert_converge_in_precision {|n| gamma(BigDecimal("-987.654321"), n) }
+  end
+
+  def test_lgamma
+    [-2, -1, 0].each do |x|
+      l, sign = lgamma(BigDecimal(x), N)
+      assert(l.infinite?)
+      assert_equal(1, sign)
+    end
+    [-1.8, -0.7, 0.6, 1, 1.5, 2, 2.4, 3, 1e+300].each do |x|
+      l, sign = Math.lgamma(x)
+      bigl, bigsign = lgamma(BigDecimal(x.to_s), N)
+      assert_in_epsilon(l, bigl)
+      assert_equal(sign, bigsign)
+    end
+    assert_equal([BigMath.log(PI(120).sqrt(120), 100), 1], lgamma(BigDecimal("0.5"), 100))
+    assert_converge_in_precision {|n| lgamma(BigDecimal("-1." + "9" * 30), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("-3." + "0" * 30 + "1"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("10"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("0.3"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("-1.9" + "9" * 30), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("987.65421"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("-1234.56789"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("1e+400"), n).first }
   end
 end
