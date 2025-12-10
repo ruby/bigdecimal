@@ -188,6 +188,11 @@ typedef struct {
     DECDIG frac[FLEXIBLE_ARRAY_SIZE]; /* Array of fraction part. */
 } Real;
 
+typedef struct {
+    VALUE bigdecimal;
+    Real *real;
+} BDVALUE;
+
 /*
  *  ------------------
  *   EXPORTables.
@@ -232,9 +237,30 @@ VP_EXPORT int VpActiveRound(Real *y, Real *x, unsigned short f, ssize_t il);
 VP_EXPORT int VpMidRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT int VpLeftRound(Real *y, unsigned short f, ssize_t nf);
 VP_EXPORT void VpFrac(Real *y, Real *x);
+VP_EXPORT int AddExponent(Real *a, SIGNED_VALUE n);
 
 /* VP constants */
 VP_EXPORT Real *VpOne(void);
+
+/*
+ *  **** BigDecimal part ****
+ */
+VP_EXPORT VALUE BigDecimal_lt(VALUE self, VALUE r);
+VP_EXPORT VALUE BigDecimal_ge(VALUE self, VALUE r);
+VP_EXPORT VALUE BigDecimal_exponent(VALUE self);
+VP_EXPORT VALUE BigDecimal_fix(VALUE self);
+VP_EXPORT VALUE BigDecimal_frac(VALUE self);
+VP_EXPORT VALUE BigDecimal_add(VALUE self, VALUE b);
+VP_EXPORT VALUE BigDecimal_sub(VALUE self, VALUE b);
+VP_EXPORT VALUE BigDecimal_mult(VALUE self, VALUE b);
+VP_EXPORT VALUE BigDecimal_add2(VALUE self, VALUE b, VALUE n);
+VP_EXPORT VALUE BigDecimal_sub2(VALUE self, VALUE b, VALUE n);
+VP_EXPORT VALUE BigDecimal_mult2(VALUE self, VALUE b, VALUE n);
+VP_EXPORT VALUE BigDecimal_split(VALUE self);
+VP_EXPORT VALUE BigDecimal_decimal_shift(VALUE self, VALUE v);
+VP_EXPORT inline BDVALUE GetBDValueMust(VALUE v);
+VP_EXPORT inline BDVALUE rbd_allocate_struct_zero_wrap(int sign, size_t const digits);
+#define NewZeroWrap rbd_allocate_struct_zero_wrap
 
 /*
  *  ------------------
