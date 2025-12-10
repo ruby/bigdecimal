@@ -1,6 +1,6 @@
 # BigDecimal
 
-![CI](https://github.com/ruby/bigdecimal/workflows/CI/badge.svg?branch=master&event=push)
+[![CI](https://github.com/ruby/bigdecimal/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/ruby/bigdecimal/actions/workflows/ci.yml)
 
 BigDecimal provides an arbitrary-precision decimal floating-point number class.
 
@@ -14,11 +14,15 @@ gem 'bigdecimal'
 
 And then execute:
 
-    $ bundle
+```bash
+bundle
+```
 
 Or install it yourself as:
 
-    $ gem install bigdecimal
+```bash
+gem install bigdecimal
+```
 
 ### For RubyInstaller users
 
