@@ -768,6 +768,24 @@ module BigMath
       log_gamma = BigMath.log(_gamma_positive_integer(x, prec2), prec)
       [log_gamma, 1]
     else
+      # if x is close to 1 or 2, increase precision to reduce loss of significance
+      diff1_exponent = (x - 1).exponent
+      diff2_exponent = (x - 2).exponent
+      extra_prec = [-diff1_exponent, -diff2_exponent, 0].max
+      extremely_near_one = diff1_exponent < -prec2
+      extremely_near_two = diff2_exponent < -prec2
+
+      if extremely_near_one || extremely_near_two
+        # If x is extreamely close to base = 1 or 2, linear interpolation is accurate enough.
+        # Taylor expansion at x = base is: (x - base) * digamma(base) + (x - base) ** 2 * trigamma(base) / 2 + ...
+        # And we can ignore (x - base) ** 2 and higher order terms.
+        base = extremely_near_one ? 1 : 2
+        d = BigDecimal(1)._decimal_shift(1 - prec2)
+        log_gamma_d, sign = lgamma(base + d, prec2)
+        return [log_gamma_d.mult(x - base, prec2).div(d, prec), sign]
+      end
+
+      prec2 += [-diff1_exponent, -diff2_exponent, 0].max
       a, sum = _gamma_spouge_sum_part(x, prec2)
       log_gamma = BigMath.log(sum, prec2).add((x - 0.5).mult(BigMath.log(x.add(a - 1, prec2), prec2), prec2) + 1 - x, prec)
       [log_gamma, 1]
