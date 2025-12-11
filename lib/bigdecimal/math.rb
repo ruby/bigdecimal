@@ -563,13 +563,23 @@ module BigMath
     if x < -1
       # log10(exp(x)) = x * log10(e)
       lg_e = 0.4342944819032518
-      exp_prec = prec + (lg_e * x).ceil + 2
+      exp_prec = prec + (lg_e * x).ceil + BigDecimal.double_fig
     elsif x < 1
-      exp_prec = prec - x.exponent + 2
+      exp_prec = prec - x.exponent + BigDecimal.double_fig
     else
       exp_prec = prec
     end
-    exp_prec > 0 ? exp(x, exp_prec).sub(1, prec) : BigDecimal(-1)
+
+    return BigDecimal(-1) if exp_prec <= 0
+
+    exp = exp(x, exp_prec)
+
+    if exp.exponent > prec + BigDecimal.double_fig
+      # Workaroudn for https://github.com/ruby/bigdecimal/issues/464
+      exp
+    else
+      exp.sub(1, prec)
+    end
   end
 
   #   erf(decimal, numeric) -> BigDecimal
@@ -596,7 +606,12 @@ module BigMath
       log10_erfc = -xf ** 2 / Math.log(10) - Math.log10(xf * Math::PI ** 0.5)
       erfc_prec = [prec + log10_erfc.ceil, 1].max
       erfc = _erfc_asymptotic(x, erfc_prec)
-      return BigDecimal(1).sub(erfc, prec) if erfc
+      if erfc
+        # Workaround for https://github.com/ruby/bigdecimal/issues/464
+        return BigDecimal(1) if erfc.exponent < -prec - BigDecimal.double_fig
+
+        return BigDecimal(1).sub(erfc, prec)
+      end
     end
 
     prec2 = prec + BigDecimal.double_fig
@@ -623,7 +638,7 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :erfc)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal(1 - x.infinite?) if x.infinite?
-    return BigDecimal(1).sub(erf(x, prec), prec) if x < 0
+    return BigDecimal(1).sub(erf(x, prec + BigDecimal.double_fig), prec) if x < 0
     return BigDecimal(0) if x > 5000000000 # erfc(5000000000) < 1e-10000000000000000000 (underflow)
 
     if x >= 8
@@ -714,12 +729,12 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :gamma)
     prec2 = prec + BigDecimal.double_fig
     if x < 0.5
-      raise Math::DomainError 'Numerical argument is out of domain - gamma' if x.frac.zero?
+      raise Math::DomainError, 'Numerical argument is out of domain - gamma' if x.frac.zero?
 
       # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
       pi = PI(prec2)
       sin = _sinpix(x, pi, prec2)
-      return pi.div(gamma(1 - x, prec).mult(sin, prec2), prec)
+      return pi.div(gamma(1 - x, prec2).mult(sin, prec2), prec)
     elsif x.frac.zero? && x < 1000 * prec
       return _gamma_positive_integer(x, prec2).mult(1, prec)
     end
@@ -747,7 +762,7 @@ module BigMath
       # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
       pi = PI(prec2)
       sin = _sinpix(x, pi, prec2)
-      log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec).first + BigMath.log(sin.abs, prec2), prec)
+      log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec2).first + BigMath.log(sin.abs, prec2), prec)
       [log_gamma, sin > 0 ? 1 : -1]
     elsif x.frac.zero? && x < 1000 * prec
       log_gamma = BigMath.log(_gamma_positive_integer(x, prec2), prec)
