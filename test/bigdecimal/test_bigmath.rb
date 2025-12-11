@@ -568,6 +568,10 @@ class TestBigMath < Test::Unit::TestCase
       assert_equal(sign, bigsign)
     end
     assert_equal([BigMath.log(PI(120).sqrt(120), 100), 1], lgamma(BigDecimal("0.5"), 100))
+    assert_converge_in_precision {|n| lgamma(BigDecimal("0." + "9" * 80), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("1." + "0" * 80 + "1"), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("1." + "9" * 80), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal("2." + "0" * 80 + "1"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("-1." + "9" * 30), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("-3." + "0" * 30 + "1"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("10"), n).first }
