@@ -476,6 +476,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_in_exact_precision(exp(-3, 100) - 1, expm1(BigDecimal("-3"), 100), 100)
     assert_in_exact_precision(exp(BigDecimal("1.23e-10"), 120) - 1, expm1(BigDecimal("1.23e-10"), 100), 100)
     assert_in_exact_precision(exp(123, 120) - 1, expm1(BigDecimal("123"), 100), 100)
+    assert_equal(exp(BigDecimal("1e+12"), N), expm1(BigDecimal("1e+12"), N))
   end
 
   def test_erf
@@ -486,6 +487,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(-1, BigMath.erf(MINF, N))
     assert_equal(1, BigMath.erf(BigDecimal(1000), 100))
     assert_equal(-1, BigMath.erf(BigDecimal(-1000), 100))
+    assert_equal(1, BigMath.erf(BigDecimal(10000000), 100))
     assert_not_equal(1, BigMath.erf(BigDecimal(10), 45))
     assert_not_equal(1, BigMath.erf(BigDecimal(15), 100))
     assert_equal(1, BigMath.erf(BigDecimal('1e400'), 10))
@@ -524,6 +526,7 @@ class TestBigMath < Test::Unit::TestCase
       BigMath.erfc(BigDecimal("40"), 100)
     )
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(30), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(-2), n) }
     assert_converge_in_precision {|n| BigMath.erfc(30 * SQRT2, n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(50), n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(60000), n) }

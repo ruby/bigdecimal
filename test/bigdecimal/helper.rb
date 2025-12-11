@@ -53,7 +53,7 @@ module TestBigDecimalBase
     [50, 100, 150].each do |n|
       value = yield(n)
       assert(value != expected, "Unable to estimate precision for exact value")
-      assert_in_exact_precision(expected, value, n)
+      assert_equal(expected.mult(1, n), value)
     end
   end
 
