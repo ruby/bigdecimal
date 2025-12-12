@@ -884,7 +884,7 @@ module BigMath
   #   #=> 0.123456e3
   #
   def ldexp(x, exponent)
-    x = BigDecimal::Internal.coerce_to_bigdecimal(x, 0, :frexp)
+    x = BigDecimal::Internal.coerce_to_bigdecimal(x, 0, :ldexp)
     x.finite? ? x._decimal_shift(exponent) : x
   end
 
