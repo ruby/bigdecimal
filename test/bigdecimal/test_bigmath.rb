@@ -580,5 +580,9 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| lgamma(BigDecimal("987.65421"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("-1234.56789"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("1e+400"), n).first }
+
+    # gamma close 1 or -1 cases
+    assert_converge_in_precision {|n| lgamma(BigDecimal('-3.143580888349980058694358781820227899566'), n).first }
+    assert_converge_in_precision {|n| lgamma(BigDecimal('-4.991544640560047722345260122806465721667'), n).first }
   end
 end

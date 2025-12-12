@@ -759,11 +759,16 @@ module BigMath
     if x < 0.5
       return [BigDecimal::INFINITY, 1] if x.frac.zero?
 
-      # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
-      pi = PI(prec2)
-      sin = _sinpix(x, pi, prec2)
-      log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec2).first + BigMath.log(sin.abs, prec2), prec)
-      [log_gamma, sin > 0 ? 1 : -1]
+      loop do
+        # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
+        pi = PI(prec2)
+        sin = _sinpix(x, pi, prec2)
+        log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec2).first + BigMath.log(sin.abs, prec2), prec)
+        return [log_gamma, sin > 0 ? 1 : -1] if prec2 + log_gamma.exponent > prec + BigDecimal.double_fig
+
+        # Retry with higher precision if loss of significance is too large
+        prec2 = prec2 * 3 / 2
+      end
     elsif x.frac.zero? && x < 1000 * prec
       log_gamma = BigMath.log(_gamma_positive_integer(x, prec2), prec)
       [log_gamma, 1]
