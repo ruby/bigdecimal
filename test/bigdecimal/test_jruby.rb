@@ -75,6 +75,8 @@ class TestJRuby < Test::Unit::TestCase
     assert_in_delta(Math.erfc(10), BigMath.erfc(BigDecimal(10), N))
     assert_in_delta(Math.gamma(0.5), BigMath.gamma(BigDecimal('0.5'), N))
     assert_in_delta(Math.lgamma(0.5).first, BigMath.lgamma(BigDecimal('0.5'), N).first)
+    assert_equal([BigDecimal('0.123'), 4], BigMath.frexp(BigDecimal('0.123e4')))
+    assert_equal(BigDecimal('12.3e4'), BigMath.ldexp(BigDecimal('12.3'), 4))
     assert_in_delta(Math::PI, BigMath.PI(N))
     assert_in_delta(Math::E, BigMath.E(N))
   end

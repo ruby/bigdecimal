@@ -585,4 +585,28 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| lgamma(BigDecimal('-3.143580888349980058694358781820227899566'), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal('-4.991544640560047722345260122806465721667'), n).first }
   end
+
+  def test_frexp
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal([BigDecimal("-0.123456"), 10], BigMath.frexp(BigDecimal("-0.123456e10")))
+      assert_equal([BigDecimal("0.123456"), -10], BigMath.frexp(BigDecimal("0.123456e-10")))
+      assert_equal([BigDecimal("0.123456789"), 9], BigMath.frexp(123456789))
+      assert_equal([BigDecimal(0), 0], BigMath.frexp(BigDecimal(0)))
+      assert_equal([BigDecimal::NAN, 0], BigMath.frexp(BigDecimal::NAN))
+      assert_equal([BigDecimal::INFINITY, 0], BigMath.frexp(BigDecimal::INFINITY))
+    end
+  end
+
+  def test_ldexp
+    BigDecimal.save_limit do
+      BigDecimal.limit(3)
+      assert_equal(BigDecimal("-0.123456e10"), BigMath.ldexp(BigDecimal("-0.123456"), 10))
+      assert_equal(BigDecimal("0.123456e20"), BigMath.ldexp(BigDecimal("0.123456e10"), 10.9))
+      assert_equal(BigDecimal("0.123456e-10"), BigMath.ldexp(BigDecimal("0.123456"), -10))
+      assert_equal(BigDecimal("0.123456789e19"), BigMath.ldexp(123456789, 10))
+      assert(BigMath.ldexp(BigDecimal::NAN, 10).nan?)
+      assert_equal(BigDecimal::INFINITY, BigMath.ldexp(BigDecimal::INFINITY, 10))
+    end
+  end
 end
