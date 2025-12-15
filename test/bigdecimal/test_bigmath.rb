@@ -278,6 +278,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| atan(BigDecimal("2"), n)}
     assert_converge_in_precision {|n| atan(BigDecimal("1e-30"), n)}
     assert_converge_in_precision {|n| atan(BigDecimal("1e30"), n)}
+    assert_equal(BigDecimal(0.78), BigMath.atan(0.996, 2))
   end
 
   def test_atan2
