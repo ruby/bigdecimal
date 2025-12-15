@@ -1,6 +1,8 @@
 # frozen_string_literal: false
 require 'bigdecimal'
 
+warn "'bigdecimal/ludcmp' is deprecated and will be removed in a future release."
+
 #
 # Solves a*x = b for x, using LU decomposition.
 #

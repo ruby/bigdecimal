@@ -2,6 +2,8 @@
 
 require 'bigdecimal'
 
+warn "'bigdecimal/jacobian' is deprecated and will be removed in a future release."
+
 # require 'bigdecimal/jacobian'
 #
 # Provides methods to compute the Jacobian matrix of a set of equations at a
