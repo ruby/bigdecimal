@@ -286,7 +286,7 @@ module BigMath
     pi = PI(n)
     x = -x if neg = x < 0
     return pi.div(neg ? -2 : 2, prec) if x.infinite?
-    return pi.div(neg ? -4 : 4, prec) if x.round(prec) == 1
+    return pi.div(neg ? -4 : 4, prec) if x.round(n) == 1
     x = BigDecimal("1").div(x, n) if inv = x > 1
     x = (-1 + sqrt(1 + x.mult(x, n), n)).div(x, n) if dbl = x > 0.5
     y = x
