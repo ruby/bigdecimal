@@ -2,6 +2,8 @@
 require "bigdecimal/ludcmp"
 require "bigdecimal/jacobian"
 
+warn "'bigdecimal/newton' is deprecated and will be removed in a future release."
+
 #
 # newton.rb
 #
