@@ -778,24 +778,6 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_operator(BigDecimal((2**100).to_s), :==, d)
   end
 
-  def test_precs_deprecated
-    assert_warn(/BigDecimal#precs is deprecated and will be removed in the future/) do
-      Warning[:deprecated] = true if defined?(Warning.[])
-      BigDecimal("1").precs
-    end
-  end
-
-  def test_precs
-    $VERBOSE, verbose = nil, $VERBOSE
-    a = BigDecimal("1").precs
-    assert_instance_of(Array, a)
-    assert_equal(2, a.size)
-    assert_kind_of(Integer, a[0])
-    assert_kind_of(Integer, a[1])
-  ensure
-    $VERBOSE = verbose
-  end
-
   def test_hash
     a = []
     b = BigDecimal("1")
@@ -832,11 +814,9 @@ class TestBigDecimal < Test::Unit::TestCase
     too_few_precs = BigDecimal._load('100:' + digits_part)
     assert_equal(1000, too_few_precs.precision)
     assert_equal(n, too_few_precs)
-    assert_equal(n.precs, too_few_precs.precs)
     too_large_precs = BigDecimal._load('999999999999:' + digits_part)
     assert_equal(1000, too_large_precs.precision)
     assert_equal(n, too_large_precs)
-    assert_equal(n.precs, too_large_precs.precs)
   ensure
     $VERBOSE = verbose
   end

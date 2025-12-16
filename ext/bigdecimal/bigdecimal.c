@@ -400,37 +400,6 @@ BigDecimal_double_fig(VALUE self)
     return INT2FIX(BIGDECIMAL_DOUBLE_FIGURES);
 }
 
-/*  call-seq:
- *    precs -> array
- *
- *  Returns an Array of two Integer values that represent platform-dependent
- *  internal storage properties.
- *
- *  This method is deprecated and will be removed in the future.
- *  Instead, use BigDecimal#n_significant_digits for obtaining the number of
- *  significant digits in scientific notation, and BigDecimal#precision for
- *  obtaining the number of digits in decimal notation.
- *
- */
-
-static VALUE
-BigDecimal_prec(VALUE self)
-{
-    BDVALUE v;
-    VALUE obj;
-
-    rb_category_warn(RB_WARN_CATEGORY_DEPRECATED,
-                     "BigDecimal#precs is deprecated and will be removed in the future; "
-                     "use BigDecimal#precision instead.");
-
-    v = GetBDValueMust(self);
-    obj = rb_assoc_new(SIZET2NUM(v.real->Prec*VpBaseFig()),
-		       SIZET2NUM(v.real->MaxPrec*VpBaseFig()));
-
-    RB_GC_GUARD(v.bigdecimal);
-    return obj;
-}
-
 static void
 VpCountPrecisionAndScale(Real *p, ssize_t *out_precision, ssize_t *out_scale)
 {
@@ -3593,7 +3562,6 @@ Init_bigdecimal(void)
     rb_define_const(rb_cBigDecimal, "NAN", BIGDECIMAL_LITERAL(NAN, NaN));
 
     /* instance methods */
-    rb_define_method(rb_cBigDecimal, "precs", BigDecimal_prec, 0);
     rb_define_method(rb_cBigDecimal, "precision", BigDecimal_precision, 0);
     rb_define_method(rb_cBigDecimal, "scale", BigDecimal_scale, 0);
     rb_define_method(rb_cBigDecimal, "precision_scale", BigDecimal_precision_scale, 0);
