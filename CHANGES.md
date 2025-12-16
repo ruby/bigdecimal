@@ -1,5 +1,27 @@
 # CHANGES
 
+## 4.0.0
+
+* `BigDecimal#divmod` return value changed to `[Integer, BigDecimal]` [GH-312]
+
+  **@mrzasa**
+
+* Remove `BigDecimal#precs` [GH-470]
+
+  **@tompng**
+
+* BigMath now supports all functions defined in Math module [GH-336] [GH-357] [GH-451] [GH-448]
+
+  **@tompng**
+
+* Fix incorrect exception when exponent is fractional for Infinity base [GH-453]
+
+  **@troy-dunamu**
+
+* Deprecate `bigdecimal/jacobian`, `bigdecimal/ludcmp` and `bigdecimal/newton` [GH-471]
+
+  **@tompng**
+
 ## 3.3.1
 
 * All BigMath methods converts non integer precision with to_int

@@ -31,7 +31,7 @@
 #include "bits.h"
 #include "static_assert.h"
 
-#define BIGDECIMAL_VERSION "3.3.1"
+#define BIGDECIMAL_VERSION "4.0.0"
 
 /* #define ENABLE_NUMERIC_STRING */
 
