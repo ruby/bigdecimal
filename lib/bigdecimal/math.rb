@@ -678,9 +678,9 @@ module BigMath
     sum = c_prev.add(c_next, prec)
 
     2.step do |k|
-      c = (c_prev.mult(x, prec) + a * c_next).mult(2, prec).mult(x, prec).div(k, prec)
-      sum = sum.add(c, prec)
-      c_prev, c_next = c_next, c
+      cn = (c_prev.mult(x, prec) + a * c_next).mult(2, prec).mult(x, prec).div(k, prec)
+      sum = sum.add(cn, prec)
+      c_prev, c_next = c_next, cn
       break if [c_prev, c_next].all? { |c| c.zero?  || (c.exponent < sum.exponent - prec) }
     end
     value = sum.mult(scale.mult(exp(-(x + a).mult(x + a, prec), prec), prec), prec)
@@ -778,7 +778,6 @@ module BigMath
       # if x is close to 1 or 2, increase precision to reduce loss of significance
       diff1_exponent = (x - 1).exponent
       diff2_exponent = (x - 2).exponent
-      extra_prec = [-diff1_exponent, -diff2_exponent, 0].max
       extremely_near_one = diff1_exponent < -prec2
       extremely_near_two = diff2_exponent < -prec2
 
