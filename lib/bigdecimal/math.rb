@@ -778,7 +778,6 @@ module BigMath
       # if x is close to 1 or 2, increase precision to reduce loss of significance
       diff1_exponent = (x - 1).exponent
       diff2_exponent = (x - 2).exponent
-      extra_prec = [-diff1_exponent, -diff2_exponent, 0].max
       extremely_near_one = diff1_exponent < -prec2
       extremely_near_two = diff2_exponent < -prec2
 
