@@ -1,5 +1,11 @@
 # CHANGES
 
+## 4.0.1
+
+* Fix warning [GH-475]
+
+  **@tompng**
+
 ## 4.0.0
 
 * `BigDecimal#divmod` return value changed to `[Integer, BigDecimal]` [GH-312]
