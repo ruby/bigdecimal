@@ -32,24 +32,6 @@ If your Ruby comes from [RubyInstaller](https://rubyinstaller.org/), make sure [
 
 I don't have enough knowledge about Chocolatey.  Please tell me what should I write here.
 
-## Which version should you select
-
-The differences among versions are given below:
-
-| version | characteristics | Supported ruby version range |
-| ------- | --------------- | ----------------------- |
-| 3.0.0   | You can use BigDecimal with Ractor on Ruby 3.0 | 2.5 .. |
-| 2.0.x   | You cannot use BigDecimal.new and do subclassing | 2.4 .. |
-| 1.4.x   | BigDecimal.new and subclassing always prints warning. | 2.3 .. 2.7 |
-| 1.3.5   | You can use BigDecimal.new and subclassing without warning | .. 2.5 |
-
-You can select the version you want to use using `gem` method in Gemfile or scripts.
-For example, you want to stick bigdecimal version 1.3.5, it works file to put the following `gem` call in you Gemfile.
-
-```ruby
-gem 'bigdecimal', '1.3.5'
-```
-
 ## Usage
 
 TODO: Write usage instructions here
