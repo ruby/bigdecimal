@@ -33,8 +33,6 @@
 
 #define BIGDECIMAL_VERSION "4.0.1"
 
-/* #define ENABLE_NUMERIC_STRING */
-
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
@@ -335,14 +333,6 @@ GetBDValueWithPrecInternal(VALUE v, size_t prec, int must)
         v = rb_inum_convert_to_BigDecimal(v);
         break;
       }
-
-#ifdef ENABLE_NUMERIC_STRING
-      case T_STRING: {
-        const char *c_str = StringValueCStr(v);
-        v = rb_cstr_convert_to_BigDecimal(c_str, must);
-        break;
-      }
-#endif /* ENABLE_NUMERIC_STRING */
 
       default:
 	goto SomeOneMayDoIt;
