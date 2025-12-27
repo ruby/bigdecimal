@@ -986,7 +986,7 @@ BigDecimal_mode(int argc, VALUE *argv, VALUE self)
 static size_t
 GetAddSubPrec(Real *a, Real *b)
 {
-    if (!VpIsDef(a) || !VpIsDef(b)) return (size_t)-1L;
+    if (VpIsZero(a) || VpIsZero(b)) return Max(a->Prec, b->Prec);
     ssize_t min_a = a->exponent - a->Prec;
     ssize_t min_b = b->exponent - b->Prec;
     return Max(a->exponent, b->exponent) - Min(min_a, min_b);
@@ -1290,13 +1290,32 @@ BigDecimal_addsub_with_coerce(VALUE self, VALUE r, size_t prec, int operation)
     if (VpIsNaN(a.real)) return CheckGetValue(a);
     if (VpIsNaN(b.real)) return CheckGetValue(b);
 
-    mx = GetAddSubPrec(a.real, b.real);
-    if (mx == (size_t)-1L) {
-        /* a or b is inf */
+    if (VpIsInf(a.real) || VpIsInf(b.real)) {
         c = NewZeroWrap(1, BASE_FIG);
         VpAddSub(c.real, a.real, b.real, operation);
     }
     else {
+
+        // Optimization when exponent difference is large
+        // (1.234e+1000).add(5.678e-1000, 10) == (1.234e+1000).add(0.1e+990, 10) in every rounding mode
+        if (prec && !VpIsZero(a.real) && !VpIsZero(b.real)) {
+            size_t precRoom = roomof(prec, BASE_FIG);
+            if (a.real->exponent - (ssize_t)Max(a.real->Prec, precRoom) - 1 > b.real->exponent) {
+                BDVALUE b2 = NewZeroWrap(1, BASE_FIG);
+                VpSetOne(b2.real)
+                VpSetSign(b2.real, b.real->sign);
+                b2.real->exponent = a.real->exponent - (ssize_t)Max(a.real->Prec, precRoom) - 1;
+                b = b2;
+            } else if (b.real->exponent - (ssize_t)Max(b.real->Prec, precRoom) - 1 > a.real->exponent) {
+                BDVALUE a2 = NewZeroWrap(1, BASE_FIG);
+                VpSetOne(a2.real)
+                VpSetSign(a2.real, a.real->sign);
+                a2.real->exponent = b.real->exponent - (ssize_t)Max(b.real->Prec, precRoom) - 1;
+                a = a2;
+            }
+        }
+
+        mx = GetAddSubPrec(a.real, b.real);
         c = NewZeroWrap(1, (mx + 1) * BASE_FIG);
         size_t pl = VpGetPrecLimit();
         if (prec) VpSetPrecLimit(prec);

@@ -574,14 +574,7 @@ module BigMath
 
     return BigDecimal(-1) if exp_prec <= 0
 
-    exp = exp(x, exp_prec)
-
-    if exp.exponent > prec + BigDecimal.double_fig
-      # Workaroudn for https://github.com/ruby/bigdecimal/issues/464
-      exp
-    else
-      exp.sub(1, prec)
-    end
+    exp(x, exp_prec).sub(1, prec)
   end
 
   #   erf(decimal, numeric) -> BigDecimal
@@ -608,12 +601,7 @@ module BigMath
       log10_erfc = -xf ** 2 / Math.log(10) - Math.log10(xf * Math::PI ** 0.5)
       erfc_prec = [prec + log10_erfc.ceil, 1].max
       erfc = _erfc_asymptotic(x, erfc_prec)
-      if erfc
-        # Workaround for https://github.com/ruby/bigdecimal/issues/464
-        return BigDecimal(1) if erfc.exponent < -prec - BigDecimal.double_fig
-
-        return BigDecimal(1).sub(erfc, prec)
-      end
+      return BigDecimal(1).sub(erfc, prec) if erfc
     end
 
     prec2 = prec + BigDecimal.double_fig
