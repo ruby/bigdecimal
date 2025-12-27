@@ -13,7 +13,7 @@
 # :stopdoc:
 require "bigdecimal"
 
-# Requires gem "matrix"
+# Requires gem matrix
 require "matrix"
 
 class PrecisionSpecifiedValue
@@ -63,9 +63,11 @@ class PrecisionSpecifiedValue
   end
 end
 
+return if __FILE__ != $0
+
 def rd_order(na)
   printf("Number of equations ?") if(na <= 0)
-  n = ARGF.gets().to_i
+  ARGF.gets().to_i
 end
 
 na = ARGV.size
