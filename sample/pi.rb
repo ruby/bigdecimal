@@ -1,4 +1,3 @@
-#!/usr/local/bin/ruby
 # frozen_string_literal: false
 
 #
@@ -11,11 +10,9 @@
 require "bigdecimal"
 require "bigdecimal/math.rb"
 
-include BigMath
-
 if ARGV.size == 1
     print "PI("+ARGV[0]+"):\n"
-    p PI(ARGV[0].to_i)
+    p BigMath.PI(ARGV[0].to_i)
 else
     print "TRY: ruby pi.rb 1000 \n"
 end

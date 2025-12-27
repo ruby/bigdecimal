@@ -1,4 +1,3 @@
-#!/usr/local/bin/ruby
 # frozen_string_literal: false
 
 #
@@ -13,62 +12,101 @@
 
 # :stopdoc:
 require "bigdecimal"
-require "bigdecimal/ludcmp"
 
-#
-# NOTE:
-#   Change following BigDecimal.limit() if needed.
-BigDecimal.limit(100)
-#
+# Requires gem matrix
+require "matrix"
 
-include LUSolve
-def rd_order(na)
-   printf("Number of equations ?") if(na <= 0)
-   n = ARGF.gets().to_i
+class PrecisionSpecifiedValue
+  # NOTE:
+  #   Change following PREC if needed.
+
+  attr_reader :value
+  def initialize(value, prec)
+    @value = BigDecimal(value)
+    @prec = prec
+  end
+
+  def unwrap(value)
+    PrecisionSpecifiedValue === value ? value.value : value
+  end
+
+  def coerce(other)
+    [self.class.new(unwrap(other), @prec), self]
+  end
+
+  def abs
+    self.class.new(@value.abs, @prec)
+  end
+
+  def >(other)
+    @value > unwrap(other)
+  end
+
+  def <(other)
+    @value < unwrap(other)
+  end
+
+  def -(other)
+    self.class.new(@value.sub(unwrap(other), @prec), @prec)
+  end
+
+  def +(other)
+    self.class.new(@value.add(unwrap(other), @prec), @prec)
+  end
+
+  def *(other)
+    self.class.new(@value.mult(unwrap(other), @prec), @prec)
+  end
+
+  def quo(other)
+    self.class.new(@value.div(unwrap(other), @prec), @prec)
+  end
 end
 
-na   = ARGV.size
-zero = BigDecimal("0.0")
-one  = BigDecimal("1.0")
+return if __FILE__ != $0
+
+def rd_order(na)
+  printf("Number of equations ?") if(na <= 0)
+  ARGF.gets().to_i
+end
+
+na = ARGV.size
 
 while (n=rd_order(na))>0
   a = []
-  as= []
   b = []
   if na <= 0
      # Read data from console.
      printf("\nEnter coefficient matrix element A[i,j]\n")
      for i in 0...n do
-       for j in 0...n do
+       a << n.times.map do |j|
          printf("A[%d,%d]? ",i,j); s = ARGF.gets
-         a  << BigDecimal(s)
-         as << BigDecimal(s)
+         BigDecimal(s)
        end
        printf("Contatant vector element b[%d] ? ",i)
        b << BigDecimal(ARGF.gets)
      end
   else
-     # Read data from specified file.
-     printf("Coefficient matrix and constant vector.\n")
-     for i in 0...n do
-       s = ARGF.gets
-       printf("%d) %s",i,s)
-       s = s.split
-       for j in 0...n do
-         a  << BigDecimal(s[j])
-         as << BigDecimal(s[j])
-       end
-       b << BigDecimal(s[n])
-     end
+    # Read data from specified file.
+    printf("Coefficient matrix and constant vector.\n")
+    for i in 0...n do
+      s = ARGF.gets
+      printf("%d) %s",i,s)
+      s = s.split
+      a << n.times.map {|j| BigDecimal(s[j]) }
+      b << BigDecimal(s[n])
+    end
   end
-  x = lusolve(a,b,ludecomp(a,n,zero,one),zero)
+
+  prec = 100
+  matrix = Matrix[*a.map {|row| row.map {|v| PrecisionSpecifiedValue.new(v, prec) } }]
+  vector = b.map {|v| PrecisionSpecifiedValue.new(v, prec) }
+  x = matrix.lup.solve(vector).map(&:value)
+
   printf("Answer(x[i] & (A*x-b)[i]) follows\n")
   for i in 0...n do
      printf("x[%d]=%s ",i,x[i].to_s)
-     s = zero
-     for j in 0...n do
-       s = s + as[i*n+j]*x[j]
-     end
-     printf(" & %s\n",(s-b[i]).to_s)
+     diff = a[i].zip(x).sum {|aij, xj| aij*xj }.sub(b[i], 10)
+     printf(" & %s\n", diff.to_s)
   end
 end
