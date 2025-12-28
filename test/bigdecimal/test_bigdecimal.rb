@@ -523,6 +523,52 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_negative_zero((-x) - (-y))
   end
 
+  def test_add_sub_huge_with_zero
+    huge = BigDecimal("0.1e#{EXPONENT_MAX}")
+    assert_equal(huge, huge + 0)
+    assert_equal(huge, huge - 0)
+    assert_equal(huge, huge.add(BigDecimal(0), 10))
+    assert_equal(huge, huge.sub(BigDecimal(0), 10))
+  end
+
+  def test_add_sub_huge_exponent_difference
+    huge = BigDecimal('1e+1000000000000')
+    zero = BigDecimal(0)
+    small = BigDecimal('1e-1000000000000')
+    assert_equal(huge, huge.add(small, 10))
+    assert_equal(huge, huge.sub(small, 10))
+    assert_equal(huge, small.add(huge, 10))
+    assert_equal(-huge, small.sub(huge, 10))
+    assert_equal(huge, zero.add(huge, 10))
+    assert_equal(huge, huge.add(zero, 10))
+    assert_equal(small, zero.add(small, 10))
+    assert_equal(small, small.add(zero, 10))
+
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_DOWN)
+    assert_equal(huge, huge.add(small, 10))
+    assert_equal(huge * BigDecimal('0.9999999999'), huge.sub(small, 10))
+    assert_equal(huge, huge.add(zero, 10))
+    assert_equal(huge, huge.sub(zero, 10))
+
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_UP)
+    assert_equal(huge * BigDecimal('1.000000001'), huge.add(small, 10))
+    assert_equal(huge, huge.sub(small, 10))
+    assert_equal(huge, huge.add(zero, 10))
+    assert_equal(huge, huge.sub(zero, 10))
+
+    [BigDecimal::ROUND_UP, BigDecimal::ROUND_DOWN, BigDecimal::ROUND_HALF_UP].each do |mode|
+      BigDecimal.mode(BigDecimal::ROUND_MODE, mode)
+      xs = [BigDecimal(1), BigDecimal(2)]
+      ys = [BigDecimal('0.5e-89'), BigDecimal('0.5e-90'), BigDecimal('0.5e-91')]
+      xs.product(ys).each do |x, y|
+        assert_equal((x + y).mult(1, 91), x.add(y, 91))
+        assert_equal((y + x).mult(1, 91), y.add(x, 91))
+        assert_equal((x - y).mult(1, 91), x.sub(y, 91))
+        assert_equal((y - x).mult(1, 91), y.sub(x, 91))
+      end
+    end
+  end
+
   def test_mult_div_overflow_underflow_sign
     BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
     BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
