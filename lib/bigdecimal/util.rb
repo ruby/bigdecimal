@@ -1,4 +1,4 @@
-# frozen_string_literal: false
+# frozen_string_literal: true
 #
 #--
 # bigdecimal/util extends various native classes to provide the #to_d method,

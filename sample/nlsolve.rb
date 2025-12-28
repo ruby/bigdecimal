@@ -1,5 +1,3 @@
-# frozen_string_literal: false
-
 #
 # nlsolve.rb
 # An example for solving nonlinear algebraic equation system.
