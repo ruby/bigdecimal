@@ -29,9 +29,17 @@
 #endif
 
 #include "bits.h"
+#include "div.h"
 #include "static_assert.h"
 
 #define BIGDECIMAL_VERSION "4.0.1"
+
+#if SIZEOF_DECDIG == 4
+#define USE_NTT_MULTIPLICATION 1
+#include "ntt.h"
+#define NTT_MULTIPLICATION_THRESHOLD 100
+#define NEWTON_RAPHSON_DIVISION_THRESHOLD 200
+#endif
 
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
@@ -72,11 +80,6 @@ static struct {
     ID id;
     uint8_t mode;
 } rbd_rounding_modes[RBD_NUM_ROUNDING_MODES];
-
-typedef struct {
-    VALUE bigdecimal;
-    Real *real;
-} BDVALUE;
 
 typedef struct {
     VALUE bigdecimal_or_nil;
@@ -205,7 +208,6 @@ rbd_allocate_struct_zero(int sign, size_t const digits)
 static unsigned short VpGetException(void);
 static void  VpSetException(unsigned short f);
 static void VpCheckException(Real *p, bool always);
-static int AddExponent(Real *a, SIGNED_VALUE n);
 static VALUE CheckGetValue(BDVALUE v);
 static void  VpInternalRound(Real *c, size_t ixDigit, DECDIG vPrev, DECDIG v);
 static int   VpLimitRound(Real *c, size_t ixDigit);
@@ -1070,9 +1072,6 @@ BigDecimal_check_num(Real *p)
 {
     VpCheckException(p, true);
 }
-
-static VALUE BigDecimal_fix(VALUE self);
-static VALUE BigDecimal_split(VALUE self);
 
 /* Returns the value as an Integer.
  *
@@ -3235,17 +3234,37 @@ BigDecimal_literal(const char *str)
 
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
 VALUE
-BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
-    BDVALUE a,b,c,d;
+BigDecimal_vpdivd_generic(VALUE self, VALUE r, VALUE cprec, void (*vpdivd_func)(Real*, Real*, Real*, Real*)) {
+    BDVALUE a, b, c, d;
     size_t cn = NUM2INT(cprec);
     a = GetBDValueMust(self);
     b = GetBDValueMust(r);
     c = NewZeroWrap(1, cn * BASE_FIG);
     d = NewZeroWrap(1, VPDIVD_REM_PREC(a.real, b.real, c.real) * BASE_FIG);
-    VpDivd(c.real, d.real, a.real, b.real);
+    vpdivd_func(c.real, d.real, a.real, b.real);
     RB_GC_GUARD(a.bigdecimal);
     RB_GC_GUARD(b.bigdecimal);
     return rb_assoc_new(c.bigdecimal, d.bigdecimal);
+}
+
+void
+VpDivdNormal(Real *c, Real *r, Real *a, Real *b) {
+    VpDivd(c, r, a, b);
+}
+
+VALUE
+BigDecimal_vpdivd(VALUE self, VALUE r, VALUE cprec) {
+  return BigDecimal_vpdivd_generic(self, r, cprec, VpDivdNormal);
+}
+
+VALUE
+BigDecimal_vpdivd_newton(VALUE self, VALUE r, VALUE cprec) {
+    return BigDecimal_vpdivd_generic(self, r, cprec, VpDivdNewton);
+}
+
+VALUE
+BigDecimal_newton_raphson_inverse(VALUE self, VALUE prec) {
+    return newton_raphson_inverse(self, NUM2SIZET(prec));
 }
 
 VALUE
@@ -3259,6 +3278,25 @@ BigDecimal_vpmult(VALUE self, VALUE v) {
     RB_GC_GUARD(b.bigdecimal);
     return c.bigdecimal;
 }
+
+#if SIZEOF_DECDIG == 4
+VALUE
+BigDecimal_nttmult(VALUE self, VALUE v) {
+    BDVALUE a,b,c;
+    a = GetBDValueMust(self);
+    b = GetBDValueMust(v);
+    c = NewZeroWrap(1, VPMULT_RESULT_PREC(a.real, b.real) * BASE_FIG);
+    ntt_multiply(a.real->Prec, b.real->Prec, a.real->frac, b.real->frac, c.real->frac);
+    VpSetSign(c.real, a.real->sign * b.real->sign);
+    c.real->exponent = a.real->exponent + b.real->exponent;
+    c.real->Prec = a.real->Prec + b.real->Prec;
+    VpNmlz(c.real);
+    RB_GC_GUARD(a.bigdecimal);
+    RB_GC_GUARD(b.bigdecimal);
+    return c.bigdecimal;
+}
+#endif
+
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
 /* Document-class: BigDecimal
@@ -3629,7 +3667,12 @@ Init_bigdecimal(void)
 
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
     rb_define_method(rb_cBigDecimal, "vpdivd", BigDecimal_vpdivd, 2);
+    rb_define_method(rb_cBigDecimal, "vpdivd_newton", BigDecimal_vpdivd_newton, 2);
+    rb_define_method(rb_cBigDecimal, "newton_raphson_inverse", BigDecimal_newton_raphson_inverse, 1);
     rb_define_method(rb_cBigDecimal, "vpmult", BigDecimal_vpmult, 1);
+#ifdef USE_NTT_MULTIPLICATION
+    rb_define_method(rb_cBigDecimal, "nttmult", BigDecimal_nttmult, 1);
+#endif
 #endif /* BIGDECIMAL_USE_VP_TEST_METHODS */
 
 #define ROUNDING_MODE(i, name, value) \
@@ -4912,6 +4955,15 @@ VpMult(Real *c, Real *a, Real *b)
     c->exponent = a->exponent;    /* set exponent */
     VpSetSign(c, VpGetSign(a) * VpGetSign(b));    /* set sign  */
     if (!AddExponent(c, b->exponent)) return 0;
+
+#ifdef USE_NTT_MULTIPLICATION
+    if (b->Prec >= NTT_MULTIPLICATION_THRESHOLD) {
+        ntt_multiply((uint32_t)a->Prec, (uint32_t)b->Prec, a->frac, b->frac, c->frac);
+        c->Prec = a->Prec + b->Prec;
+        goto Cleanup;
+    }
+#endif
+
     carry = 0;
     nc = ind_c = MxIndAB;
     memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
@@ -4958,6 +5010,8 @@ VpMult(Real *c, Real *a, Real *b)
 	    }
 	}
     }
+
+Cleanup:
     VpNmlz(c);
 
 Exit:
@@ -5004,6 +5058,14 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
     word_r = r->MaxPrec;
 
     if (word_a > word_r || word_b + word_c - 2 >= word_r) goto space_error;
+
+#ifdef USE_NTT_MULTIPLICATION
+    // Newton-Raphson division requires multiplication to be faster than O(n^2)
+    if (word_c >= NEWTON_RAPHSON_DIVISION_THRESHOLD && word_b >= NEWTON_RAPHSON_DIVISION_THRESHOLD) {
+        VpDivdNewton(c, r, a, b);
+        goto Exit;
+    }
+#endif
 
     for (i = 0; i < word_a; ++i) r->frac[i] = a->frac[i];
     for (i = word_a; i < word_r; ++i) r->frac[i] = 0;
