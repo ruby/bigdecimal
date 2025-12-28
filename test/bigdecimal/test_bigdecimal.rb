@@ -1,4 +1,4 @@
-# frozen_string_literal: false
+# frozen_string_literal: true
 require_relative "helper"
 require 'bigdecimal/math'
 
@@ -266,7 +266,7 @@ class TestBigDecimal < Test::Unit::TestCase
     def test_BigDecimal_with_tainted_string
       Thread.new {
         $SAFE = 1
-        BigDecimal('1'.taint)
+        BigDecimal('1'.dup.taint)
       }.join
     ensure
       $SAFE = 0

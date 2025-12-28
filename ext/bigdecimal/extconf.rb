@@ -1,4 +1,4 @@
-# frozen_string_literal: false
+# frozen_string_literal: true
 require 'mkmf'
 
 def have_builtin_func(name, check_expr, opt = "", &b)
