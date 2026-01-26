@@ -43,7 +43,7 @@ jobs:
         - { os: windows-latest , ruby: "3.2" }
 
     steps:
-    - uses: actions/checkout@v6.0.1
+    - uses: actions/checkout@v6.0.2
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
