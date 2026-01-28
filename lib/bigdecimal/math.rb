@@ -885,39 +885,20 @@ module BigMath
   #   #=> "0.31415926535897932384626433832795e1"
   #
   def PI(prec)
+    # Gauss–Legendre algorithm
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :PI)
-    n      = prec + BigDecimal.double_fig
-    zero   = BigDecimal("0")
-    one    = BigDecimal("1")
-    two    = BigDecimal("2")
-
-    m25    = BigDecimal("-0.04")
-    m57121 = BigDecimal("-57121")
-
-    pi     = zero
-
-    d = one
-    k = one
-    t = BigDecimal("-80")
-    while d.nonzero? && ((m = n - (pi.exponent - d.exponent).abs) > 0)
-      m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      t   = t*m25
-      d   = t.div(k,m)
-      k   = k+two
-      pi  = pi + d
+    n = prec + BigDecimal.double_fig
+    a = BigDecimal(1)
+    b = BigDecimal(0.5, 0).sqrt(n)
+    s = BigDecimal(0.25, 0)
+    t = 1
+    while a != b && (a - b).exponent > 1 - n
+      c = (a - b).div(2, n)
+      a, b = (a + b).div(2, n), (a * b).sqrt(n)
+      s = s.sub(c * c * t, n)
+      t *= 2
     end
-
-    d = one
-    k = one
-    t = BigDecimal("956")
-    while d.nonzero? && ((m = n - (pi.exponent - d.exponent).abs) > 0)
-      m = BigDecimal.double_fig if m < BigDecimal.double_fig
-      t   = t.div(m57121,n)
-      d   = t.div(k,m)
-      pi  = pi + d
-      k   = k+two
-    end
-    pi.mult(1, prec)
+    (a * b).div(s, prec)
   end
 
   # call-seq:
