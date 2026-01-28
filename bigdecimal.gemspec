@@ -43,9 +43,11 @@ Gem::Specification.new do |s|
       ext/bigdecimal/bigdecimal.c
       ext/bigdecimal/bigdecimal.h
       ext/bigdecimal/bits.h
+      ext/bigdecimal/div.h
       ext/bigdecimal/feature.h
       ext/bigdecimal/missing.c
       ext/bigdecimal/missing.h
+      ext/bigdecimal/ntt.h
       ext/bigdecimal/missing/dtoa.c
       ext/bigdecimal/static_assert.h
     ]
