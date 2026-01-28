@@ -303,10 +303,13 @@ module BigMath
 
     prec2 = prec + BigDecimal.double_fig
 
-    if x < 0.1 || x > 10
-      exponent = (3 * x).exponent - 1
-      x = x._decimal_shift(-exponent)
-      return log(10, prec2).mult(exponent, prec2).add(log(x, prec2), prec)
+    # Reduce x to near 1
+    if x > 1.01 || x < 0.99
+      # log(x) = log(x/exp(logx_approx)) + logx_approx
+      logx_approx = BigDecimal(BigDecimal::Internal.float_log(x), 0)
+      x = x.div(exp(logx_approx, prec2), prec2)
+    else
+      logx_approx = BigDecimal(0)
     end
 
     # Solve exp(y) - x = 0 with Newton's method
@@ -317,7 +320,7 @@ module BigMath
       expy = exp(y, p + exp_additional_prec)
       y = y.sub(expy.sub(x, p).div(expy, p), p)
     end
-    y.mult(1, prec)
+    y.add(logx_approx, prec)
   end
 
   private_class_method def _exp_binary_splitting(x, prec) # :nodoc:
