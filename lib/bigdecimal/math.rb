@@ -585,6 +585,7 @@ module BigMath
     exp(x, exp_prec).sub(1, prec)
   end
 
+  # call-seq:
   #   erf(decimal, numeric) -> BigDecimal
   #
   # Computes the error function of +decimal+ to the specified number of digits of
