@@ -12,6 +12,9 @@ end
 
 class BigDecimal
   module Internal # :nodoc:
+    # Default extra precision for intermediate calculations
+    # This value is currently the same as BigDecimal.double_fig, but defined separately for future changes.
+    EXTRA_PREC = 16
 
     # Coerce x to BigDecimal with the specified precision.
     # TODO: some methods (example: BigMath.exp) require more precision than specified to coerce.
@@ -210,7 +213,7 @@ class BigDecimal
     result_prec = prec.nonzero? || [x.n_significant_digits, y.n_significant_digits, BigDecimal.double_fig].max + BigDecimal.double_fig
     result_prec = [result_prec, limit].min if prec.zero? && limit.nonzero?
 
-    prec2 = result_prec + BigDecimal.double_fig
+    prec2 = result_prec + BigDecimal::Internal::EXTRA_PREC
 
     if y < 0
       inv = x.power(-y, prec2)
@@ -266,7 +269,7 @@ class BigDecimal
     ex = exponent / 2
     x = _decimal_shift(-2 * ex)
     y = BigDecimal(Math.sqrt(x.to_f), 0)
-    Internal.newton_loop(prec + BigDecimal.double_fig) do |p|
+    Internal.newton_loop(prec + BigDecimal::Internal::EXTRA_PREC) do |p|
       y = y.add(x.div(y, p), p).div(2, p)
     end
     y._decimal_shift(ex).mult(1, prec)
@@ -301,7 +304,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal(0) if x == 1
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
 
     # Reduce x to near 1
     if x > 1.01 || x < 0.99
@@ -352,7 +355,7 @@ module BigMath
 
     # exp(x * 10**cnt) = exp(x)**(10**cnt)
     cnt = x < -1 || x > 1 ? x.exponent : 0
-    prec2 = prec + BigDecimal.double_fig + cnt
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC + cnt
     x = x._decimal_shift(-cnt)
 
     # Decimal form of bit-burst algorithm

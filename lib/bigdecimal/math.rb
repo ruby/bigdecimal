@@ -75,8 +75,8 @@ module BigMath
   private_class_method def _sin_periodic_reduction(x, prec, add_half_pi: false) # :nodoc:
     return [1, x] if -Math::PI/2 <= x && x <= Math::PI/2 && !add_half_pi
 
-    mod_prec = prec + BigDecimal.double_fig
-    pi_extra_prec = [x.exponent, 0].max + BigDecimal.double_fig
+    mod_prec = prec + BigDecimal::Internal::EXTRA_PREC
+    pi_extra_prec = [x.exponent, 0].max + BigDecimal::Internal::EXTRA_PREC
     while true
       pi = PI(mod_prec + pi_extra_prec)
       half_pi = pi / 2
@@ -84,10 +84,10 @@ module BigMath
       mod -= half_pi
       if mod.zero? || mod_prec + mod.exponent <= 0
         # mod is too small to estimate required pi precision
-        mod_prec = mod_prec * 3 / 2 + BigDecimal.double_fig
+        mod_prec = mod_prec * 3 / 2 + BigDecimal::Internal::EXTRA_PREC
       elsif mod_prec + mod.exponent < prec
         # Estimate required precision of pi
-        mod_prec = prec - mod.exponent + BigDecimal.double_fig
+        mod_prec = prec - mod.exponent + BigDecimal::Internal::EXTRA_PREC
       else
         return [div % 2 == 0 ? 1 : -1, mod.mult(1, prec)]
       end
@@ -145,9 +145,7 @@ module BigMath
     ex = x.exponent / 3
     x = x._decimal_shift(-3 * ex)
     y = BigDecimal(Math.cbrt(x.to_f), 0)
-    precs = [prec + BigDecimal.double_fig]
-    precs << 2 + precs.last / 2 while precs.last > BigDecimal.double_fig
-    precs.reverse_each do |p|
+    BigDecimal::Internal.newton_loop(prec + BigDecimal::Internal::EXTRA_PREC) do |p|
       y = (2 * y + x.div(y, p).div(y, p)).div(3, p)
     end
     y._decimal_shift(ex).mult(neg ? -1 : 1, prec)
@@ -168,7 +166,7 @@ module BigMath
     y = BigDecimal::Internal.coerce_to_bigdecimal(y, prec, :hypot)
     return BigDecimal::Internal.nan_computation_result if x.nan? || y.nan?
     return BigDecimal::Internal.infinity_computation_result if x.infinite? || y.infinite?
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     sqrt(x.mult(x, prec2) + y.mult(y, prec2), prec)
   end
 
@@ -187,7 +185,7 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :sin)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :sin)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
-    n = prec + BigDecimal.double_fig
+    n = prec + BigDecimal::Internal::EXTRA_PREC
     sign, x = _sin_periodic_reduction(x, n)
     _sin_around_zero(x, n).mult(sign, prec)
   end
@@ -207,7 +205,7 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :cos)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :cos)
     return BigDecimal::Internal.nan_computation_result if x.infinite? || x.nan?
-    n = prec + BigDecimal.double_fig
+    n = prec + BigDecimal::Internal::EXTRA_PREC
     sign, x = _sin_periodic_reduction(x, n, add_half_pi: true)
     _sin_around_zero(x, n).mult(sign, prec)
   end
@@ -228,7 +226,8 @@ module BigMath
   #
   def tan(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :tan)
-    sin(x, prec + BigDecimal.double_fig).div(cos(x, prec + BigDecimal.double_fig), prec)
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
+    sin(x, prec2).div(cos(x, prec2), prec)
   end
 
   # call-seq:
@@ -248,7 +247,7 @@ module BigMath
     raise Math::DomainError, "Out of domain argument for asin" if x < -1 || x > 1
     return BigDecimal::Internal.nan_computation_result if x.nan?
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     cos = (1 - x**2).sqrt(prec2)
     if cos.zero?
       PI(prec2).div(x > 0 ? 2 : -2, prec)
@@ -274,7 +273,7 @@ module BigMath
     raise Math::DomainError, "Out of domain argument for acos" if x < -1 || x > 1
     return BigDecimal::Internal.nan_computation_result if x.nan?
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     return (PI(prec2) / 2).sub(asin(x, prec2), prec) if x < 0
     return PI(prec2).div(2, prec) if x.zero?
 
@@ -297,7 +296,7 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :atan)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :atan)
     return BigDecimal::Internal.nan_computation_result if x.nan?
-    n = prec + BigDecimal.double_fig
+    n = prec + BigDecimal::Internal::EXTRA_PREC
     return PI(n).div(2 * x.infinite?, prec) if x.infinite?
 
     x = -x if neg = x < 0
@@ -341,7 +340,7 @@ module BigMath
 
     y = -y if neg = y < 0
     xlarge = y.abs < x.abs
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     if x > 0
       v = xlarge ? atan(y.div(x, prec2), prec) : PI(prec2) / 2 - atan(x.div(y, prec2), prec2)
     else
@@ -367,7 +366,7 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal::Internal.infinity_computation_result * x.infinite? if x.infinite?
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     prec2 -= x.exponent if x.exponent < 0
     e = exp(x, prec2)
     (e - BigDecimal(1).div(e, prec2)).div(2, prec)
@@ -390,7 +389,7 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     e = exp(x, prec2)
     (e + BigDecimal(1).div(e, prec2)).div(2, prec)
   end
@@ -412,7 +411,7 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal(x.infinite?) if x.infinite?
 
-    prec2 = prec + BigDecimal.double_fig + [-x.exponent, 0].max
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC + [-x.exponent, 0].max
     e = exp(x, prec2)
     einv = BigDecimal(1).div(e, prec2)
     (e - einv).div(e + einv, prec)
@@ -436,7 +435,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result * x.infinite? if x.infinite?
     return -asinh(-x, prec) if x < 0
 
-    sqrt_prec = prec + [-x.exponent, 0].max + BigDecimal.double_fig
+    sqrt_prec = prec + [-x.exponent, 0].max + BigDecimal::Internal::EXTRA_PREC
     log(x + sqrt(x**2 + 1, sqrt_prec), prec)
   end
 
@@ -458,7 +457,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x.infinite?
     return BigDecimal::Internal.nan_computation_result if x.nan?
 
-    log(x + sqrt(x**2 - 1, prec + BigDecimal.double_fig), prec)
+    log(x + sqrt(x**2 - 1, prec + BigDecimal::Internal::EXTRA_PREC), prec)
   end
 
   # call-seq:
@@ -480,7 +479,7 @@ module BigMath
     return BigDecimal::Internal.infinity_computation_result if x == 1
     return -BigDecimal::Internal.infinity_computation_result if x == -1
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     (log(x + 1, prec2) - log(1 - x, prec2)).div(2, prec)
   end
 
@@ -505,10 +504,10 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
 
-    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC * 3 / 2
     v = log(x, prec2).div(log(BigDecimal(2), prec2), prec2)
     # Perform half-up rounding to calculate log2(2**n)==n correctly in every rounding mode
-    v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+    v = v.round(prec + BigDecimal::Internal::EXTRA_PREC - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
     v.mult(1, prec)
   end
 
@@ -533,10 +532,10 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal::Internal.infinity_computation_result if x.infinite? == 1
 
-    prec2 = prec + BigDecimal.double_fig * 3 / 2
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC * 3 / 2
     v = log(x, prec2).div(log(BigDecimal(10), prec2), prec2)
     # Perform half-up rounding to calculate log10(10**n)==n correctly in every rounding mode
-    v = v.round(prec + BigDecimal.double_fig - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
+    v = v.round(prec + BigDecimal::Internal::EXTRA_PREC - (v.exponent < 0 ? v.exponent : 0), BigDecimal::ROUND_HALF_UP)
     v.mult(1, prec)
   end
 
@@ -573,9 +572,9 @@ module BigMath
     if x < -1
       # log10(exp(x)) = x * log10(e)
       lg_e = 0.4342944819032518
-      exp_prec = prec + (lg_e * x).ceil + BigDecimal.double_fig
+      exp_prec = prec + (lg_e * x).ceil + BigDecimal::Internal::EXTRA_PREC
     elsif x < 1
-      exp_prec = prec - x.exponent + BigDecimal.double_fig
+      exp_prec = prec - x.exponent + BigDecimal::Internal::EXTRA_PREC
     else
       exp_prec = prec
     end
@@ -613,7 +612,7 @@ module BigMath
       return BigDecimal(1).sub(erfc, prec) if erfc
     end
 
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     x_smallprec = x.mult(1, Integer.sqrt(prec2) / 2)
     # Taylor series of x with small precision is fast
     erf1 = _erf_taylor(x_smallprec, BigDecimal(0), BigDecimal(0), prec2)
@@ -637,7 +636,7 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :erfc)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal(1 - x.infinite?) if x.infinite?
-    return BigDecimal(1).sub(erf(x, prec + BigDecimal.double_fig), prec) if x < 0
+    return BigDecimal(1).sub(erf(x, prec + BigDecimal::Internal::EXTRA_PREC), prec) if x < 0
     return BigDecimal(0) if x > 5000000000 # erfc(5000000000) < 1e-10000000000000000000 (underflow)
 
     if x >= 8
@@ -648,7 +647,7 @@ module BigMath
     # erfc(x) = 1 - erf(x) < exp(-x**2)/x/sqrt(pi)
     # Precision of erf(x) needs about log10(exp(-x**2)) extra digits
     log10 = 2.302585092994046
-    high_prec = prec + BigDecimal.double_fig + (x.ceil**2 / log10).ceil
+    high_prec = prec + BigDecimal::Internal::EXTRA_PREC + (x.ceil**2 / log10).ceil
     BigDecimal(1).sub(erf(x, high_prec), prec)
   end
 
@@ -697,7 +696,7 @@ module BigMath
     # Using Stirling's approximation, we can simplify this condition to:
     # sqrt(2)/2 + k*log(k) - k - 2*k*log(x) < -prec*log(10)
     # and the left side is minimized when k = x**2.
-    prec += BigDecimal.double_fig
+    prec += BigDecimal::Internal::EXTRA_PREC
     xf = x.to_f
     kmax = (1..(xf ** 2).floor).bsearch do |k|
       Math.log(2) / 2 + k * Math.log(k) - k - 2 * k * Math.log(xf) < -prec * Math.log(10)
@@ -726,7 +725,7 @@ module BigMath
   def gamma(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :gamma)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :gamma)
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     if x < 0.5
       raise Math::DomainError, 'Numerical argument is out of domain - gamma' if x.frac.zero?
 
@@ -754,7 +753,7 @@ module BigMath
   def lgamma(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :lgamma)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :lgamma)
-    prec2 = prec + BigDecimal.double_fig
+    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
     if x < 0.5
       return [BigDecimal::INFINITY, 1] if x.frac.zero?
 
@@ -763,7 +762,7 @@ module BigMath
         pi = PI(prec2)
         sin = _sinpix(x, pi, prec2)
         log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec2).first + BigMath.log(sin.abs, prec2), prec)
-        return [log_gamma, sin > 0 ? 1 : -1] if prec2 + log_gamma.exponent > prec + BigDecimal.double_fig
+        return [log_gamma, sin > 0 ? 1 : -1] if prec2 + log_gamma.exponent > prec + BigDecimal::Internal::EXTRA_PREC
 
         # Retry with higher precision if loss of significance is too large
         prec2 = prec2 * 3 / 2
@@ -896,7 +895,7 @@ module BigMath
   def PI(prec)
     # Gauss–Legendre algorithm
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :PI)
-    n = prec + BigDecimal.double_fig
+    n = prec + BigDecimal::Internal::EXTRA_PREC
     a = BigDecimal(1)
     b = BigDecimal(0.5, 0).sqrt(n)
     s = BigDecimal(0.25, 0)
