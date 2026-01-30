@@ -547,6 +547,15 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
   end
 
+  def test_erf_erfc_consistency_large_prec
+    [BigDecimal(34.5), 34 + BigDecimal(4).div(7, 1200)].each do |x|
+      erf = BigMath.erf(x, 1200) # Calculated with taylor series of erf
+      erfc = BigMath.erfc(x, 400) # Calculated with asymptotic expansion
+      erfc2 = 1 - erf
+      assert_equal(erfc, erfc2.mult(1, 400))
+    end
+  end
+
   def test_gamma
     [-1.8, -0.7, 0.6, 1.5, 2.4].each do |x|
       assert_in_epsilon(Math.gamma(x), gamma(BigDecimal(x.to_s), N))
