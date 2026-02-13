@@ -2,6 +2,7 @@ require "bigdecimal"
 require "bigdecimal/math"
 require 'test/unit'
 require 'rbs/unit_test'
+require_relative './test_helper'
 
 class BigMathSingletonTest < Test::Unit::TestCase
   include TestHelper
