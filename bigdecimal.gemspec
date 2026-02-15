@@ -34,6 +34,8 @@ Gem::Specification.new do |s|
     sample/linear.rb
     sample/nlsolve.rb
     sample/pi.rb
+    sig/big_decimal.rbs
+    sig/big_math.rbs
   ]
   if Gem::Platform === s.platform and s.platform =~ 'java' or RUBY_ENGINE == 'jruby'
     s.platform      = 'java'
