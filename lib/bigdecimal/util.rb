@@ -7,31 +7,13 @@
 
 require 'bigdecimal'
 
-class Integer < Numeric
+class Numeric
   # call-seq:
-  #     int.to_d  -> bigdecimal
+  #     num.to_d  -> bigdecimal
+  #     num.to_d(precision)  -> bigdecimal
   #
-  # Returns the value of +int+ as a BigDecimal.
+  # Returns the value as a BigDecimal.
   #
-  #     require 'bigdecimal'
-  #     require 'bigdecimal/util'
-  #
-  #     42.to_d   # => 0.42e2
-  #
-  # See also Kernel.BigDecimal.
-  #
-  def to_d
-    BigDecimal(self)
-  end
-end
-
-
-class Float < Numeric
-  # call-seq:
-  #     float.to_d             -> bigdecimal
-  #     float.to_d(precision)  -> bigdecimal
-  #
-  # Returns the value of +float+ as a BigDecimal.
   # The +precision+ parameter is used to determine the number of
   # significant digits for the result. When +precision+ is set to +0+,
   # the number of digits to represent the float being converted is determined
@@ -41,17 +23,15 @@ class Float < Numeric
   #     require 'bigdecimal'
   #     require 'bigdecimal/util'
   #
-  #     0.5.to_d         # => 0.5e0
-  #     1.234.to_d       # => 0.1234e1
-  #     1.234.to_d(2)    # => 0.12e1
+  #     Rational(22, 7).to_d(3)   # => 0.314e1
+  #     3.14.to_d(3)   # => 0.314e1
+  #     3.to_d(3)   # => 0.3e1
   #
   # See also Kernel.BigDecimal.
-  #
   def to_d(precision=0)
     BigDecimal(self, precision)
   end
 end
-
 
 class String
   # call-seq:
@@ -108,32 +88,7 @@ class BigDecimal < Numeric
   #     d.to_d                       # => 0.314e1
   #
   def to_d
-    self
-  end
-end
-
-
-class Rational < Numeric
-  # call-seq:
-  #     rat.to_d(precision)  -> bigdecimal
-  #
-  # Returns the value as a BigDecimal.
-  #
-  # The +precision+ parameter is used to determine the number of
-  # significant digits for the result. When +precision+ is set to +0+,
-  # the number of digits to represent the float being converted is determined
-  # automatically.
-  # The default +precision+ is +0+.
-  #
-  #     require 'bigdecimal'
-  #     require 'bigdecimal/util'
-  #
-  #     Rational(22, 7).to_d(3)   # => 0.314e1
-  #
-  # See also Kernel.BigDecimal.
-  #
-  def to_d(precision=0)
-    BigDecimal(self, precision)
+    self # override to return the same object
   end
 end
 
@@ -180,7 +135,7 @@ class NilClass
   #
   #     nil.to_d   # => 0.0
   #
-  def to_d
-    BigDecimal(0)
+  def to_d(precision=0)
+    BigDecimal(0, precision)
   end
 end
