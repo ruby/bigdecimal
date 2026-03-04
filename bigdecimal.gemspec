@@ -34,6 +34,7 @@ Gem::Specification.new do |s|
     sample/linear.rb
     sample/nlsolve.rb
     sample/pi.rb
+    sig/big_decimal_util.rbs
     sig/big_decimal.rbs
     sig/big_math.rbs
   ]
