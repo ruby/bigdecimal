@@ -40,13 +40,15 @@ ntt_recursive(int size_bits, uint32_t *input, uint32_t *output, uint32_t *tmp, i
     uint32_t stride = (uint32_t)1 << (size_bits - depth - 1);
     uint32_t n = size_half / stride;
     uint32_t rn = 1, rm = prime - 1;
-    uint32_t idx = 0;
     for (uint32_t i = 0; i < n; i++) {
-        uint32_t j = i * 2 * stride;
-        for (uint32_t k = 0; k < stride; k++, j++, idx++) {
-            uint32_t a = tmp[j], b = tmp[j + stride];
-            output[idx] = (a + (uint64_t)rn * b) % prime;
-            output[idx + size_half] = (a + (uint64_t)rm * b) % prime;
+        uint32_t *aptr = tmp + i * 2 * stride;
+        uint32_t *bptr = aptr + stride;
+        uint32_t *out1 = output + stride * i;
+        uint32_t *out2 = out1 + size_half;
+        for (uint32_t k = 0; k < stride; k++) {
+            uint32_t a = aptr[k], b = bptr[k];
+            out1[k] = (a + (uint64_t)rn * b) % prime;
+            out2[k] = (a + (uint64_t)rm * b) % prime;
         }
         rn = ((uint64_t)rn * r) % prime;
         rm = ((uint64_t)rm * r) % prime;
