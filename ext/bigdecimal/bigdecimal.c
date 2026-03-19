@@ -4949,7 +4949,7 @@ VpMult(Real *c, Real *a, Real *b)
     if (!AddExponent(c, b->exponent)) return 0;
 
     if (b->Prec >= NTT_MULTIPLICATION_THRESHOLD) {
-        ntt_multiply((uint32_t)a->Prec, (uint32_t)b->Prec, a->frac, b->frac, c->frac);
+        ntt_multiply(a->Prec, b->Prec, a->frac, b->frac, c->frac);
         c->Prec = a->Prec + b->Prec;
         goto Cleanup;
     }
