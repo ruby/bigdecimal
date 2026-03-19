@@ -121,12 +121,13 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_vpdivd_with_one
-    x = BigDecimal('1234.2468000001234')
-    assert_vpdivd_equal([BigDecimal('1234'), BigDecimal('0.2468000001234')], [x, BigDecimal(1), 1])
-    assert_vpdivd_equal([BigDecimal('+1234.2468'), BigDecimal('+0.1234e-9')], [+x, BigDecimal(+1), 2])
-    assert_vpdivd_equal([BigDecimal('-1234.2468'), BigDecimal('+0.1234e-9')], [+x, BigDecimal(-1), 2])
-    assert_vpdivd_equal([BigDecimal('-1234.2468'), BigDecimal('-0.1234e-9')], [-x, BigDecimal(+1), 2])
-    assert_vpdivd_equal([BigDecimal('+1234.2468'), BigDecimal('-0.1234e-9')], [-x, BigDecimal(-1), 2])
+    rest = BigDecimal("0.1234e-#{BASE_FIG}")
+    x = BigDecimal('1234.2468') + rest
+    assert_vpdivd_equal([BigDecimal('1234'), BigDecimal('0.2468') + rest], [x, BigDecimal(1), 1])
+    assert_vpdivd_equal([BigDecimal('+1234.2468'), +rest], [+x, BigDecimal(+1), 2])
+    assert_vpdivd_equal([BigDecimal('-1234.2468'), +rest], [+x, BigDecimal(-1), 2])
+    assert_vpdivd_equal([BigDecimal('-1234.2468'), -rest], [-x, BigDecimal(+1), 2])
+    assert_vpdivd_equal([BigDecimal('+1234.2468'), -rest], [-x, BigDecimal(-1), 2])
   end
 
   def test_vpdivd_precisions
@@ -169,9 +170,17 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_vpdivd_intermediate_zero
-    x = BigDecimal('123456789.246913578000000000123456789')
-    y = BigDecimal('123456789')
-    assert_vpdivd_equal([BigDecimal('1.000000002000000000000000001'), BigDecimal(0)], [x, y, 4])
-    assert_vpdivd_equal([BigDecimal('1.000000000049999999'), BigDecimal('1e-18')], [BigDecimal("2.000000000099999999"), 2, 3])
+    case BASE_FIG
+    when 9
+      x = BigDecimal('123456789.246913578000000000123456789')
+      y = BigDecimal('123456789')
+      assert_vpdivd_equal([BigDecimal('1.000000002000000000000000001'), BigDecimal(0)], [x, y, 4])
+      assert_vpdivd_equal([BigDecimal('1.000000000049999999'), BigDecimal('1e-18')], [BigDecimal("2.000000000099999999"), 2, 3])
+    when 18
+      x = BigDecimal('123456789.246913578000000000000000000000000000123456789')
+      y = BigDecimal('123456789')
+      assert_vpdivd_equal([BigDecimal('1.000000002000000000000000000000000000000000001'), BigDecimal(0)], [x, y, 4])
+      assert_vpdivd_equal([BigDecimal('1.000000000000000000049999999999999999'), BigDecimal('1e-36')], [BigDecimal("2.000000000000000000099999999999999999"), 2, 3])
+    end
   end
 end

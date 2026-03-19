@@ -1084,7 +1084,12 @@ BigDecimal_to_i(VALUE self)
 
     if (v.real->exponent <= 0) return INT2FIX(0);
     if (v.real->exponent == 1) {
-        ret = LONG2NUM((long)(VpGetSign(v.real) * (DECDIG_DBL_SIGNED)v.real->frac[0]));
+        DECDIG_SIGNED value = VpGetSign(v.real) * (DECDIG_SIGNED)v.real->frac[0];
+#if SIZEOF_DECDIG == 4
+        ret = LONG2NUM((long)value);
+#elif SIZEOF_DECDIG == 8
+        ret = LL2NUM((long long)value);
+#endif
     }
     else {
         VALUE fix = (ssize_t)v.real->Prec > v.real->exponent ? BigDecimal_fix(self) : self;
@@ -3228,6 +3233,40 @@ BigDecimal_literal(const char *str)
 
 #define BIGDECIMAL_LITERAL(var, val) (BIGDECIMAL_ ## var = BigDecimal_literal(#val))
 
+#if SIZEOF_DECDIG == 4
+# define ntt_multiply ntt_multiply32
+#elif SIZEOF_DECDIG == 8 && BASE_FIG == 18
+static void
+ntt_multiply(size_t a_size, size_t b_size, uint64_t *a, uint64_t *b, uint64_t *c) {
+    size_t c_size = a_size + b_size;
+    BDVALUE bd_a = NewZeroWrap(1, a_size * BASE_FIG);
+    BDVALUE bd_b = NewZeroWrap(1, b_size * BASE_FIG);
+    BDVALUE bd_c = NewZeroWrap(1, c_size * BASE_FIG);
+    uint32_t *a32 = (uint32_t*)bd_a.real->frac;
+    uint32_t *b32 = (uint32_t*)bd_b.real->frac;
+    uint32_t *c32 = (uint32_t*)bd_c.real->frac;
+
+    // Pack to 64-bit (BASE_FIG=18) to 32-bit digits(BASE_FIG=9) and call ntt_multiply32
+    for (uint32_t i = 0; i < a_size; i++) {
+        uint64_t v = a[i];
+        a32[i * 2] = (uint32_t)(v / NTT_DECDIG_BASE);
+        a32[i * 2 + 1] = (uint32_t)(v % NTT_DECDIG_BASE);
+    }
+    for (uint32_t i = 0; i < b_size; i++) {
+        uint64_t v = b[i];
+        b32[i * 2] = (uint32_t)(v / NTT_DECDIG_BASE);
+        b32[i * 2 + 1] = (uint32_t)(v % NTT_DECDIG_BASE);
+    }
+    ntt_multiply32(a_size * 2, b_size * 2, a32, b32, c32);
+    for (uint32_t i = 0; i < c_size; i++) {
+        c[i] = (uint64_t)c32[i * 2] * NTT_DECDIG_BASE + c32[i * 2 + 1];
+    }
+    RB_GC_GUARD(bd_a.bigdecimal);
+    RB_GC_GUARD(bd_b.bigdecimal);
+    RB_GC_GUARD(bd_c.bigdecimal);
+}
+#endif
+
 #ifdef BIGDECIMAL_USE_VP_TEST_METHODS
 VALUE
 BigDecimal_vpdivd_generic(VALUE self, VALUE r, VALUE cprec, void (*vpdivd_func)(Real*, Real*, Real*, Real*)) {
@@ -3486,13 +3525,15 @@ Init_bigdecimal(void)
     rb_define_const(rb_cBigDecimal, "VERSION", rb_str_new2(BIGDECIMAL_VERSION));
 
     /*
-     * Base value used in internal calculations.  On a 32 bit system, BASE
-     * is 10000, indicating that calculation is done in groups of 4 digits.
-     * (If it were larger, BASE**2 wouldn't fit in 32 bits, so you couldn't
+     * Base value used in internal calculations.
+     * If uint128_t is available, BASE is (uint64_t)1000000000000000000ULL.
+     * Otherswise, BASE is 1000000000, indicating that calculation is done
+     * in groups of 9 digits.
+     * (If it were larger, BASE**2 wouldn't fit in 64 bits, so you couldn't
      * guarantee that two groups could always be multiplied together without
      * overflow.)
      */
-    rb_define_const(rb_cBigDecimal, "BASE", INT2FIX((SIGNED_VALUE)BASE));
+    rb_define_const(rb_cBigDecimal, "BASE", ULL2NUM(BASE));
 
     /* Exceptions */
 

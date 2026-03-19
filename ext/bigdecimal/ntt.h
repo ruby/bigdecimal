@@ -117,9 +117,9 @@ mod_restore_prime_24_26_29_shift_27(uint32_t mod1, uint32_t mod2, uint32_t mod3,
  * Uses three NTTs with mod (24 << 27 | 1), (26 << 27 | 1), and (29 << 27 | 1)
  */
 static void
-ntt_multiply(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c) {
+ntt_multiply32(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c) {
     if (a_size < b_size) {
-      ntt_multiply(b_size, a_size, b, a, c);
+      ntt_multiply32(b_size, a_size, b, a, c);
       return;
     }
 

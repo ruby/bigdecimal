@@ -52,6 +52,9 @@ else
   bigdecimal_rb = "$(srcdir)/../../lib/bigdecimal.rb"
 end
 
+decdig_bits = ENV['BIGDECIMAL_DECDIG_BITS']
+$defs.push("-DBIGDECIMAL_DECDIG_BITS=#{decdig_bits}") if %w[32 64].include?(decdig_bits)
+
 $defs.push '-DBIGDECIMAL_USE_VP_TEST_METHODS' if ENV['BIGDECIMAL_USE_VP_TEST_METHODS'] == 'true'
 
 create_makefile('bigdecimal') {|mf|

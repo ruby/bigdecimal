@@ -5,7 +5,12 @@ require 'rbconfig/sizeof'
 
 module TestBigDecimalBase
   BASE = BigDecimal::BASE
-  BASE_FIG = 9
+  case BASE
+  when (_avoid_jruby_crash = 1000000000000000000)
+    BASE_FIG = 18
+  when 1000000000
+    BASE_FIG = 9
+  end
 
   def setup
     @mode = BigDecimal.mode(BigDecimal::EXCEPTION_ALL)

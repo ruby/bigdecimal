@@ -20,7 +20,7 @@ jobs:
 
   host:
     needs: ruby-versions
-    name: ${{ matrix.os }} ${{ matrix.ruby }}
+    name: ${{ matrix.os }} ${{ matrix.ruby }} decdig_bits=${{ matrix.decdig_bits }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,7 +31,12 @@ jobs:
         - macos-14
         - windows-latest
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
+        decdig_bits: ['auto']
         include:
+        - { os: ubuntu-latest, ruby: "4.0", decdig_bits: 32 }
+        - { os: ubuntu-latest, ruby: "4.0", decdig_bits: 64 }
+        - { os: windows-latest, ruby: "4.0", decdig_bits: 32 }
+        - { os: windows-latest, ruby: "4.0", decdig_bits: 64 }
         - { os: windows-latest , ruby: mingw }
         - { os: windows-latest , ruby: mswin }
         exclude:
@@ -39,6 +44,7 @@ jobs:
         - { os: windows-latest , ruby: truffleruby }
         - { os: windows-latest , ruby: truffleruby-head }
     env:
+      BIGDECIMAL_DECDIG_BITS: ${{ matrix.decdig_bits }}
       BIGDECIMAL_USE_VP_TEST_METHODS: true
       BUNDLE_WITHOUT: sig
 
