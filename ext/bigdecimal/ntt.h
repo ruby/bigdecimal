@@ -123,9 +123,7 @@ ntt_multiply(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c
       return;
     }
 
-    int b_bits = 0;
-    while (((uint32_t)1 << b_bits) < (uint32_t)b_size) b_bits++;
-    int ntt_size_bits = b_bits + 1;
+    int ntt_size_bits = bit_length(b_size - 1) + 1;
     if (ntt_size_bits > MAX_NTT32_BITS) {
       rb_raise(rb_eArgError, "Multiply size too large");
     }
