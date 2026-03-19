@@ -65,13 +65,8 @@ class TestBigDecimalUtil < Test::Unit::TestCase
   def test_Float_to_d_issue_192
     # https://github.com/ruby/bigdecimal/issues/192
     # https://github.com/rails/rails/pull/42125
-    if BASE_FIG == 9
-      flo = 1_000_000_000.12345
-      big = BigDecimal("0.100000000012345e10")
-    else  # BASE_FIG == 4
-      flo = 1_0000.12
-      big = BigDecimal("0.1000012e5")
-    end
+    flo = 1_000_000_000.12345
+    big = BigDecimal("0.100000000012345e10")
     assert_equal(flo.to_d, big, "[ruby/bigdecimal#192]")
   end
 

@@ -5,14 +5,7 @@ require 'rbconfig/sizeof'
 
 module TestBigDecimalBase
   BASE = BigDecimal::BASE
-  case BASE
-  when 1000000000
-    SIZEOF_DECDIG = RbConfig::SIZEOF["int32_t"]
-    BASE_FIG = 9
-  when 10000
-    SIZEOF_DECDIG = RbConfig::SIZEOF["int16_t"]
-    BASE_FIG = 4
-  end
+  BASE_FIG = 9
 
   def setup
     @mode = BigDecimal.mode(BigDecimal::EXCEPTION_ALL)
