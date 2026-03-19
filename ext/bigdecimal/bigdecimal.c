@@ -5049,7 +5049,6 @@ VpDivd(Real *c, Real *r, Real *a, Real *b)
 
     if (word_a > word_r || word_b + word_c - 2 >= word_r) goto space_error;
 
-    // Newton-Raphson division requires multiplication to be faster than O(n^2)
     if (word_c >= NEWTON_RAPHSON_DIVISION_THRESHOLD && word_b >= NEWTON_RAPHSON_DIVISION_THRESHOLD) {
         VpDivdNewton(c, r, a, b);
         goto Exit;
