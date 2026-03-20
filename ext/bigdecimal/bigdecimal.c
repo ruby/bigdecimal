@@ -35,8 +35,8 @@
 
 #define BIGDECIMAL_VERSION "4.1.0"
 
-#define NTT_MULTIPLICATION_THRESHOLD 100
-#define NEWTON_RAPHSON_DIVISION_THRESHOLD 200
+#define NTT_MULTIPLICATION_THRESHOLD 350
+#define NEWTON_RAPHSON_DIVISION_THRESHOLD 100
 #define SIGNED_VALUE_MAX INTPTR_MAX
 #define SIGNED_VALUE_MIN INTPTR_MIN
 #define MUL_OVERFLOW_SIGNED_VALUE_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, SIGNED_VALUE_MIN, SIGNED_VALUE_MAX)
@@ -4837,17 +4837,12 @@ VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos,
  *        a0 a1 .... an    * b0
  *      +_____________________________
  *     c0 c1 c2  ......  cl
- *     nc      <---|
- *     MaxAB |--------------------|
  */
 VP_EXPORT size_t
 VpMult(Real *c, Real *a, Real *b)
 {
-    size_t MxIndA, MxIndB, MxIndAB;
-    size_t ind_c, i, ii, nc;
-    size_t ind_as, ind_ae, ind_bs;
-    DECDIG carry;
-    DECDIG_DBL s;
+    ssize_t a_batch_max, b_batch_max;
+    DECDIG_DBL batch[15];
 
     if (!VpIsDefOP(c, a, b, OP_SW_MULT)) return 0; /* No significant digit */
 
@@ -4871,9 +4866,6 @@ VpMult(Real *c, Real *a, Real *b)
 	a = b;
 	b = w;
     }
-    MxIndA = a->Prec - 1;
-    MxIndB = b->Prec - 1;
-    MxIndAB = a->Prec + b->Prec - 1;
 
     /* set LHSV c info */
 
@@ -4887,51 +4879,40 @@ VpMult(Real *c, Real *a, Real *b)
         goto Cleanup;
     }
 
-    carry = 0;
-    nc = ind_c = MxIndAB;
-    memset(c->frac, 0, (nc + 1) * sizeof(DECDIG));        /* Initialize c  */
-    c->Prec = nc + 1;        /* set precision */
-    for (nc = 0; nc < MxIndAB; ++nc, --ind_c) {
-	if (nc < MxIndB) {    /* The left triangle of the Fig. */
-	    ind_as = MxIndA - nc;
-	    ind_ae = MxIndA;
-	    ind_bs = MxIndB;
-	}
-	else if (nc <= MxIndA) {    /* The middle rectangular of the Fig. */
-	    ind_as = MxIndA - nc;
-	    ind_ae = MxIndA - (nc - MxIndB);
-	    ind_bs = MxIndB;
-	}
-	else /* if (nc > MxIndA) */ {    /*  The right triangle of the Fig. */
-	    ind_as = 0;
-	    ind_ae = MxIndAB - nc - 1;
-	    ind_bs = MxIndB - (nc - MxIndA);
-	}
+    c->Prec = a->Prec + b->Prec; /* set precision */
+    memset(c->frac, 0, c->Prec * sizeof(DECDIG)); /* Initialize c  */
 
-	for (i = ind_as; i <= ind_ae; ++i) {
-            s = (DECDIG_DBL)a->frac[i] * b->frac[ind_bs--];
-            carry = (DECDIG)(s / BASE);
-            s -= (DECDIG_DBL)carry * BASE;
-            c->frac[ind_c] += (DECDIG)s;
-            if (c->frac[ind_c] >= BASE) {
-                s = c->frac[ind_c] / BASE;
-                carry += (DECDIG)s;
-                c->frac[ind_c] -= (DECDIG)(s * BASE);
+    // Process 8 decdigits at a time to reduce the number of carry operations.
+    a_batch_max = (a->Prec - 1) / 8;
+    b_batch_max = (b->Prec - 1) / 8;
+    for (ssize_t ibatch = a_batch_max; ibatch >= 0; ibatch--) {
+        int isize = ibatch == a_batch_max ? (a->Prec - 1) % 8 + 1 : 8;
+        for (ssize_t jbatch = b_batch_max; jbatch >= 0; jbatch--) {
+            int jsize = jbatch == b_batch_max ? (b->Prec - 1) % 8 + 1 : 8;
+            memset(batch, 0, (isize + jsize - 1) * sizeof(DECDIG_DBL));
+
+            // Perform multiplication without carry calculation.
+            // 999999999 * 999999999 * 8 < 2**63 - 1, so DECDIG_DBL can hold the intermediate sum without overflow.
+            for (int i = 0; i < isize; i++) {
+                for (int j = 0; j < jsize; j++) {
+                    batch[i + j] += (DECDIG_DBL)a->frac[ibatch * 8 + i] * b->frac[jbatch * 8 + j];
+                }
             }
-	    if (carry) {
-		ii = ind_c;
-		while (ii-- > 0) {
-		    c->frac[ii] += carry;
-		    if (c->frac[ii] >= BASE) {
-			carry = c->frac[ii] / BASE;
-			c->frac[ii] -= (carry * BASE);
-		    }
-		    else {
-			break;
-		    }
-		}
-	    }
-	}
+
+            // Add the batch result to c with carry calculation.
+            DECDIG_DBL carry = 0;
+            for (int k = isize + jsize - 2; k >= 0; k--) {
+                size_t l = (ibatch + jbatch) * 8 + k + 1;
+                DECDIG_DBL s = c->frac[l] + batch[k] + carry;
+                c->frac[l] = (DECDIG)(s % BASE);
+                carry = (DECDIG_DBL)(s / BASE);
+            }
+
+            // Adding carry may exceed BASE, but it won't cause overflow of DECDIG.
+            // Exceeded value will be resolved in the carry operation of next (ibatch + jbatch - 1) batch.
+            // WARNING: This safety strongly relies on the current nested loop execution order.
+            c->frac[(ibatch + jbatch) * 8] += (DECDIG)carry;
+        }
     }
 
 Cleanup:
