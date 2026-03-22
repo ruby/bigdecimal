@@ -636,7 +636,7 @@ module BigMath
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :erfc)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal(1 - x.infinite?) if x.infinite?
-    return BigDecimal(1).sub(erf(x, prec + BigDecimal::Internal::EXTRA_PREC), prec) if x < 0
+    return BigDecimal(1).sub(erf(x, prec + BigDecimal::Internal::EXTRA_PREC), prec) if x < 0.5
     return BigDecimal(0) if x > 5000000000 # erfc(5000000000) < 1e-10000000000000000000 (underflow)
 
     if x >= 8
@@ -645,9 +645,10 @@ module BigMath
     end
 
     # erfc(x) = 1 - erf(x) < exp(-x**2)/x/sqrt(pi)
-    # Precision of erf(x) needs about log10(exp(-x**2)) extra digits
+    # Precision of erf(x) needs about log10(exp(-x**2)/x/sqrt(pi)) extra digits
     log10 = 2.302585092994046
-    high_prec = prec + BigDecimal::Internal::EXTRA_PREC + (x.ceil**2 / log10).ceil
+    xf = x.to_f
+    high_prec = prec + BigDecimal::Internal::EXTRA_PREC + ((xf**2 + Math.log(xf) + Math.log(Math::PI)/2) / log10).ceil
     BigDecimal(1).sub(erf(x, high_prec), prec)
   end
 
@@ -704,7 +705,8 @@ module BigMath
     return unless kmax
 
     sum = BigDecimal(1)
-    x2 = x.mult(x, prec)
+    # To calculate `exp(x2, prec)`, x2 needs extra log10(x**2) digits of precision
+    x2 = x.mult(x, prec + (2 * Math.log10(xf)).ceil)
     d = BigDecimal(1)
     (1..kmax).each do |k|
       d = d.div(x2, prec).mult(1 - 2 * k, prec).div(2, prec)

@@ -542,6 +542,7 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| BigMath.erfc(30 * SQRT2, n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(50), n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(60000), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(1000000000 + SQRT2), n) }
     # Near crossover point between taylor series and asymptotic expansion around prec=150
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(19.5), n) }
     assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
