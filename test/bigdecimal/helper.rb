@@ -39,17 +39,18 @@ module TestBigDecimalBase
     assert_in_delta(expected.mult(1, precision), actual, delta)
   end
 
+  CONVERSION_CHECK_PRECISIONS = [200, 400, 800, 1200]
+
   # Asserts that the calculation of the given block converges to some value
   # with exactly the given +precision+.
-  def assert_converge_in_precision(&block)
-    expected = yield(200)
-    [50, 100, 150].each do |n|
+  def assert_converge_in_precision(precisions = CONVERSION_CHECK_PRECISIONS, &block)
+    expected = yield(precisions.max + 16)
+    precisions.each do |n|
       value = yield(n)
       assert(value != expected, "Unable to estimate precision for exact value")
       assert_equal(expected.mult(1, n), value)
     end
   end
-
 
   def assert_nan(x)
     assert(x.nan?, "Expected #{x.inspect} to be NaN")

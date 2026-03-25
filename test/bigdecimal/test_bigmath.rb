@@ -509,9 +509,10 @@ class TestBigMath < Test::Unit::TestCase
       BigDecimal("0.9953222650189527341620692563672529286108917970400600767383523262004372807199951773676290080196806805"),
       BigMath.erf(BigDecimal("2"), 100)
     )
-    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("1e-30"), n) }
-    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("0.3"), n) }
-    assert_converge_in_precision {|n| BigMath.erf(SQRT2, n) }
+    precisions = [200, 300, 400]
+    assert_converge_in_precision(precisions) {|n| BigMath.erf(BigDecimal("1e-30"), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erf(BigDecimal("0.3"), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erf(SQRT2, n) }
   end
 
   def test_erfc
@@ -524,28 +525,31 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(2, BigMath.erfc(BigDecimal('-1e400'), 10))
     assert_equal(1, BigMath.erfc(BigDecimal('1e-400'), N))
 
+    precisions = [200, 300, 400]
+
     # erfc with taylor series
     assert_equal(
       BigDecimal("2.088487583762544757000786294957788611560818119321163727012213713938174695833440290610766384285723554e-45"),
       BigMath.erfc(BigDecimal("10"), 100)
     )
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(0.3), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(SQRT2, n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(8), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(0.3), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(SQRT2, n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(8), n) }
     # erfc with asymptotic expansion
     assert_equal(
       BigDecimal("1.896961059966276509268278259713415434936907563929186183462834752900411805205111886605256690776760041e-697"),
       BigMath.erfc(BigDecimal("40"), 100)
     )
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(30), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(-2), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(30 * SQRT2, n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(50), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(60000), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(1000000000 + SQRT2), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(30), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(-2), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(30 * SQRT2, n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(50), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(60000), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(1000000000 + SQRT2), n) }
+
     # Near crossover point between taylor series and asymptotic expansion around prec=150
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(19.5), n) }
-    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(19.5), n) }
+    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(20.5), n) }
   end
 
   def test_gamma
@@ -562,10 +566,11 @@ class TestBigMath < Test::Unit::TestCase
       BigDecimal('0.28242294079603478742934215780245355184774949260912e456569'),
       BigMath.gamma(100000, 50)
     )
-    assert_converge_in_precision {|n| gamma(BigDecimal("0.3"), n) }
-    assert_converge_in_precision {|n| gamma(BigDecimal("-1.9" + "9" * 30), n) }
-    assert_converge_in_precision {|n| gamma(BigDecimal("1234.56789"), n) }
-    assert_converge_in_precision {|n| gamma(BigDecimal("-987.654321"), n) }
+    precisions = [50, 100, 150]
+    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("0.3"), n) }
+    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("-1.9" + "9" * 30), n) }
+    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("1234.56789"), n) }
+    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("-987.654321"), n) }
   end
 
   def test_lgamma
@@ -581,22 +586,23 @@ class TestBigMath < Test::Unit::TestCase
       assert_equal(sign, bigsign)
     end
     assert_equal([BigMath.log(PI(120).sqrt(120), 100), 1], lgamma(BigDecimal("0.5"), 100))
-    assert_converge_in_precision {|n| lgamma(BigDecimal("0." + "9" * 80), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("1." + "0" * 80 + "1"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("1." + "9" * 80), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("2." + "0" * 80 + "1"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("-1." + "9" * 30), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("-3." + "0" * 30 + "1"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("10"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("0.3"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("-1.9" + "9" * 30), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("987.65421"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("-1234.56789"), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal("1e+400"), n).first }
+    precisions = [50, 100, 150]
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("0." + "9" * 80), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("1." + "0" * 80 + "1"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("1." + "9" * 80), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("2." + "0" * 80 + "1"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("-1." + "9" * 30), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("-3." + "0" * 30 + "1"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("10"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("0.3"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("-1.9" + "9" * 30), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("987.65421"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("-1234.56789"), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("1e+400"), n).first }
 
     # gamma close 1 or -1 cases
-    assert_converge_in_precision {|n| lgamma(BigDecimal('-3.143580888349980058694358781820227899566'), n).first }
-    assert_converge_in_precision {|n| lgamma(BigDecimal('-4.991544640560047722345260122806465721667'), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal('-3.143580888349980058694358781820227899566'), n).first }
+    assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal('-4.991544640560047722345260122806465721667'), n).first }
   end
 
   def test_frexp
