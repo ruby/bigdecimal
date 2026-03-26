@@ -33,7 +33,7 @@
 #include "div.h"
 #include "static_assert.h"
 
-#define BIGDECIMAL_VERSION "4.0.1"
+#define BIGDECIMAL_VERSION "4.1.0"
 
 #define NTT_MULTIPLICATION_THRESHOLD 100
 #define NEWTON_RAPHSON_DIVISION_THRESHOLD 200
