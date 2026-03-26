@@ -58,7 +58,7 @@ char *BigDecimal_dtoa(double d_, int mode, int ndigits, int *decpt, int *sign, c
 
 #ifndef HAVE_RB_COMPLEX_REAL
 static inline VALUE
-rb_complex_real(VALUE cmp)
+rb_complex_real_fallback(VALUE cmp)
 {
 #ifdef RCOMPLEX
   return RCOMPLEX(cmp)->real;
@@ -66,11 +66,12 @@ rb_complex_real(VALUE cmp)
   return rb_funcall(cmp, rb_intern("real"), 0);
 #endif
 }
+#define rb_complex_real rb_complex_real_fallback
 #endif
 
 #ifndef HAVE_RB_COMPLEX_IMAG
 static inline VALUE
-rb_complex_imag(VALUE cmp)
+rb_complex_imag_fallback(VALUE cmp)
 {
 # ifdef RCOMPLEX
   return RCOMPLEX(cmp)->imag;
@@ -78,6 +79,7 @@ rb_complex_imag(VALUE cmp)
   return rb_funcall(cmp, rb_intern("imag"), 0);
 # endif
 }
+#define rb_complex_imag rb_complex_imag_fallback
 #endif
 
 /* st */
