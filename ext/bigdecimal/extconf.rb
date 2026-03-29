@@ -46,6 +46,10 @@ have_func("rb_opts_exception_p", "ruby.h")
 have_func("rb_category_warn", "ruby.h")
 have_const("RB_WARN_CATEGORY_DEPRECATED", "ruby.h")
 
+if RUBY_ENGINE == "ruby"
+  have_const("RUBY_TYPED_EMBEDDABLE", "ruby.h") # RUBY_VERSION >= 3.3
+end
+
 if File.file?(File.expand_path('../lib/bigdecimal.rb', __FILE__))
   bigdecimal_rb = "$(srcdir)/lib/bigdecimal.rb"
 else
