@@ -19,8 +19,8 @@ Rake::TestTask.new do |t|
   t.warning = true
 end
 
-task travis: :test
 task test: :compile
+task default: :test
 
 benchmark_tasks = []
 namespace :benchmark do
