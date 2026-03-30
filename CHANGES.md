@@ -1,5 +1,31 @@
 # CHANGES
 
+## 4.1.0
+
+* Drop Ruby 2.5 support [GH-505]
+
+  **@tompng**
+
+* Performance improvements: NTT multiplication, Newton-Raphson division, bit-burst algorithm for exp/sin, Gauss-Legendre for PI, improved log, and faster add/sub for large exponent differences [GH-407] [GH-433] [GH-434] [GH-478] [GH-484]
+
+  **@tompng**
+
+* Remove ENABLE_NUMERIC_STRING flag [GH-479]
+
+  **@tompng**
+
+* Add RBS signature and testing [GH-488] [GH-492]
+
+  **@ksss**
+
+* Fix erfc(x,prec) precision when x is huge [GH-502]
+
+  **@tompng**
+
+* Fix error compiling with ruby.wasm [GH-504]
+
+  **@tompng**
+
 ## 4.0.1
 
 * Fix warning [GH-475]
