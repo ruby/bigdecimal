@@ -77,11 +77,6 @@ static struct {
     uint8_t mode;
 } rbd_rounding_modes[RBD_NUM_ROUNDING_MODES];
 
-typedef struct {
-    VALUE bigdecimal_or_nil;
-    Real *real_or_null;
-} NULLABLE_BDVALUE;
-
 static inline BDVALUE
 bdvalue_nonnullable(NULLABLE_BDVALUE v)
 {
@@ -157,42 +152,6 @@ rbd_struct_size(size_t const internal_digits)
     return offsetof(Real, frac) + frac_len * sizeof(DECDIG);
 }
 
-static inline Real *
-rbd_allocate_struct(size_t const internal_digits)
-{
-    size_t const size = rbd_struct_size(internal_digits);
-    Real *real = ruby_xcalloc(1, size);
-    atomic_allocation_count_inc();
-    real->MaxPrec = internal_digits;
-    return real;
-}
-
-static inline Real *
-rbd_allocate_struct_decimal_digits(size_t const decimal_digits)
-{
-    return rbd_allocate_struct(roomof(decimal_digits, BASE_FIG));
-}
-
-static void
-rbd_free_struct(Real *real)
-{
-    if (real != NULL) {
-        check_allocation_count_nonzero();
-        ruby_xfree(real);
-        atomic_allocation_count_dec_nounderflow();
-    }
-}
-
-MAYBE_UNUSED(static inline Real * rbd_allocate_struct_zero(int sign, size_t const digits));
-#define NewZero rbd_allocate_struct_zero
-static inline Real *
-rbd_allocate_struct_zero(int sign, size_t const digits)
-{
-    Real *real = rbd_allocate_struct_decimal_digits(digits);
-    VpSetZero(real, sign);
-    return real;
-}
-
 /*
  * ================== Ruby Interface part ==========================
  */
@@ -207,7 +166,6 @@ static void VpCheckException(Real *p, bool always);
 static VALUE CheckGetValue(BDVALUE v);
 static void  VpInternalRound(Real *c, size_t ixDigit, DECDIG vPrev, DECDIG v);
 static int   VpLimitRound(Real *c, size_t ixDigit);
-static Real *VpCopy(Real *pv, Real const* const x);
 static int VPrint(FILE *fp,const char *cntl_chr,Real *a);
 
 /*
@@ -222,49 +180,67 @@ static VALUE BigDecimal_negative_zero(void);
 static VALUE BigDecimal_addsub_with_coerce(VALUE self, VALUE r, size_t prec, int operation);
 static VALUE BigDecimal_mult_with_coerce(VALUE self, VALUE r, size_t prec);
 
-static void
-BigDecimal_delete(void *pv)
-{
-    rbd_free_struct(pv);
-}
-
-static size_t
-BigDecimal_memsize(const void *ptr)
-{
-    const Real *pv = ptr;
-    return (sizeof(*pv) + pv->MaxPrec * sizeof(DECDIG));
-}
-
 #ifndef HAVE_RB_EXT_RACTOR_SAFE
 #   undef RUBY_TYPED_FROZEN_SHAREABLE
 #   define RUBY_TYPED_FROZEN_SHAREABLE 0
 #endif
 
-static const rb_data_type_t BigDecimal_data_type = {
-    "BigDecimal",
-    { 0, BigDecimal_delete, BigDecimal_memsize, },
-#ifdef RUBY_TYPED_FREE_IMMEDIATELY
-    0, 0, RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_FROZEN_SHAREABLE | RUBY_TYPED_WB_PROTECTED
+#ifdef RUBY_TYPED_EMBEDDABLE
+#  define HAVE_RUBY_TYPED_EMBEDDABLE 1
+#else
+# ifdef HAVE_CONST_RUBY_TYPED_EMBEDDABLE
+#  define RUBY_TYPED_EMBEDDABLE RUBY_TYPED_EMBEDDABLE
+#  define HAVE_RUBY_TYPED_EMBEDDABLE 1
+# else
+#  define RUBY_TYPED_EMBEDDABLE 0
+# endif
 #endif
+
+static size_t
+BigDecimal_memsize(const void *ptr)
+{
+#ifdef HAVE_RUBY_TYPED_EMBEDDABLE
+    return 0; // Entirely embedded
+#else
+    const Real *pv = ptr;
+    return (sizeof(*pv) + pv->MaxPrec * sizeof(DECDIG));
+#endif
+}
+
+static const rb_data_type_t BigDecimal_data_type = {
+    .wrap_struct_name = "BigDecimal",
+    .function = {
+        .dmark = 0,
+        .dfree = RUBY_DEFAULT_FREE,
+        .dsize = BigDecimal_memsize,
+    },
+    .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_FROZEN_SHAREABLE | RUBY_TYPED_WB_PROTECTED | RUBY_TYPED_EMBEDDABLE,
 };
 
-// TypedData_Wrap_Struct may fail if there is no memory, or GC.add_stress_to_class(BigDecimal) is set.
-// We need to first allocate empty struct, allocate Real struct, and then set the data pointer.
-typedef struct { VALUE _obj; } NULL_WRAPPED_VALUE;
-static NULL_WRAPPED_VALUE
-BigDecimal_alloc_empty_struct(VALUE klass)
+static VALUE
+BigDecimal_allocate(size_t const internal_digits)
 {
-    return (NULL_WRAPPED_VALUE) { TypedData_Wrap_Struct(klass, &BigDecimal_data_type, NULL) };
+    const size_t size = rbd_struct_size(internal_digits);
+    VALUE bd = rb_data_typed_object_zalloc(rb_cBigDecimal, size, &BigDecimal_data_type);
+    Real *vp;
+    TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
+    vp->MaxPrec = internal_digits;
+    RB_OBJ_FREEZE(bd);
+    return bd;
 }
 
 static VALUE
-BigDecimal_wrap_struct(NULL_WRAPPED_VALUE v, Real *real)
+BigDecimal_allocate_decimal_digits(size_t const decimal_digits)
 {
-    VALUE obj = v._obj;
-    assert(RTYPEDDATA_DATA(obj) == NULL);
-    RTYPEDDATA_DATA(obj) = real;
-    RB_OBJ_FREEZE(obj);
-    return obj;
+    return BigDecimal_allocate(roomof(decimal_digits, BASE_FIG));
+}
+
+static Real *
+VpPtr(VALUE obj)
+{
+    Real *vp;
+    TypedData_Get_Struct(obj, Real, &BigDecimal_data_type, vp);
+    return vp;
 }
 
 MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_wrap(int sign, size_t const digits));
@@ -272,9 +248,10 @@ MAYBE_UNUSED(static inline BDVALUE rbd_allocate_struct_zero_wrap(int sign, size_
 static BDVALUE
 rbd_allocate_struct_zero_wrap(int sign, size_t const digits)
 {
-    NULL_WRAPPED_VALUE null_wrapped = BigDecimal_alloc_empty_struct(rb_cBigDecimal);
-    Real *real = rbd_allocate_struct_zero(sign, digits);
-    return (BDVALUE) { BigDecimal_wrap_struct(null_wrapped, real), real };
+    VALUE obj = BigDecimal_allocate_decimal_digits(digits);
+    Real *real = VpPtr(obj);
+    VpSetZero(real, sign);
+    return (BDVALUE) { obj, real };
 }
 
 static inline int
@@ -336,8 +313,7 @@ GetBDValueWithPrecInternal(VALUE v, size_t prec, int must)
 	goto SomeOneMayDoIt;
     }
 
-    Real *vp;
-    TypedData_Get_Struct(v, Real, &BigDecimal_data_type, vp);
+    Real *vp = VpPtr(v);
     return (NULLABLE_BDVALUE) { v, vp };
 
 SomeOneMayDoIt:
@@ -1010,26 +986,18 @@ check_int_precision(VALUE v)
 static NULLABLE_BDVALUE
 CreateFromString(const char *str, VALUE klass, bool strict_p, bool raise_exception)
 {
-    NULL_WRAPPED_VALUE null_wrapped = BigDecimal_alloc_empty_struct(klass);
-    Real *pv = VpAlloc(str, strict_p, raise_exception);
-    if (!pv) return (NULLABLE_BDVALUE) { Qnil, NULL };
-    return (NULLABLE_BDVALUE) { BigDecimal_wrap_struct(null_wrapped, pv), pv };
+    return VpAlloc(str, strict_p, raise_exception);
 }
 
-static Real *
-VpCopy(Real *pv, Real const* const x)
+void
+VpMemCopy(Real *pv, Real const* const x)
 {
-    assert(x != NULL);
-
-    pv = (Real *)ruby_xrealloc(pv, rbd_struct_size(x->MaxPrec));
     pv->MaxPrec = x->MaxPrec;
     pv->Prec = x->Prec;
     pv->exponent = x->exponent;
     pv->sign = x->sign;
     pv->flag = x->flag;
     MEMCPY(pv->frac, x->frac, DECDIG, pv->MaxPrec);
-
-    return pv;
 }
 
 /* Returns True if the value is Not a Number. */
@@ -1219,7 +1187,7 @@ GetCoercePrec(Real *a, size_t prec)
 static VALUE
 BigDecimal_coerce(VALUE self, VALUE other)
 {
-    Real* pv = DATA_PTR(self);
+    Real* pv = VpPtr(self);
     BDVALUE b = GetBDValueWithPrecMust(other, GetCoercePrec(pv, 0));
     return rb_assoc_new(CheckGetValue(b), self);
 }
@@ -1687,7 +1655,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
 
     if (VpIsNaN(a.real) || VpIsNaN(b.real) || (VpIsInf(a.real) && VpIsInf(b.real))) {
         VALUE nan = BigDecimal_nan();
-        *div = *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
+        *div = *mod = (NULLABLE_BDVALUE) { nan, VpPtr(nan) };
         goto Done;
     }
     if (VpIsZero(b.real)) {
@@ -1696,19 +1664,19 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
     if (VpIsInf(a.real)) {
         if (VpGetSign(a.real) == VpGetSign(b.real)) {
             VALUE inf = BigDecimal_positive_infinity();
-            *div = (NULLABLE_BDVALUE) { inf, DATA_PTR(inf) };
+            *div = (NULLABLE_BDVALUE) { inf, VpPtr(inf) };
         }
         else {
             VALUE inf = BigDecimal_negative_infinity();
-            *div = (NULLABLE_BDVALUE) { inf, DATA_PTR(inf) };
+            *div = (NULLABLE_BDVALUE) { inf, VpPtr(inf) };
         }
         VALUE nan = BigDecimal_nan();
-        *mod = (NULLABLE_BDVALUE) { nan, DATA_PTR(nan) };
+        *mod = (NULLABLE_BDVALUE) { nan, VpPtr(nan) };
         goto Done;
     }
     if (VpIsZero(a.real)) {
         VALUE zero = BigDecimal_positive_zero();
-        *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+        *div = (NULLABLE_BDVALUE) { zero, VpPtr(zero) };
         *mod = bdvalue_nullable(a);
         goto Done;
     }
@@ -1722,7 +1690,7 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
             *mod = bdvalue_nullable(b);
         } else {
             VALUE zero = BigDecimal_positive_zero();
-            *div = (NULLABLE_BDVALUE) { zero, DATA_PTR(zero) };
+            *div = (NULLABLE_BDVALUE) { zero, VpPtr(zero) };
             *mod = bdvalue_nullable(a);
         }
         goto Done;
@@ -2566,9 +2534,7 @@ check_exception(VALUE bd)
 {
     assert(is_kind_of_BigDecimal(bd));
 
-    Real *vp;
-    TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
-    VpCheckException(vp, false);
+    VpCheckException(VpPtr(bd), false);
 
     return bd;
 }
@@ -2576,17 +2542,19 @@ check_exception(VALUE bd)
 static VALUE
 rb_uint64_convert_to_BigDecimal(uint64_t uval)
 {
-    NULL_WRAPPED_VALUE null_wrapped = BigDecimal_alloc_empty_struct(rb_cBigDecimal);
+    VALUE bd;
     Real *vp;
     if (uval == 0) {
-        vp = rbd_allocate_struct(1);
+        bd = BigDecimal_allocate(1);
+        vp = VpPtr(bd);
         vp->Prec = 1;
         vp->exponent = 1;
         VpSetZero(vp, 1);
         vp->frac[0] = 0;
     }
     else if (uval < BASE) {
-        vp = rbd_allocate_struct(1);
+        bd = BigDecimal_allocate(1);
+        vp = VpPtr(bd);
         vp->Prec = 1;
         vp->exponent = 1;
         VpSetSign(vp, 1);
@@ -2611,14 +2579,15 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval)
         }
 
         const size_t exp = len + ntz;
-        vp = rbd_allocate_struct(len);
+        bd = BigDecimal_allocate(len);
+        vp = VpPtr(bd);
         vp->Prec = len;
         vp->exponent = exp;
         VpSetSign(vp, 1);
         MEMCPY(vp->frac, buf + BIGDECIMAL_INT64_MAX_LENGTH - len, DECDIG, len);
     }
 
-    return BigDecimal_wrap_struct(null_wrapped, vp);
+    return bd;
 }
 
 static VALUE
@@ -2627,8 +2596,7 @@ rb_int64_convert_to_BigDecimal(int64_t ival)
     const uint64_t uval = (ival < 0) ? (((uint64_t)-(ival+1))+1) : (uint64_t)ival;
     VALUE bd = rb_uint64_convert_to_BigDecimal(uval);
     if (ival < 0) {
-        Real *vp;
-        TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
+        Real *vp = VpPtr(bd);
         VpSetSign(vp, -1);
     }
     return bd;
@@ -2835,8 +2803,7 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
     }
 
     VALUE bd = rb_inum_convert_to_BigDecimal(inum);
-    Real *vp;
-    TypedData_Get_Struct(bd, Real, &BigDecimal_data_type, vp);
+    Real *vp = VpPtr(bd);
     assert(vp->Prec == prec);
     vp->exponent = exp;
 
@@ -2902,13 +2869,15 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         if (digs == SIZE_MAX)
             return check_exception(val);
 
-        NULL_WRAPPED_VALUE null_wrapped = BigDecimal_alloc_empty_struct(rb_cBigDecimal);
-        Real *vp;
-        TypedData_Get_Struct(val, Real, &BigDecimal_data_type, vp);
-        vp = VpCopy(NULL, vp);
+        Real *vp = VpPtr(val);
+
+        VALUE copy = BigDecimal_allocate(vp->MaxPrec);
+        Real *vp_copy = VpPtr(copy);
+
+        VpMemCopy(vp_copy, vp);
+
         RB_GC_GUARD(val);
 
-        VALUE copy = BigDecimal_wrap_struct(null_wrapped, vp);
         /* TODO: rounding */
         return check_exception(copy);
     }
@@ -3707,7 +3676,7 @@ Init_bigdecimal(void)
 static int gfDebug = 1;         /* Debug switch */
 #endif /* BIGDECIMAL_DEBUG */
 
-static Real *VpConstOne;    /* constant 1.0 */
+static VALUE VpConstOne; /* constant 1.0 */
 
 enum op_sw {
     OP_SW_ADD = 1,  /* + */
@@ -4108,8 +4077,9 @@ VpInit(DECDIG BaseVal)
     VpGetDoubleNegZero();
 
     /* Const 1.0 */
-    VpConstOne = NewZero(1, 1);
-    VpSetOne(VpConstOne);
+    rb_global_variable(&VpConstOne);
+    VpConstOne = NewZeroWrap(1, 1).bigdecimal;
+    VpSetOne(VpPtr(VpConstOne));
 
 #ifdef BIGDECIMAL_DEBUG
     gnAlloc = 0;
@@ -4121,7 +4091,7 @@ VpInit(DECDIG BaseVal)
 VP_EXPORT Real *
 VpOne(void)
 {
-    return VpConstOne;
+    return VpPtr(VpConstOne);
 }
 
 /* If exponent overflows,then raise exception or returns 0 */
@@ -4152,7 +4122,7 @@ overflow:
     return VpException(VP_EXCEPTION_OVERFLOW, "Exponent overflow", 0);
 }
 
-Real *
+NULLABLE_BDVALUE
 bigdecimal_parse_special_string(const char *str)
 {
     static const struct {
@@ -4177,66 +4147,27 @@ bigdecimal_parse_special_string(const char *str)
         p = str + table[i].len;
         while (*p && ISSPACE(*p)) ++p;
         if (*p == '\0') {
-            Real *vp = rbd_allocate_struct(1);
+            VALUE obj = BigDecimal_allocate(1);
+            Real *vp = VpPtr(obj);
             switch (table[i].sign) {
               default:
-                UNREACHABLE; break;
+                UNREACHABLE;
+                return (NULLABLE_BDVALUE) { Qnil, NULL };
               case VP_SIGN_POSITIVE_INFINITE:
                 VpSetPosInf(vp);
-                return vp;
+                break;
               case VP_SIGN_NEGATIVE_INFINITE:
                 VpSetNegInf(vp);
-                return vp;
+                break;
               case VP_SIGN_NaN:
                 VpSetNaN(vp);
-                return vp;
+                break;
             }
+            return (NULLABLE_BDVALUE) { obj, vp };
         }
     }
 
-    return NULL;
-}
-
-struct VpCtoV_args {
-  Real *a;
-  const char *int_chr;
-  size_t ni;
-  const char *frac;
-  size_t nf;
-  const char *exp_chr;
-  size_t ne;
-};
-
-static VALUE
-call_VpCtoV(VALUE arg)
-{
-  struct VpCtoV_args *x = (struct VpCtoV_args *)arg;
-  return (VALUE)VpCtoV(x->a, x->int_chr, x->ni, x->frac, x->nf, x->exp_chr, x->ne);
-}
-
-static int
-protected_VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size_t nf, const char *exp_chr, size_t ne, int free_on_error)
-{
-  struct VpCtoV_args args;
-  int state = 0;
-
-  args.a = a;
-  args.int_chr = int_chr;
-  args.ni = ni;
-  args.frac = frac;
-  args.nf = nf;
-  args.exp_chr = exp_chr;
-  args.ne = ne;
-
-  VALUE result = rb_protect(call_VpCtoV, (VALUE)&args, &state);
-  if (state) {
-    if (free_on_error) {
-      rbd_free_struct(a);
-    }
-    rb_jump_tag(state);
-  }
-
-  return (int)result;
+    return (NULLABLE_BDVALUE) { Qnil, NULL };
 }
 
 /*
@@ -4245,25 +4176,25 @@ protected_VpCtoV(Real *a, const char *int_chr, size_t ni, const char *frac, size
  *   szVal ... The value assigned(char).
  *
  * [Returns]
- *   Pointer to the newly allocated variable, or
- *   NULL be returned if memory allocation is failed,or any error.
+ *   NULLABLE_BDVALUE to the newly allocated variable.
+ *   Null is returned if memory allocation failed, or any error occured.
  */
-VP_EXPORT Real *
+VP_EXPORT NULLABLE_BDVALUE
 VpAlloc(const char *szVal, int strict_p, int exc)
 {
     const char *orig_szVal = szVal;
     size_t i, j, ni, ipf, nf, ipe, ne, exp_seen, nalloc;
     char v, *psz;
     int  sign=1;
-    Real *vp = NULL;
     VALUE buf;
 
     /* Skipping leading spaces */
     while (ISSPACE(*szVal)) szVal++;
 
     /* Check on Inf & NaN */
-    if ((vp = bigdecimal_parse_special_string(szVal)) != NULL) {
-        return vp;
+    NULLABLE_BDVALUE special_bd = bigdecimal_parse_special_string(szVal);
+    if (special_bd.real_or_null != NULL) {
+        return special_bd;
     }
 
     /* Skip leading `#`.
@@ -4417,10 +4348,11 @@ VpAlloc(const char *szVal, int strict_p, int exc)
         VALUE str;
       invalid_value:
         if (!strict_p) {
-            return NewZero(1, 1);
+            BDVALUE res = rbd_allocate_struct_zero_wrap(1, 1);
+            return (NULLABLE_BDVALUE) { res.bigdecimal, res.real };
         }
         if (!exc) {
-            return NULL;
+            return (NULLABLE_BDVALUE) { Qnil, NULL };
         }
         str = rb_str_new2(orig_szVal);
         rb_raise(rb_eArgError, "invalid value for BigDecimal(): \"%"PRIsVALUE"\"", str);
@@ -4428,11 +4360,12 @@ VpAlloc(const char *szVal, int strict_p, int exc)
 
     nalloc = (ni + nf + BASE_FIG - 1) / BASE_FIG + 1;    /* set effective allocation  */
     /* units for szVal[]  */
-    vp = rbd_allocate_struct(nalloc);
+    VALUE obj = BigDecimal_allocate(nalloc);
+    Real *vp = VpPtr(obj);
     VpSetZero(vp, sign);
-    protected_VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne, true);
+    VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
     rb_str_resize(buf, 0);
-    return vp;
+    return (NULLABLE_BDVALUE) { obj, vp };
 }
 
 /*

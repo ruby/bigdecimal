@@ -168,6 +168,11 @@ typedef struct {
     Real *real;
 } BDVALUE;
 
+typedef struct {
+    VALUE bigdecimal_or_nil;
+    Real *real_or_null;
+} NULLABLE_BDVALUE;
+
 /*
  *  ------------------
  *   EXPORTables.
@@ -194,7 +199,7 @@ VP_EXPORT unsigned short VpSetRoundMode(unsigned short n);
 VP_EXPORT int VpException(unsigned short f,const char *str,int always);
 VP_EXPORT size_t VpNumOfChars(Real *vp,const char *pszFmt);
 VP_EXPORT size_t VpInit(DECDIG BaseVal);
-VP_EXPORT Real *VpAlloc(const char *szVal, int strict_p, int exc);
+VP_EXPORT NULLABLE_BDVALUE VpAlloc(const char *szVal, int strict_p, int exc);
 VP_EXPORT size_t VpAsgn(Real *c, Real *a, int isw);
 VP_EXPORT size_t VpAddSub(Real *c,Real *a,Real *b,int operation);
 VP_EXPORT size_t VpMult(Real *c,Real *a,Real *b);
