@@ -14,6 +14,13 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_vpmult
+    # Max carry case
+    [*32...40].repeated_permutation(2) do |n, m|
+      x = BigDecimal('9' * BASE_FIG * n)
+      y = BigDecimal('9' * BASE_FIG * m)
+      assert_equal(x.to_i * y.to_i, x.vpmult(y))
+    end
+
     assert_equal(BigDecimal('121932631112635269'), BigDecimal('123456789').vpmult(BigDecimal('987654321')))
     assert_equal(BigDecimal('12193263.1112635269'), BigDecimal('123.456789').vpmult(BigDecimal('98765.4321')))
     x = 123**456
@@ -22,6 +29,13 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_nttmult
+    # Max carry case
+    [*32...40].repeated_permutation(2) do |n, m|
+      x = BigDecimal('9' * BASE_FIG * n)
+      y = BigDecimal('9' * BASE_FIG * m)
+      assert_equal(x.to_i * y.to_i, x.nttmult(y))
+    end
+
     [*1..32].repeated_permutation(2) do |a, b|
       x = BigDecimal(10 ** (BASE_FIG * a) / 7)
       y = BigDecimal(10 ** (BASE_FIG * b) / 13)
