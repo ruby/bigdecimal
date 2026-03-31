@@ -15,7 +15,7 @@ class TestVpOperation < Test::Unit::TestCase
 
   def test_vpmult
     # Max carry case
-    [*32...40].repeated_permutation(2) do |n, m|
+    [*32...48].repeated_permutation(2) do |n, m|
       x = BigDecimal('9' * BASE_FIG * n)
       y = BigDecimal('9' * BASE_FIG * m)
       assert_equal(x.to_i * y.to_i, x.vpmult(y))
@@ -30,7 +30,7 @@ class TestVpOperation < Test::Unit::TestCase
 
   def test_nttmult
     # Max carry case
-    [*32...40].repeated_permutation(2) do |n, m|
+    [*32...48].repeated_permutation(2) do |n, m|
       x = BigDecimal('9' * BASE_FIG * n)
       y = BigDecimal('9' * BASE_FIG * m)
       assert_equal(x.to_i * y.to_i, x.nttmult(y))
