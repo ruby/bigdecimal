@@ -144,7 +144,7 @@ module BigMath
     x = -x if neg = x < 0
     ex = x.exponent / 3
     x = x._decimal_shift(-3 * ex)
-    y = BigDecimal(Math.cbrt(x.to_f), 0)
+    y = BigDecimal(Math.cbrt(BigDecimal::Internal.fast_to_f(x)), 0)
     BigDecimal::Internal.newton_loop(prec + BigDecimal::Internal::EXTRA_PREC) do |p|
       y = (2 * y + x.div(y, p).div(y, p)).div(3, p)
     end
@@ -304,7 +304,7 @@ module BigMath
 
     # Solve tan(y) - x = 0 with Newton's method
     # Repeat: y -= (tan(y) - x) * cos(y)**2
-    y = BigDecimal(Math.atan(x.to_f), 0)
+    y = BigDecimal(Math.atan(BigDecimal::Internal.fast_to_f(x)), 0)
     BigDecimal::Internal.newton_loop(n) do |p|
       s = sin(y, p)
       c = (1 - s * s).sqrt(p)
@@ -605,7 +605,7 @@ module BigMath
     return BigDecimal(1) if x > 5000000000 # erf(5000000000) > 1 - 1e-10000000000000000000
 
     if x > 8
-      xf = x.to_f
+      xf = BigDecimal::Internal.fast_to_f(x)
       log10_erfc = -xf ** 2 / Math.log(10) - Math.log10(xf * Math::PI ** 0.5)
       erfc_prec = [prec + log10_erfc.ceil, 1].max
       erfc = _erfc_asymptotic(x, erfc_prec)
@@ -647,7 +647,7 @@ module BigMath
     # erfc(x) = 1 - erf(x) < exp(-x**2)/x/sqrt(pi)
     # Precision of erf(x) needs about log10(exp(-x**2)/x/sqrt(pi)) extra digits
     log10 = 2.302585092994046
-    xf = x.to_f
+    xf = BigDecimal::Internal.fast_to_f(x)
     high_prec = prec + BigDecimal::Internal::EXTRA_PREC + ((xf**2 + Math.log(xf) + Math.log(Math::PI)/2) / log10).ceil
     BigDecimal(1).sub(erf(x, high_prec), prec)
   end
@@ -698,7 +698,7 @@ module BigMath
     # sqrt(2)/2 + k*log(k) - k - 2*k*log(x) < -prec*log(10)
     # and the left side is minimized when k = x**2.
     prec += BigDecimal::Internal::EXTRA_PREC
-    xf = x.to_f
+    xf = BigDecimal::Internal.fast_to_f(x)
     kmax = (1..(xf ** 2).floor).bsearch do |k|
       Math.log(2) / 2 + k * Math.log(k) - k - 2 * k * Math.log(xf) < -prec * Math.log(10)
     end
