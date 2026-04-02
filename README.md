@@ -26,7 +26,7 @@ gem install bigdecimal
 
 ### For RubyInstaller users
 
-If your Ruby comes from [RubyInstaller](https://rubyinstaller.org/), make sure [Devkit](https://github.com/oneclick/rubyinstaller/wiki/Development-Kit) is available on your environment before installing bigdecimal.
+If your Ruby comes from [RubyInstaller](https://rubyinstaller.org/), make sure [Devkit](https://github.com/oneclick/rubyinstaller/wiki/Development-Kit) is available in your environment before installing bigdecimal.
 
 ### For Chocolatey
 
