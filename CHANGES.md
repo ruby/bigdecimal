@@ -1,5 +1,15 @@
 # CHANGES
 
+## 4.1.1
+
+* Make BigDecimal object embedded [GH-507]
+
+  **@byroot**
+
+* Multiplication with 16-decdig batch [GH-501] [GH-511]
+
+  **@tompng**
+
 ## 4.1.0
 
 * Drop Ruby 2.5 support [GH-505]

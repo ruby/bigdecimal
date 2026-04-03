@@ -33,7 +33,7 @@
 #include "div.h"
 #include "static_assert.h"
 
-#define BIGDECIMAL_VERSION "4.1.0"
+#define BIGDECIMAL_VERSION "4.1.1"
 
 /* Make sure VPMULT_BATCH_SIZE*BASE*BASE does not overflow DECDIG_DBL */
 #define VPMULT_BATCH_SIZE 16
