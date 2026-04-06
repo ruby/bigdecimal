@@ -133,7 +133,7 @@ ntt_multiply(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c
     uint32_t batch_size = ntt_size - (uint32_t)b_size;
     uint32_t batch_count = (uint32_t)((a_size + batch_size - 1) / batch_size);
 
-    uint32_t *mem = ruby_xcalloc(sizeof(uint32_t), ntt_size * 9);
+    uint32_t *mem = ruby_xcalloc(ntt_size * 9, sizeof(uint32_t));
     uint32_t *ntt1 = mem;
     uint32_t *ntt2 = mem + ntt_size;
     uint32_t *ntt3 = mem + ntt_size * 2;
