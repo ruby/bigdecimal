@@ -5396,8 +5396,8 @@ VpSzMantissa(Real *a, char *buf, size_t buflen)
             while (m) {
                 nn = e / m;
                 if (!ZeroSup || nn) {
-                    snprintf(buf, buflen, "%lu", (unsigned long)nn); /* The leading zero(s) */
-                    buf += strlen(buf);
+                    *buf = (char)('0' + nn);
+                    buf++;
                     /* as 0.00xx will be ignored. */
                     ZeroSup = 0; /* Set to print succeeding zeros */
                 }
@@ -5504,10 +5504,8 @@ VpToString(Real *a, char *buf, size_t buflen, size_t fFmt, int fPlus)
         while (m) {
             nn = e / m;
             if (!ZeroSup || nn) {
-                size_t n = Vp_ulltoa(nn, ulltoa_buf_end - 1);
-                if (n > plen) goto overflow;
-                MEMCPY(p, ulltoa_buf_end - n, char, n);
-                ADVANCE(n);
+                *p = (char)('0' + nn);
+                ADVANCE(1);
 
                 /* as 0.00xx will be ignored. */
                 ZeroSup = 0;    /* Set to print succeeding zeros */
