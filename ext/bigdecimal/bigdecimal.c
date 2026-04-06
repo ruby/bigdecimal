@@ -5449,10 +5449,22 @@ VpToSpecialString(Real *a, char *buf, size_t buflen, int fPlus)
     return 0;
 }
 
+#define ULLTOA_BUFFER_SIZE 20
+static size_t Vp_ulltoa(unsigned long long number, char *buf)
+{
+    static const char digits[] = "0123456789";
+    char* tmp = buf;
+
+    do *tmp-- = digits[number % 10]; while (number /= 10);
+    return buf - tmp;
+}
+
 VP_EXPORT void
 VpToString(Real *a, char *buf, size_t buflen, size_t fFmt, int fPlus)
 /* fPlus = 0: default, 1: set ' ' before digits, 2: set '+' before digits. */
 {
+    char ulltoa_buf[ULLTOA_BUFFER_SIZE];
+    char *ulltoa_buf_end = ulltoa_buf + ULLTOA_BUFFER_SIZE;
     size_t i, n, ZeroSup;
     DECDIG shift, m, e, nn;
     char *p = buf;
@@ -5492,10 +5504,11 @@ VpToString(Real *a, char *buf, size_t buflen, size_t fFmt, int fPlus)
         while (m) {
             nn = e / m;
             if (!ZeroSup || nn) {
-                /* The reading zero(s) */
-                size_t n = (size_t)snprintf(p, plen, "%lu", (unsigned long)nn);
+                size_t n = Vp_ulltoa(nn, ulltoa_buf_end - 1);
                 if (n > plen) goto overflow;
+                MEMCPY(p, ulltoa_buf_end - n, char, n);
                 ADVANCE(n);
+
                 /* as 0.00xx will be ignored. */
                 ZeroSup = 0;    /* Set to print succeeding zeros */
             }
@@ -5514,7 +5527,22 @@ VpToString(Real *a, char *buf, size_t buflen, size_t fFmt, int fPlus)
         *(--p) = '\0';
         ++plen;
     }
-    snprintf(p, plen, "e%"PRIdSIZE, ex);
+    *p = 'e';
+    ADVANCE(1);
+
+    if (ex < 0) {
+        *p = '-';
+        ADVANCE(1);
+        ex = -ex;
+    }
+
+    size_t ex_n = Vp_ulltoa(ex, ulltoa_buf_end - 1);
+    if (ex_n > plen) goto overflow;
+    MEMCPY(p, ulltoa_buf_end - ex_n, char, ex_n);
+    ADVANCE(ex_n);
+    *p = '\0';
+    ADVANCE(1);
+
     if (fFmt) VpFormatSt(buf, fFmt);
 
   overflow:
