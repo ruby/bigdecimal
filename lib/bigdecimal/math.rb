@@ -750,22 +750,43 @@ module BigMath
     x += shift
     # Lagrange interpolate of b**x/x! at x=b-l, b-l+1, ..., b+l
     b = x.round
-    prod = BigDecimal(1)
-    ((b-l)..(b+l)).each do |i|
-      prod = prod.mult(x - i, prec)
-    end
-    shift.times do |i|
-      prod = prod.mult(x - i, prec)
-    end
-    sum = BigDecimal(0)
-    c = BigDecimal(1).div((1..b-l).reduce(:*) * (1..2*l).reduce(:*), prec)
-    ((b-l)..(b+l)).each do |i|
-      if i != b - l
-        c = c.mult(-b * (b + l - i + 1), prec).div((i - b + l) * i, prec)
+    prods = ((b-l)..(b+l)).map {|i| x - i } + shift.times.map {|i| x - i }
+    prods = prods.each_slice(2).map {|a, b| b ? a.mult(b, prec) : a } while prods.size != 1
+    prod = prods.first
+
+    c0s = [*(1..b-l), *(1..2*l)]
+    c0s = c0s.each_slice(2).map {|a, b| b ? BigDecimal(a).mult(b, prec) : BigDecimal(a) } while c0s.size != 1
+    c0 = c0s.first
+
+    if x.n_significant_digits > prec / 10
+      sum = BigDecimal(0)
+      c = BigDecimal(1)
+      ((b-l)..(b+l)).each do |i|
+        if i != b - l
+          c = c.mult(-b * (b + l - i + 1), prec).div((i - b + l) * i, prec)
+        end
+        sum = sum.add(c.div(x - i, prec), prec)
       end
-      sum = sum.add(c.div(x - i, prec), prec)
+    else
+      # Binary splitting
+      fractions = (b - l + 1..b + l).map do |i|
+        denominator = (x - i).mult((i - b + l) * i, prec)
+        numerator = (x - i + 1).mult(-b * (b + l - i + 1), prec)
+        [denominator, numerator, denominator]
+      end
+
+      while fractions.size > 1
+        fractions = fractions.each_slice(2).map do |a, b|
+          b ||= [BigDecimal(1), BigDecimal(0), BigDecimal(1)]
+          # a[0]/a[2]+a[1]/a[2] * (b[0]/b[2]+b[1]/b[2] * rest)
+          # (a[0]*b[2]+a[1]*b[0])/(a[2]*b[2]) + (a[1]*b[1])/(a[2]*b[2]) * rest
+          [a[0].mult(b[2], prec).add(a[1].mult(b[0], prec), prec), a[1].mult(b[1], prec), a[2].mult(b[2], prec)]
+        end
+      end
+      sum = fractions[0][0].add(fractions[0][1], prec).div(fractions[0][2], prec).div(x - b + l, prec)
     end
-    BigDecimal(b).power(x - (b - l), prec).div(prod.mult(sum, prec), prec)
+
+    BigDecimal(b).power(x - (b - l), prec).div(prod.mult(sum, prec), prec).mult(c0, prec)
   end
 
   # call-seq:
