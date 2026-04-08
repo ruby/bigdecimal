@@ -521,7 +521,8 @@ class TestBigMath < Test::Unit::TestCase
     end
     assert_equal(0, BigMath.erfc(PINF, N))
     assert_equal(2, BigMath.erfc(MINF, N))
-    assert_equal(0, BigMath.erfc(BigDecimal('1e400'), 10))
+    assert_underflow_calculation(accept_overflow: true) { BigMath.erfc(4999999999, 10) }
+    assert_underflow_calculation { BigMath.erfc(BigDecimal('1e400'), 10) }
     assert_equal(2, BigMath.erfc(BigDecimal('-1e400'), 10))
     assert_equal(1, BigMath.erfc(BigDecimal('1e-400'), N))
 

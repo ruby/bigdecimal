@@ -83,12 +83,16 @@ module TestBigDecimalBase
     assert_infinite_calculation(positive: false, &block)
   end
 
-  def assert_underflow_calculation
+  def assert_underflow_calculation(accept_overflow: false)
     BigDecimal.save_exception_mode do
       BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
+      BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, false)
       assert_equal(BigDecimal(0), yield)
       BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, true)
-      assert_raise_with_message(FloatDomainError, /underflow/i) { yield }
+      BigDecimal.mode(BigDecimal::EXCEPTION_OVERFLOW, true)
+      # Accept internal overflow (e.g. overflow calculating denominator part)
+      pattern = accept_overflow ? /underflow|overflow/i : /underflow/i
+      assert_raise_with_message(FloatDomainError, pattern) { yield }
     end
   end
 
