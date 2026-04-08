@@ -743,6 +743,31 @@ module BigMath
     (x + (a - 1)).power(x - 0.5, prec2).mult(BigMath.exp(1 - x, prec2), prec2).mult(sum, prec)
   end
 
+  def gamma_lagrange(x, prec)
+    x = BigDecimal(x) - 1
+    l = prec
+    shift = x < 2 * prec ? 2 * prec - x.floor : 0
+    x += shift
+    # Lagrange interpolate of b**x/x! at x=b-l, b-l+1, ..., b+l
+    b = x.round
+    prod = BigDecimal(1)
+    ((b-l)..(b+l)).each do |i|
+      prod = prod.mult(x - i, prec)
+    end
+    shift.times do |i|
+      prod = prod.mult(x - i, prec)
+    end
+    sum = BigDecimal(0)
+    c = BigDecimal(1).div((1..b-l).reduce(:*) * (1..2*l).reduce(:*), prec)
+    ((b-l)..(b+l)).each do |i|
+      if i != b - l
+        c = c.mult(-b * (b + l - i + 1), prec).div((i - b + l) * i, prec)
+      end
+      sum = sum.add(c.div(x - i, prec), prec)
+    end
+    BigDecimal(b).power(x - (b - l), prec).div(prod.mult(sum, prec), prec)
+  end
+
   # call-seq:
   #   BigMath.lgamma(decimal, numeric)    -> [BigDecimal, Integer]
   #
