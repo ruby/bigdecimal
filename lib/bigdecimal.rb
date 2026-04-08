@@ -57,6 +57,13 @@ class BigDecimal
       BigDecimal::INFINITY
     end
 
+    def self.underflow_computation_result # :nodoc:
+      if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_UNDERFLOW)
+        raise FloatDomainError, 'Exponent underflow'
+      end
+      BigDecimal(0)
+    end
+
     def self.nan_computation_result # :nodoc:
       if BigDecimal.mode(BigDecimal::EXCEPTION_ALL).anybits?(BigDecimal::EXCEPTION_NaN)
         raise FloatDomainError, "Computation results to 'NaN'"
@@ -350,7 +357,17 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :exp)
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :exp)
     return BigDecimal::Internal.nan_computation_result if x.nan?
-    return x.positive? ? BigDecimal::Internal.infinity_computation_result : BigDecimal(0) if x.infinite?
+    if x.infinite? || x.exponent >= 21 # exp(10**20) and exp(-10**20) overflows/underflows 64-bit exponent
+      if x.positive?
+        return BigDecimal::Internal.infinity_computation_result
+      elsif x.infinite?
+        # exp(-Infinity) is +0 by definition, this is not an underflow.
+        return BigDecimal(0)
+      else
+        return BigDecimal::Internal.underflow_computation_result
+      end
+    end
+
     return BigDecimal(1) if x.zero?
 
     # exp(x * 10**cnt) = exp(x)**(10**cnt)

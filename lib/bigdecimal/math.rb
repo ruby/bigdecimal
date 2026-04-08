@@ -637,7 +637,7 @@ module BigMath
     return BigDecimal::Internal.nan_computation_result if x.nan?
     return BigDecimal(1 - x.infinite?) if x.infinite?
     return BigDecimal(1).sub(erf(x, prec + BigDecimal::Internal::EXTRA_PREC), prec) if x < 0.5
-    return BigDecimal(0) if x > 5000000000 # erfc(5000000000) < 1e-10000000000000000000 (underflow)
+    return BigDecimal::Internal.underflow_computation_result if x > 5000000000 # erfc(5000000000) < 1e-10000000000000000000 (underflow)
 
     if x >= 8
       y = _erfc_asymptotic(x, prec)
