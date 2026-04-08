@@ -71,7 +71,7 @@ module TestBigDecimalBase
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, false)
       positive ? assert_positive_infinite(yield) : assert_negative_infinite(yield)
       BigDecimal.mode(BigDecimal::EXCEPTION_INFINITY, true)
-      assert_raise_with_message(FloatDomainError, /Infinity/) { yield }
+      assert_raise_with_message(FloatDomainError, /infinity|overflow/i) { yield }
     end
   end
 
@@ -81,6 +81,15 @@ module TestBigDecimalBase
 
   def assert_negative_infinite_calculation(&block)
     assert_infinite_calculation(positive: false, &block)
+  end
+
+  def assert_underflow_calculation
+    BigDecimal.save_exception_mode do
+      BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, false)
+      assert_equal(BigDecimal(0), yield)
+      BigDecimal.mode(BigDecimal::EXCEPTION_UNDERFLOW, true)
+      assert_raise_with_message(FloatDomainError, /underflow/i) { yield }
+    end
   end
 
   def assert_nan_calculation(&block)

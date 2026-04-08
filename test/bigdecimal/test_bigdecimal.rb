@@ -2296,11 +2296,22 @@ class TestBigDecimal < Test::Unit::TestCase
   end
 
   def test_exp_with_negative_infinite
+    # exp(-infinity) is exactly zero. This is not an underflow.
     assert_equal(0, BigMath.exp(NEGATIVE_INFINITY, 20))
   end
 
   def test_exp_with_positive_infinite
     assert_positive_infinite_calculation { BigMath.exp(BigDecimal::INFINITY, 20) }
+  end
+
+  def test_exp_with_overflow_underflow
+    assert_underflow_calculation { BigMath.exp(-1e+100, 20) }
+    assert_underflow_calculation { BigMath.exp(-0.9e+20, 20) }
+    assert_positive_infinite_calculation { BigMath.exp(1e+100, 20) }
+    assert_positive_infinite_calculation { BigMath.exp(0.9e+20, 20) }
+    huge = BigDecimal("0.1e#{EXPONENT_MAX / 100}")
+    assert_positive_infinite_calculation { BigMath.exp(huge, 20) }
+    assert_underflow_calculation { BigMath.exp(-huge, 20) }
   end
 
   def test_exp_with_nan
