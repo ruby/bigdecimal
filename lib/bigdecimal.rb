@@ -76,18 +76,9 @@ class BigDecimal
       end
     end
 
-    # Fast and rough conversion to float for mathematical calculations.
-    # Bigdecimal#to_f is slow when n_significant_digits is large.
-    # This is because to_f internally converts BigDecimal to String
-    # to get the exact nearest float representation.
-    # TODO: Remove this workaround when BigDecimal#to_f is optimized.
-    def self.fast_to_f(x) # :nodoc:
-      x.n_significant_digits < 40 ? x.to_f : x.mult(1, 20).to_f
-    end
-
     # Calculates Math.log(x.to_f) considering large or small exponent
     def self.float_log(x) # :nodoc:
-      Math.log(fast_to_f(x._decimal_shift(-x.exponent))) + x.exponent * Math.log(10)
+      Math.log(x._decimal_shift(-x.exponent).to_f) + x.exponent * Math.log(10)
     end
 
     # Calculating Taylor series sum using binary splitting method
@@ -277,7 +268,7 @@ class BigDecimal
 
     ex = exponent / 2
     x = _decimal_shift(-2 * ex)
-    y = BigDecimal(Math.sqrt(BigDecimal::Internal.fast_to_f(x)), 0)
+    y = BigDecimal(Math.sqrt(x.to_f), 0)
     Internal.newton_loop(prec + BigDecimal::Internal::EXTRA_PREC) do |p|
       y = y.add(x.div(y, p), p).div(2, p)
     end
