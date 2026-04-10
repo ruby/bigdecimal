@@ -567,11 +567,11 @@ class TestBigMath < Test::Unit::TestCase
       BigDecimal('0.28242294079603478742934215780245355184774949260912e456569'),
       BigMath.gamma(100000, 50)
     )
-    precisions = [50, 100, 150]
-    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("0.3"), n) }
-    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("-1.9" + "9" * 30), n) }
-    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("1234.56789"), n) }
-    assert_converge_in_precision(precisions) {|n| gamma(BigDecimal("-987.654321"), n) }
+    precisions = [100, 200, 300, 400]
+    assert_converge_in_precision() {|n| gamma(BigDecimal("0.3"), n) }
+    assert_converge_in_precision() {|n| gamma(BigDecimal("-1.9" + "9" * 30), n) }
+    assert_converge_in_precision() {|n| gamma(BigDecimal("1234.56789"), n) }
+    assert_converge_in_precision() {|n| gamma(BigDecimal("-987.654321"), n) }
   end
 
   def test_lgamma
@@ -587,7 +587,7 @@ class TestBigMath < Test::Unit::TestCase
       assert_equal(sign, bigsign)
     end
     assert_equal([BigMath.log(PI(120).sqrt(120), 100), 1], lgamma(BigDecimal("0.5"), 100))
-    precisions = [50, 100, 150]
+    precisions = [50, 100, 150, 200]
     assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("0." + "9" * 80), n).first }
     assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("1." + "0" * 80 + "1"), n).first }
     assert_converge_in_precision(precisions) {|n| lgamma(BigDecimal("1." + "9" * 80), n).first }

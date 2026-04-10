@@ -737,6 +737,8 @@ module BigMath
       return pi.div(gamma(1 - x, prec2).mult(sin, prec2), prec)
     elsif x.frac.zero? && x < 1000 * prec
       return _gamma_positive_integer(x, prec2).mult(1, prec)
+    elsif x < (prec / prec.bit_length)**2
+      return _gamma_lagrange(x, prec2).mult(1, prec)
     end
 
     a, sum = _gamma_spouge_sum_part(x, prec2)
@@ -925,8 +927,13 @@ module BigMath
       end
 
       prec2 += [-diff1_exponent, -diff2_exponent, 0].max
-      a, sum = _gamma_spouge_sum_part(x, prec2)
-      log_gamma = BigMath.log(sum, prec2).add((x - 0.5).mult(BigMath.log(x.add(a - 1, prec2), prec2), prec2) + 1 - x, prec)
+
+      if x < (prec / prec.bit_length)**2
+        log_gamma = BigMath.log(_gamma_lagrange(x, prec2), prec)
+      else
+        a, sum = _gamma_spouge_sum_part(x, prec2)
+        log_gamma = BigMath.log(sum, prec2).add((x - 0.5).mult(BigMath.log(x.add(a - 1, prec2), prec2), prec2) + 1 - x, prec)
+      end
       [log_gamma, 1]
     end
   end
