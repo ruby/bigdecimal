@@ -101,7 +101,7 @@ divmod_newton(VALUE x, VALUE y, VALUE *div_out, VALUE *mod_out) {
     BDVALUE div_result = NewZeroWrap(1, BIGDECIMAL_COMPONENT_FIGURES * (num_blocks * block_figs + 1));
     BDVALUE bdx = GetBDValueMust(x);
 
-    VALUE mod = BigDecimal_fix(BigDecimal_decimal_shift(x, SSIZET2NUM(-num_blocks * block_digits)));
+    VALUE mod = BigDecimal_fix(BigDecimal_decimal_shift(x, SSIZET2NUM(-(ssize_t)num_blocks * block_digits)));
     for (ssize_t i = num_blocks - 1; i >= 0; i--) {
         memset(divident.real->frac, 0, (y_figs + block_figs) * sizeof(DECDIG));
 
@@ -164,9 +164,9 @@ VpDivdNewtonInner(VALUE args_ptr)
     VpAsgn(r, r2.real, VpGetSign(a));
     AddExponent(c, a->exponent);
     AddExponent(c, -b->exponent);
-    AddExponent(c, -div_prec);
+    AddExponent(c, -(ssize_t)div_prec);
     AddExponent(r, a->exponent);
-    AddExponent(r, -base_prec - div_prec);
+    AddExponent(r, -(ssize_t)base_prec - (ssize_t)div_prec);
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(c2.bigdecimal);
