@@ -68,7 +68,7 @@ ntt(int size_bits, uint32_t *input, uint32_t *output, uint32_t *tmp, int r_base,
 
     // rmax**(1 << shift) % prime == 1
     // r**size % prime == 1
-    uint32_t rmax = mod_pow(r_base, base, prime);
+    uint32_t rmax = mod_pow((uint32_t)r_base, (uint32_t)base, prime);
     uint32_t r = mod_pow(rmax, (uint32_t)1 << (shift - size_bits), prime);
 
     if (dir < 0) r = mod_pow(r, prime - 2, prime);
@@ -123,7 +123,7 @@ ntt_multiply(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c
       return;
     }
 
-    int ntt_size_bits = bit_length(b_size - 1) + 1;
+    int ntt_size_bits = (int)bit_length(b_size - 1) + 1;
     if (ntt_size_bits > MAX_NTT32_BITS) {
       rb_raise(rb_eArgError, "Multiply size too large");
     }
@@ -177,12 +177,12 @@ ntt_multiply(size_t a_size, size_t b_size, uint32_t *a, uint32_t *b, uint32_t *c
             // so this sum doesn't overflow uint32_t.
             for (int j = 0; j < 3; j++) {
                 // Index check: if dig[j] is non-zero, assign index is within valid range.
-                if (dig[j]) c[idx * batch_size + i + 1 - j] += dig[j];
+                if (dig[j]) c[idx * batch_size + i + 1 - (uint32_t)j] += dig[j];
             }
         }
     }
     uint32_t carry = 0;
-    for (int32_t i = (uint32_t)(a_size + b_size - 1); i >= 0; i--) {
+    for (int32_t i = (int32_t)(a_size + b_size - 1); i >= 0; i--) {
         uint32_t v = c[i] + carry;
         c[i] = v % NTT_DECDIG_BASE;
         carry = v / NTT_DECDIG_BASE;

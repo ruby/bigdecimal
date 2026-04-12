@@ -59,14 +59,14 @@ divmod_by_inv_mul(VALUE x, VALUE y, VALUE inv, VALUE *res_div, VALUE *res_mod) {
 
 static void
 slice_copy(DECDIG *dest, Real *src, size_t rshift, size_t length) {
-    ssize_t start = src->exponent - rshift - length;
+    ssize_t start = src->exponent - (ssize_t)rshift - (ssize_t)length;
     if (start >= (ssize_t)src->Prec) return;
     if (start < 0) {
         dest -= start;
-        length += start;
+        length -= (size_t)(-start);
         start = 0;
     }
-    size_t max_length = src->Prec - start;
+    size_t max_length = (size_t)((ssize_t)src->Prec - start);
     memcpy(dest, src->frac + start, Min(length, max_length) * sizeof(DECDIG));
 }
 
@@ -101,28 +101,28 @@ divmod_newton(VALUE x, VALUE y, VALUE *div_out, VALUE *mod_out) {
     BDVALUE div_result = NewZeroWrap(1, BIGDECIMAL_COMPONENT_FIGURES * (num_blocks * block_figs + 1));
     BDVALUE bdx = GetBDValueMust(x);
 
-    VALUE mod = BigDecimal_fix(BigDecimal_decimal_shift(x, SSIZET2NUM(-num_blocks * block_digits)));
-    for (ssize_t i = num_blocks - 1; i >= 0; i--) {
+    VALUE mod = BigDecimal_fix(BigDecimal_decimal_shift(x, SSIZET2NUM(-(ssize_t)(num_blocks * block_digits))));
+    for (ssize_t i = (ssize_t)(num_blocks - 1); i >= 0; i--) {
         memset(divident.real->frac, 0, (y_figs + block_figs) * sizeof(DECDIG));
 
         BDVALUE bdmod = GetBDValueMust(mod);
         slice_copy(divident.real->frac, bdmod.real, 0, y_figs);
-        slice_copy(divident.real->frac + y_figs, bdx.real, i * block_figs, block_figs);
+        slice_copy(divident.real->frac + y_figs, bdx.real, (size_t)i * block_figs, block_figs);
         RB_GC_GUARD(bdmod.bigdecimal);
 
         VpSetSign(divident.real, 1);
-        divident.real->exponent = y_figs + block_figs;
+        divident.real->exponent = (ssize_t)(y_figs + block_figs);
         divident.real->Prec = y_figs + block_figs;
         VpNmlz(divident.real);
 
         VALUE div;
         divmod_by_inv_mul(divident.bigdecimal, y, yinv, &div, &mod);
         BDVALUE bddiv = GetBDValueMust(div);
-        slice_copy(div_result.real->frac + (num_blocks - i - 1) * block_figs, bddiv.real, 0, block_figs + 1);
+        slice_copy(div_result.real->frac + (num_blocks - (size_t)i - 1) * block_figs, bddiv.real, 0, block_figs + 1);
         RB_GC_GUARD(bddiv.bigdecimal);
     }
     VpSetSign(div_result.real, 1);
-    div_result.real->exponent = num_blocks * block_figs + 1;
+    div_result.real->exponent = (ssize_t)(num_blocks * block_figs + 1);
     div_result.real->Prec = num_blocks * block_figs + 1;
     VpNmlz(div_result.real);
     RB_GC_GUARD(bdx.bigdecimal);
@@ -148,8 +148,8 @@ VpDivdNewtonInner(VALUE args_ptr)
     VpAsgn(b2.real, b, 1);
     VpSetSign(a2.real, 1);
     VpSetSign(b2.real, 1);
-    a2.real->exponent = base_prec + div_prec;
-    b2.real->exponent = base_prec;
+    a2.real->exponent = (ssize_t)(base_prec + div_prec);
+    b2.real->exponent = (ssize_t)base_prec;
 
     if ((ssize_t)a2.real->Prec > a2.real->exponent) {
         a2_frac = BigDecimal_frac(a2.bigdecimal);
@@ -164,9 +164,9 @@ VpDivdNewtonInner(VALUE args_ptr)
     VpAsgn(r, r2.real, VpGetSign(a));
     AddExponent(c, a->exponent);
     AddExponent(c, -b->exponent);
-    AddExponent(c, -div_prec);
+    AddExponent(c, -(ssize_t)div_prec);
     AddExponent(r, a->exponent);
-    AddExponent(r, -base_prec - div_prec);
+    AddExponent(r, -(ssize_t)(base_prec + div_prec));
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(c2.bigdecimal);
