@@ -2709,7 +2709,7 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
         len10 = BIGDECIMAL_DOUBLE_FIGURES;
     }
     memcpy(buf, p, len10);
-    xfree(p);
+    free(p);
 
     VALUE inum;
     size_t RB_UNUSED_VAR(prec) = 0;
