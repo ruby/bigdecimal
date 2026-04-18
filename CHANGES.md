@@ -1,5 +1,15 @@
 # CHANGES
 
+## 4.1.2
+
+* Fix dtoa Ractor-safety bug. Update dtoa to version from Ruby 4.0 [GH-528]
+
+  **@jhawthorn**
+
+* Optimize BigDecimal#to_s [GH-519]
+
+  **@byroot**
+
 ## 4.1.1
 
 * Make BigDecimal object embedded [GH-507]
