@@ -1735,13 +1735,13 @@ BigDecimal_DoDivmod(VALUE self, VALUE r, NULLABLE_BDVALUE *div, NULLABLE_BDVALUE
         *div = bdvalue_nullable(dv);
         *mod = bdvalue_nullable(md);
     }
+    RB_GC_GUARD(dv.bigdecimal);
+    RB_GC_GUARD(md.bigdecimal);
+    RB_GC_GUARD(res.bigdecimal);
 
 Done:
     RB_GC_GUARD(a.bigdecimal);
     RB_GC_GUARD(b.bigdecimal);
-    RB_GC_GUARD(dv.bigdecimal);
-    RB_GC_GUARD(md.bigdecimal);
-    RB_GC_GUARD(res.bigdecimal);
     return true;
 }
 
