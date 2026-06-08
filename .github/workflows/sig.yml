@@ -16,7 +16,7 @@ jobs:
     env:
       BUNDLE_WITH: sig
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
