@@ -725,22 +725,8 @@ module BigMath
   #   #=> "0.17724538509055160272981674833411e1"
   #
   def gamma(x, prec)
-    prec = BigDecimal::Internal.coerce_validate_prec(prec, :gamma)
-    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :gamma)
-    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
-    if x < 0.5
-      raise Math::DomainError, 'Numerical argument is out of domain - gamma' if x.frac.zero?
-
-      # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
-      pi = PI(prec2)
-      sin = _sinpix(x, pi, prec2)
-      return pi.div(gamma(1 - x, prec2).mult(sin, prec2), prec)
-    elsif x.frac.zero? && x < 1000 * prec
-      return _gamma_positive_integer(x, prec2).mult(1, prec)
-    end
-
-    a, sum = _gamma_spouge_sum_part(x, prec2)
-    (x + (a - 1)).power(x - 0.5, prec2).mult(BigMath.exp(1 - x, prec2), prec2).mult(sum, prec)
+    require 'bigdecimal/math/gamma'
+    Gamma.gamma(x, prec)
   end
 
   # call-seq:
@@ -753,106 +739,8 @@ module BigMath
   #   #=> [0.57236494292470008707171367567653e0, 1]
   #
   def lgamma(x, prec)
-    prec = BigDecimal::Internal.coerce_validate_prec(prec, :lgamma)
-    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :lgamma)
-    prec2 = prec + BigDecimal::Internal::EXTRA_PREC
-    if x < 0.5
-      return [BigDecimal::INFINITY, 1] if x.frac.zero?
-
-      loop do
-        # Euler's reflection formula: gamma(z) * gamma(1-z) = pi/sin(pi*z)
-        pi = PI(prec2)
-        sin = _sinpix(x, pi, prec2)
-        log_gamma = BigMath.log(pi, prec2).sub(lgamma(1 - x, prec2).first + BigMath.log(sin.abs, prec2), prec)
-        return [log_gamma, sin > 0 ? 1 : -1] if prec2 + log_gamma.exponent > prec + BigDecimal::Internal::EXTRA_PREC
-
-        # Retry with higher precision if loss of significance is too large
-        prec2 = prec2 * 3 / 2
-      end
-    elsif x.frac.zero? && x < 1000 * prec
-      log_gamma = BigMath.log(_gamma_positive_integer(x, prec2), prec)
-      [log_gamma, 1]
-    else
-      # if x is close to 1 or 2, increase precision to reduce loss of significance
-      diff1_exponent = (x - 1).exponent
-      diff2_exponent = (x - 2).exponent
-      extremely_near_one = diff1_exponent < -prec2
-      extremely_near_two = diff2_exponent < -prec2
-
-      if extremely_near_one || extremely_near_two
-        # If x is extreamely close to base = 1 or 2, linear interpolation is accurate enough.
-        # Taylor expansion at x = base is: (x - base) * digamma(base) + (x - base) ** 2 * trigamma(base) / 2 + ...
-        # And we can ignore (x - base) ** 2 and higher order terms.
-        base = extremely_near_one ? 1 : 2
-        d = BigDecimal(1)._decimal_shift(1 - prec2)
-        log_gamma_d, sign = lgamma(base + d, prec2)
-        return [log_gamma_d.mult(x - base, prec2).div(d, prec), sign]
-      end
-
-      prec2 += [-diff1_exponent, -diff2_exponent, 0].max
-      a, sum = _gamma_spouge_sum_part(x, prec2)
-      log_gamma = BigMath.log(sum, prec2).add((x - 0.5).mult(BigMath.log(x.add(a - 1, prec2), prec2), prec2) + 1 - x, prec)
-      [log_gamma, 1]
-    end
-  end
-
-  # Returns sum part: sqrt(2*pi) and c[k]/(x+k) terms of Spouge's approximation
-  private_class_method def _gamma_spouge_sum_part(x, prec) # :nodoc:
-    x -= 1
-    # Spouge's approximation
-    # x! = (x + a)**(x + 0.5) * exp(-x - a) * (sqrt(2 * pi)  + (1..a - 1).sum{|k| c[k] / (x + k) } + epsilon)
-    # where c[k] = (-1)**k * (a - k)**(k - 0.5) * exp(a - k) / (k - 1)!
-    # and epsilon is bounded by a**(-0.5) * (2 * pi) ** (-a - 0.5)
-
-    # Estimate required a for given precision
-    a = (prec / Math.log10(2 * Math::PI)).ceil
-
-    # Calculate exponent of c[k] in low precision to estimate required precision
-    low_prec = 16
-    log10f = Math.log(10)
-    x_low_prec = x.mult(1, low_prec)
-    loggamma_k = 0
-    ck_exponents = (1..a-1).map do |k|
-      loggamma_k += Math.log10(k - 1) if k > 1
-      -loggamma_k - k / log10f + (k - 0.5) * Math.log10(a - k) - BigDecimal::Internal.float_log(x_low_prec.add(k, low_prec)) / log10f
-    end
-
-    # Estimate exponent of sum by Stirling's approximation
-    approx_sum_exponent = x < 1 ? -Math.log10(a) / 2 : Math.log10(2 * Math::PI) / 2 + x_low_prec.add(0.5, low_prec) * Math.log10(x_low_prec / x_low_prec.add(a, low_prec))
-
-    # Determine required precision of c[k]
-    prec2 = [ck_exponents.max.ceil - approx_sum_exponent.floor, 0].max + prec
-
-    einv = BigMath.exp(-1, prec2)
-    sum = (PI(prec) * 2).sqrt(prec).mult(BigMath.exp(-a, prec), prec)
-    y = BigDecimal(1)
-    (1..a - 1).each do |k|
-      # c[k] = (-1)**k * (a - k)**(k - 0.5) * exp(-k) / (k-1)! / (x + k)
-      y = y.div(1 - k, prec2) if k > 1
-      y = y.mult(einv, prec2)
-      z = y.mult(BigDecimal((a - k) ** k), prec2).div(BigDecimal(a - k).sqrt(prec2).mult(x.add(k, prec2), prec2), prec2)
-      # sum += c[k] / (x + k)
-      sum = sum.add(z, prec2)
-    end
-    [a, sum]
-  end
-
-  private_class_method def _gamma_positive_integer(x, prec) # :nodoc:
-    return x if x == 1
-    numbers = (1..x - 1).map {|i| BigDecimal(i) }
-    while numbers.size > 1
-      numbers = numbers.each_slice(2).map {|a, b| b ? a.mult(b, prec) : a }
-    end
-    numbers.first
-  end
-
-  # Returns sin(pi * x), for gamma reflection formula calculation
-  private_class_method def _sinpix(x, pi, prec) # :nodoc:
-    x = x % 2
-    sign = x > 1 ? -1 : 1
-    x %= 1
-    x = 1 - x if x > 0.5 # to avoid sin(pi*x) loss of precision for x close to 1
-    sign * sin(x.mult(pi, prec), prec)
+    require 'bigdecimal/math/gamma'
+    Gamma.lgamma(x, prec)
   end
 
   # call-seq:
