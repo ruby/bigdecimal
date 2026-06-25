@@ -68,7 +68,6 @@ static ID id_banker;
 static ID id_ceiling;
 static ID id_ceil;
 static ID id_floor;
-static ID id_to_r;
 static ID id_eq;
 static ID id_half;
 
@@ -3658,7 +3657,6 @@ Init_bigdecimal(void)
 
 #undef ROUNDING_MODE
 
-    id_to_r = rb_intern_const("to_r");
     id_eq = rb_intern_const("==");
     id_half = rb_intern_const("half");
 
