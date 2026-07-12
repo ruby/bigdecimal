@@ -208,6 +208,10 @@ BigDecimal_memsize(const void *ptr)
 #endif
 }
 
+#ifndef RUBY_TYPED_THREAD_SAFE_FREE
+#define RUBY_TYPED_THREAD_SAFE_FREE RUBY_TYPED_FREE_IMMEDIATELY
+#endif
+
 static const rb_data_type_t BigDecimal_data_type = {
     .wrap_struct_name = "BigDecimal",
     .function = {
@@ -215,7 +219,7 @@ static const rb_data_type_t BigDecimal_data_type = {
         .dfree = RUBY_DEFAULT_FREE,
         .dsize = BigDecimal_memsize,
     },
-    .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_FROZEN_SHAREABLE | RUBY_TYPED_WB_PROTECTED | RUBY_TYPED_EMBEDDABLE,
+    .flags = RUBY_TYPED_THREAD_SAFE_FREE | RUBY_TYPED_FROZEN_SHAREABLE | RUBY_TYPED_WB_PROTECTED | RUBY_TYPED_EMBEDDABLE,
 };
 
 static VALUE
