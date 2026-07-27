@@ -138,14 +138,9 @@ module BigMath
         fp_normalize(out, e, keep_bits)
       end
 
-      # Merge of [sum_num, mult_num, den] triples, same as the BSM merge in
-      # gamma.rb but over polynomials.
-      def self.triple_merge(a, c, keep_bits)
-        [
-          fp_add(fp_mult(a[0], c[2], keep_bits), fp_mult(a[1], c[0], keep_bits), keep_bits),
-          fp_mult(a[1], c[1], keep_bits),
-          fp_mult(a[2], c[2], keep_bits)
-        ]
+      # Multiplies an fp polynomial by an exact Integer-coefficient polynomial.
+      def self.fp_mult_intpoly(p, ip, keep_bits)
+        fp_normalize(convolve(p[0], ip), p[1], keep_bits)
       end
 
       # Exact Horner evaluation at an integer point. Returns the Integer mantissa;
@@ -294,31 +289,49 @@ module BigMath
         p10 = 10**fd
         xa = ((x - a0)._decimal_shift(fd).to_i << keep) / p10
 
-        # Triple tree over leaves t = z + j (j = 1 .. m-1), as polynomials in z:
-        #   den_t = (x - a0 - t) * (t * (a0 + t))
-        #   num_t = (x - a0 - t + 1) * (-b * (n1 - t))
-        identity = [[[1], 0], [[0], 0], [[1], 0]]
-        fractions = (1..m - 1).map do |j|
-          xaj = xa - j * s2
-          den = fp_normalize(
-            [xaj * (j * (a0 + j)), xaj * (a0 + 2 * j) - s2 * (j * (a0 + j)), xaj - s2 * (a0 + 2 * j), -s2],
-            -keep, keep
-          )
-          xaj1 = xaj + s2
-          num = fp_normalize(
-            [-b * xaj1 * (n1 - j), b * (xaj1 + s2 * (n1 - j)), -b * s2],
-            -keep, keep
-          )
-          [den, num, den]
+        # Barycentric pair tree over node indices j = 0 .. m-1 (j = 0 carries the
+        # leading term of the series). The leaf factors decompose as
+        #   den_j = L_j * B_j * I_j,   num_j = -b * L_(j-1) * G_j
+        # where only L_j = (x - a0 - j) - z holds full-precision coefficients;
+        # B_j = z + j, I_j = a0 + j + z, G_j = n1 - j - z are small. The series
+        # numerator then becomes
+        #   F01 = sum_j (Omega / L_j) * w_j,  Omega = prod L_i,
+        # with w_j collecting only small-coefficient factors. Each node keeps
+        # [Omega, Phi, BI, GX] (BI = prod B_i * I_i, GX = (-b)**size * prod G_(i+1),
+        # both exact Integer polynomials) and merges as
+        #   Omega_P = Omega_A * Omega_C
+        #   Phi_P   = (Phi_A * Omega_C) * BI_C + (Omega_A * Phi_C) * GX_A
+        # so the only wide-by-wide multiplications are with Omega (degree d),
+        # cheaper than merging [sum, mult, den] triples of degree-3d polynomials.
+        nodes = (1..m - 1).map do |i|
+          [
+            fp_normalize([xa - i * s2, -s2], -keep, keep),
+            [[1], 0],
+            [i * (a0 + i), a0 + 2 * i, 1],
+            [-b * (n1 - i - 1), b]
+          ]
         end
-        while fractions.size > 1
-          fractions = fractions.each_slice(2).map do |p, q|
-            q ||= identity
-            triple_merge(p, q, keep)
+        while nodes.size > 1
+          nodes = nodes.each_slice(2).map do |na, nc|
+            next na unless nc
+            [
+              fp_mult(na[0], nc[0], keep),
+              fp_add(
+                fp_mult_intpoly(fp_mult(na[1], nc[0], keep), nc[2], keep),
+                fp_mult_intpoly(fp_mult(na[0], nc[1], keep), na[3], keep),
+                keep
+              ),
+              convolve(na[2], nc[2]),
+              convolve(na[3], nc[3])
+            ]
           end
         end
-        f0, f1, f2 = fractions.first
-        f01 = fp_add(f0, f1, keep)
+        sub = nodes.first
+        f2 = fp_mult_intpoly(sub[0], sub[2], keep)
+        # Attach the j = 0 term (Phi = 1, GX = -b * (n1 - 1 - z)):
+        # its Omega_C * BI_C part is exactly F2.
+        l0 = fp_normalize([xa, -s2], -keep, keep)
+        f01 = fp_add(f2, fp_mult_intpoly(fp_mult(l0, sub[1], keep), [-b * (n1 - 1), b], keep), keep)
         fast = eval_mode == :fast || (eval_mode == :auto && m > FAST_EVAL_MIN_BATCHES)
         if fast
           tree = subproduct_tree(0, m)
