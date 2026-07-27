@@ -8,6 +8,7 @@ require 'benchmark'
 
 MP = BigMath.const_get(:Gamma)::Multipoint
 G = BigMath.const_get(:Gamma)
+MP.eval_mode = ENV['MP_EVAL'].to_sym if ENV['MP_EVAL']
 
 def rel_err_exp(a, b, prec)
   e = a.sub(b, prec + 50).div(b, 10).abs
