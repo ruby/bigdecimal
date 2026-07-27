@@ -589,6 +589,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| gamma(BigDecimal(5) + BigDecimal("1e-300"), n) }
     assert_converge_in_precision {|n| gamma(BigDecimal("-3") - BigDecimal("1e-2000"), n) }
     assert_equal(BigDecimal(24), gamma(BigDecimal(5) + BigDecimal("1e-2000"), 50))
+    # crosses the multipoint dispatch threshold (BSGS at 1500, multipoint at 3000 when GMP is available)
+    assert_converge_in_precision([1500, 3000]) {|n| gamma(BigDecimal(1).div(3, n * 2), n) }
   end
 
   def test_lgamma
@@ -617,6 +619,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| lgamma(BigDecimal("-1234.56789"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("1e+18"), n).first }
     assert_converge_in_precision {|n| lgamma(BigDecimal("1e+400"), n).first }
+    # crosses the multipoint dispatch threshold (BSGS at 1500, multipoint at 3000 when GMP is available)
+    assert_converge_in_precision([1500, 3000]) {|n| lgamma(BigDecimal(1).div(3, n * 2), n).first }
 
     # gamma close 1 or -1 cases
     assert_converge_in_precision {|n| lgamma(BigDecimal('-3.143580888349980058694358781820227899566'), n).first }

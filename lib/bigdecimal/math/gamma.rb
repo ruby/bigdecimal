@@ -9,7 +9,9 @@ module BigMath
   # Lagrange interpolation of f(x) = b**x / x! at integer nodes x_i = b-l, ..., b+l.
   #   BSM(Binary Splitting Method) version for small digit numbers, O(PREC*log(PREC)^3)
   #   BSGS(Baby-Step Giant-Step) version for full digit numbers, O(PREC^2*log(log(PREC)))
-  #   Both orders of magnitude faster than Spouge's approximation which is O(PREC^2*log(PREC))
+  #   Multipoint evaluation version (gamma_multipoint.rb) replaces BSGS for large PREC
+  #   when Integer multiplication is GMP-backed, O(PREC^1.5*log(PREC)^2)
+  #   All orders of magnitude faster than Spouge's approximation which is O(PREC^2*log(PREC))
   #   (Complexities assume quasi-linear multiplication, counting large-by-small products
   #   as (n/m) * M(m) = n * log(m) bit ops. BigDecimal multiplies the small coefficients
   #   by schoolbook instead: an extra log factor asymptotically, but faster at any feasible PREC.)
@@ -280,6 +282,11 @@ module BigMath
     # Returns [base, large_factorial_arg, small_factorial_arg, exp2] that can produce gamma(x) as:
     #   gamma(x) = base * 2**exp2 * factorial(large_factorial_arg) * factorial(small_factorial_arg)
     def self.gamma_lagrange(x, prec)
+      # Full-digit x above the crossover precision: use the experimental multipoint
+      # evaluation (O(PREC^1.5 * polylog) polynomial pipeline) instead of BSGS.
+      # See gamma_multipoint.rb; requires GMP-backed Integer multiplication.
+      return Multipoint.gamma_lagrange(x, prec) if Multipoint.use?(x, prec)
+
       # Shift x to establish a safe center (b) for the barycentric interpolation.
       #
       # We must keep all interpolation nodes strictly positive (b - l > 0). Approaching
@@ -493,3 +500,5 @@ module BigMath
 
   private_constant :Gamma
 end
+
+require 'bigdecimal/math/gamma_multipoint'

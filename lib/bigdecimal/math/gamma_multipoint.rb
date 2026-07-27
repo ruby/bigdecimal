@@ -35,8 +35,23 @@ module BigMath
       # i.e. roughly 250000 digits of precision.
       FAST_EVAL_MIN_BATCHES = 700
       @eval_mode = :auto
+
+      # Dispatch control (used by Gamma.gamma_lagrange). The multipoint path
+      # requires GMP-backed Integer multiplication: with Toom-Cook the pipeline
+      # is asymptotically worse than BSGS. min_prec is the measured crossover
+      # against BSGS (~2000 digits) with margin. enabled = false is the kill switch.
+      @enabled = !!defined?(Integer::GMP_VERSION)
+      @min_prec = 3000
+
       class << self
-        attr_accessor :eval_mode
+        attr_accessor :eval_mode, :enabled, :min_prec
+      end
+
+      # Same full-digit criterion as the BSM/BSGS branch, applied to the shifted x.
+      def self.use?(x, prec)
+        return false unless @enabled && prec >= @min_prec
+        shift = x < 2 * prec ? 2 * prec - x.floor : 0
+        (x + shift - 1).n_significant_digits * prec.bit_length > prec
       end
 
       # ---------- Kronecker substitution convolution on Integer ----------
@@ -405,20 +420,6 @@ module BigMath
         [base, a0, n1 - 1, 0]
       end
 
-      # gamma via the multipoint Lagrange evaluation, for testing.
-      # Only supports non-integer x >= 0.5 on the Lagrange path; other inputs
-      # are delegated to the regular implementation.
-      def self.gamma(x, prec)
-        prec = BigDecimal::Internal.coerce_validate_prec(prec, :gamma)
-        x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :gamma)
-        return Gamma.gamma(x, prec) if x < 0.5 || x.frac.zero?
-
-        prec2 = prec + BigDecimal::Internal::EXTRA_PREC
-        base, large_factorial_arg, small_factorial_arg, exp2 = gamma_lagrange(x, prec2)
-        ans = base.mult(Gamma.integer_factorial(small_factorial_arg, prec2), prec2)
-        ans = ans.mult(BigDecimal(2).power(exp2, prec2), prec2) unless exp2.zero?
-        ans.mult(Gamma.integer_factorial(large_factorial_arg, prec2), prec)
-      end
     end
   end
 end
