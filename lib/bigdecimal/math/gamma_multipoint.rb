@@ -43,8 +43,14 @@ module BigMath
       @enabled = !!defined?(Integer::GMP_VERSION)
       @min_prec = 3000
 
+      # :coeff  = coefficient domain (barycentric pair tree + multipoint evaluation)
+      # :values = value domain (BGS shift of evaluation values; no tree, no eval step)
+      # :auto   = :values above its measured crossover against :coeff (~7000 digits)
+      ENGINE_VALUES_MIN_PREC = 8000
+      @engine = :auto
+
       class << self
-        attr_accessor :eval_mode, :enabled, :min_prec
+        attr_accessor :eval_mode, :enabled, :min_prec, :engine
       end
 
       # Same full-digit criterion as the BSM/BSGS branch, applied to the shifted x.
@@ -271,6 +277,119 @@ module BigMath
         [out.map {|v, e| e == emax ? v : v >> (emax - e) }, emax]
       end
 
+      # ---------- value-domain engine (BGS shift of evaluation values) ----------
+      # Instead of polynomial coefficients, the batch transition product
+      #   P_s(z) = prod_{t=z+1..z+s} [[den_t, 0], [num_t, num_t]]
+      # is represented by the values of its entries at z = u * s (u = 0..3s).
+      # Doubling: P_2s(z) = P_s(z) * P_s(z + s) needs P_s at u = 0..12s+3, obtained
+      # by shifting the value table (one convolution); then one pointwise 2x2
+      # product per point. Total cost is a geometric sum over doublings instead
+      # of the log(m) equal-cost levels of the coefficient product tree, and no
+      # separate evaluation step is needed.
+
+      # Shared kernel for shifting tables of degree d by integer a (a > d):
+      # reciprocals 1/(a - d + t) in fixed point, exact delta_k = prod (a + k - j)
+      # and d!.
+      def self.shift_kernel(d, a, out_len, keep_bits)
+        rexp = keep_bits + 64
+        recips = Array.new(out_len + d) {|t| (1 << rexp) / (a - d + t) }
+        dfact = (1..d).reduce(1, :*)
+        deltas = Array.new(out_len)
+        delta = (a - d..a).reduce(1, :*)
+        out_len.times do |k|
+          deltas[k] = delta
+          delta = delta / (a + k - d) * (a + k + 1)
+        end
+        [recips, rexp, deltas, dfact]
+      end
+
+      # Values Q(a), ..., Q(a + out_len - 1) of the polynomial of degree
+      # vals.size - 1 given by its values Q(0), ..., Q(d)
+      # (shift of evaluation values, Bostan-Gaudry-Schost):
+      #   Q(a + k) = (delta_k / d!) * sum_i Q(i) * (-1)**(d-i) * C(d,i) / (a + k - i)
+      def self.fp_shift_values(table, kernel, keep_bits)
+        vals, exp = table
+        d = vals.size - 1
+        recips, rexp, deltas, dfact = kernel
+        comb = 1
+        svals = vals.each_with_index.map do |v, i|
+          sv = comb * ((d - i).odd? ? -v : v)
+          comb = comb * (d - i) / (i + 1)
+          sv
+        end
+        conv = convolve(svals, recips)
+        out = Array.new(deltas.size) {|k| conv[k + d] * deltas[k] / dfact }
+        fp_normalize(out, exp - rexp, keep_bits)
+      end
+
+      def self.table_concat(t1, t2)
+        v1, e1 = t1
+        v2, e2 = t2
+        if e1 > e2
+          [v1 + v2.map {|v| v >> (e1 - e2) }, e1]
+        elsif e2 > e1
+          [v1.map {|v| v >> (e2 - e1) } + v2, e2]
+        else
+          [v1 + v2, e1]
+        end
+      end
+
+      # Builds the value tables [D, N, M] of P_cap_s at z = u * cap_s (u = 0..3*cap_s).
+      # cap_s must be a power of two.
+      def self.batch_value_tables(xa, s2, a0, b, n1, cap_s, keep_bits)
+        dv = []
+        nv = []
+        (0..3).each do |u|
+          t = u + 1
+          xat = xa - t * s2
+          dv << xat * (t * (a0 + t))
+          nv << (xat + s2) * (-b * (n1 - t))
+        end
+        dtab = fp_normalize(dv, -keep_bits, keep_bits)
+        ntab = fp_normalize(nv, -keep_bits, keep_bits)
+        mtab = ntab
+        s = 1
+        while s < cap_s
+          kernel = shift_kernel(3 * s, 3 * s + 1, 9 * s + 3, keep_bits)
+          dvv, de = table_concat(dtab, fp_shift_values(dtab, kernel, keep_bits))
+          nvv, ne = table_concat(ntab, fp_shift_values(ntab, kernel, keep_bits))
+          mvv, me = table_concat(mtab, fp_shift_values(mtab, kernel, keep_bits))
+          # P_2s(u * 2s) = P_s((2u) * s) * P_s((2u + 1) * s), entrywise:
+          #   D' = Dl * Dr,  N' = Nl * Dr + Ml * Nr,  M' = Ml * Mr
+          e1 = ne + de
+          e2 = me + ne
+          sh = e1 - e2
+          l2 = 6 * s
+          nd = Array.new(l2 + 1)
+          nn = Array.new(l2 + 1)
+          nm = Array.new(l2 + 1)
+          (0..l2).each do |j|
+            dr = dvv[2 * j + 1]
+            nr = nvv[2 * j + 1]
+            t1v = nvv[2 * j] * dr
+            t2v = mvv[2 * j] * nr
+            nd[j] = dvv[2 * j] * dr
+            nn[j] = sh >= 0 ? t1v + (t2v >> sh) : (t1v >> -sh) + t2v
+            nm[j] = mvv[2 * j] * mvv[2 * j + 1]
+          end
+          dtab = fp_normalize(nd, 2 * de, keep_bits)
+          ntab = fp_normalize(nn, sh >= 0 ? e1 : e2, keep_bits)
+          mtab = fp_normalize(nm, 2 * me, keep_bits)
+          s *= 2
+        end
+        [dtab, ntab, mtab]
+      end
+
+      # Guard bits for the value-domain engine.
+      # Measured loss with guard = 0 is 1.35 - 1.49 * s * n1.bit_length bits over
+      # prec = 300 .. 10000, identical for near-node x. The feared extrapolation
+      # amplification of the value shifts does not appear beyond the table
+      # dynamic range (the polynomial itself grows at the same rate outside the
+      # sampled window). 2 * s * (bit_length + 4) keeps a ~1.9x margin.
+      def self.guard_bits_values(s, n1)
+        2 * s * (n1.bit_length + 4) + 256
+      end
+
       # Guard bits on top of the target precision.
       # Measured loss with guard = 0 is 2.9 - 3.3 * m * n1.bit_length bits over
       # prec = 300 .. 10000, identical for both eval modes and for near-node x:
@@ -285,6 +404,10 @@ module BigMath
       # (m odd so that the barycentric reconstruction keeps positive sign);
       # slightly wider than the symmetric b-l .. b+l, which only adds accuracy.
       def self.gamma_lagrange(x, prec) # :nodoc:
+        if engine == :values || (engine == :auto && prec >= ENGINE_VALUES_MIN_PREC)
+          return gamma_lagrange_values(x, prec)
+        end
+
         shift = x < 2 * prec ? 2 * prec - x.floor : 0
         x += shift
         x = BigDecimal(x) - 1
@@ -392,29 +515,95 @@ module BigMath
         sum = sum.mult(BigDecimal(2).power(e01 - e2, prec), prec) unless e01 == e2
         prod = prod.mult(BigDecimal(2).power(m * e2, prec), prec) unless e2.zero?
 
-        # Shift product: batches of (x - i) for i = 0 ... shift, remainder handled directly
-        if shift > 0
-          xi = (x._decimal_shift(fd).to_i << keep) / p10
-          leaves = (0...m).map {|j| fp_normalize([xi - j * s2, -s2], -keep, keep) }
-          while leaves.size > 1
-            leaves = leaves.each_slice(2).map {|p, q| q ? fp_mult(p, q, keep) : p }
-          end
-          esp = leaves.first
-          full = shift / m
-          if full > 0
-            if fast
-              evs, ev = fp_eval_points(esp, m, full, keep)
-            else
-              evs = Array.new(full) {|k| fp_eval_int(esp, k * m) }
-              ev = esp[1]
-            end
-            full.times do |k|
-              prod = prod.mult(BigDecimal(evs[k]).mult(1, prec), prec)
-            end
-            prod = prod.mult(BigDecimal(2).power(full * ev, prec), prec) unless ev.zero?
-          end
-          (full * m...shift).each {|i| prod = prod.mult(x - i, prec) }
+        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, m, keep, prec), prec) if shift > 0
+
+        base = BigDecimal(b).power(x - a0, prec).div(prod.mult(sum, prec), prec)
+        [base, a0, n1 - 1, 0]
+      end
+
+      # Product of (x - i) for i = 0 ... shift - 1: one product polynomial of
+      # mbatch leaves evaluated at multiples of mbatch, remainder factors direct.
+      def self.shift_prod_factor(x, fd, p10, shift, mbatch, keep, prec)
+        prod = BigDecimal(1)
+        s2 = 1 << keep
+        xi = (x._decimal_shift(fd).to_i << keep) / p10
+        leaves = (0...mbatch).map {|j| fp_normalize([xi - j * s2, -s2], -keep, keep) }
+        while leaves.size > 1
+          leaves = leaves.each_slice(2).map {|p, q| q ? fp_mult(p, q, keep) : p }
         end
+        esp = leaves.first
+        full = shift / mbatch
+        if full > 0
+          if eval_mode == :fast || (eval_mode == :auto && mbatch > FAST_EVAL_MIN_BATCHES)
+            evs, ev = fp_eval_points(esp, mbatch, full, keep)
+          else
+            evs = Array.new(full) {|k| fp_eval_int(esp, k * mbatch) }
+            ev = esp[1]
+          end
+          full.times do |k|
+            prod = prod.mult(BigDecimal(evs[k]).mult(1, prec), prec)
+          end
+          prod = prod.mult(BigDecimal(2).power(full * ev, prec), prec) unless ev.zero?
+        end
+        (full * mbatch...shift).each {|i| prod = prod.mult(x - i, prec) }
+        prod
+      end
+
+      # Same contract as gamma_lagrange, value-domain engine (engine = :values).
+      # Nodes are A .. A + n1 - 1 with n1 = S * G + 1, S = 2**kappa =~ sqrt(2l).
+      # S is even, so the barycentric reconstruction sign (-1)**(n1 - 1) is
+      # positive without any parity constraint on the node count.
+      def self.gamma_lagrange_values(x, prec) # :nodoc:
+        shift = x < 2 * prec ? 2 * prec - x.floor : 0
+        x += shift
+        x = BigDecimal(x) - 1
+        b = x.round
+        l = Gamma.gamma_lagrange_l(b, prec)
+
+        kappa = (0.5 * Math.log2(2 * l)).round
+        kappa = 1 if kappa < 1
+        s_cap = 1 << kappa
+        g = (2 * l + s_cap - 1) / s_cap
+        n1 = s_cap * g + 1
+        a0 = b - l
+
+        keep = Gamma.drop_cap_bits(prec) + guard_bits_values(s_cap, n1)
+        s2 = 1 << keep
+        fd = [x.n_significant_digits - x.exponent, 0].max
+        p10 = 10**fd
+        xa = ((x - a0)._decimal_shift(fd).to_i << keep) / p10
+
+        dtab, ntab, mtab = batch_value_tables(xa, s2, a0, b, n1, s_cap, keep)
+        dvals, ed = dtab
+        nvals, en = ntab
+        mvals, em = mtab
+
+        pw_nd = BigDecimal(2).power(en - ed, prec)
+        pw_md = BigDecimal(2).power(em - ed, prec)
+        sum_series = BigDecimal(1)
+        prod = x - a0
+        c_k = BigDecimal(1)
+        g.times do |k|
+          dk = BigDecimal(dvals[k]).mult(1, prec)
+          nk = BigDecimal(nvals[k]).mult(1, prec)
+          sum_series = sum_series.add(c_k.mult(nk, prec).div(dk, prec).mult(pw_nd, prec), prec)
+
+          # Same-value invariant: the batch factor of prod is derived from the
+          # same computed D_k used in the sum denominator, so near-node errors
+          # cancel exactly in prod * sum. BI is the exact small-integer part.
+          bik = 1
+          t0 = k * s_cap
+          (1..s_cap).each {|j| bik *= (t0 + j) * (a0 + t0 + j) }
+          prod = prod.mult(dk, prec).div(bik, prec)
+
+          if k < g - 1
+            c_k = c_k.mult(BigDecimal(mvals[k]).mult(1, prec), prec).div(dk, prec).mult(pw_md, prec)
+          end
+        end
+        prod = prod.mult(BigDecimal(2).power(g * ed, prec), prec) unless ed.zero?
+        sum = sum_series.div(x - a0, prec)
+
+        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, s_cap, keep, prec), prec) if shift > 0
 
         base = BigDecimal(b).power(x - a0, prec).div(prod.mult(sum, prec), prec)
         [base, a0, n1 - 1, 0]

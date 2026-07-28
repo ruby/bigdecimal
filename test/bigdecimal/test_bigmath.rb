@@ -591,6 +591,8 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(BigDecimal(24), gamma(BigDecimal(5) + BigDecimal("1e-2000"), 50))
     # crosses the multipoint dispatch threshold (BSGS at 1500, multipoint at 3000 when GMP is available)
     assert_converge_in_precision([1500, 3000]) {|n| gamma(BigDecimal(1).div(3, n * 2), n) }
+    # crosses the multipoint engine threshold (coefficient domain at 4000, value domain at 8000)
+    assert_converge_in_precision([4000, 8000]) {|n| gamma(BigDecimal(1).div(3, n * 2), n) }
   end
 
   def test_lgamma
