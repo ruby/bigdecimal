@@ -515,35 +515,52 @@ module BigMath
         sum = sum.mult(BigDecimal(2).power(e01 - e2, prec), prec) unless e01 == e2
         prod = prod.mult(BigDecimal(2).power(m * e2, prec), prec) unless e2.zero?
 
-        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, m, keep, prec), prec) if shift > 0
+        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, keep, prec), prec) if shift > 0
 
         base = BigDecimal(b).power(x - a0, prec).div(prod.mult(sum, prec), prec)
         [base, a0, n1 - 1, 0]
       end
 
-      # Product of (x - i) for i = 0 ... shift - 1: one product polynomial of
-      # mbatch leaves evaluated at multiples of mbatch, remainder factors direct.
-      def self.shift_prod_factor(x, fd, p10, shift, mbatch, keep, prec)
-        prod = BigDecimal(1)
-        s2 = 1 << keep
-        xi = (x._decimal_shift(fd).to_i << keep) / p10
-        leaves = (0...mbatch).map {|j| fp_normalize([xi - j * s2, -s2], -keep, keep) }
-        while leaves.size > 1
-          leaves = leaves.each_slice(2).map {|p, q| q ? fp_mult(p, q, keep) : p }
+      # Value table of the shift-product batches Q_s(z) = prod_{j=0..s-1} (x - z - j)
+      # at z = u * s (u = 0..s), by the same doubling as batch_value_tables but
+      # with a single entry of degree s.
+      def self.shift_value_table(xi, s2, cap_s, keep_bits)
+        tab = fp_normalize([xi, xi - s2], -keep_bits, keep_bits)
+        s = 1
+        while s < cap_s
+          kernel = shift_kernel(s, s + 1, 3 * s + 1, keep_bits)
+          vv, e = table_concat(tab, fp_shift_values(tab, kernel, keep_bits))
+          nv = Array.new(2 * s + 1) {|j| vv[2 * j] * vv[2 * j + 1] }
+          tab = fp_normalize(nv, 2 * e, keep_bits)
+          s *= 2
         end
-        esp = leaves.first
-        full = shift / mbatch
+        tab
+      end
+
+      # Product of (x - i) for i = 0 ... shift - 1: full batches of power-of-two
+      # size (chosen here, independent of the caller's batch size) from the
+      # value table, remainder factors direct.
+      def self.shift_prod_factor(x, fd, p10, shift, keep, prec)
+        prod = BigDecimal(1)
+        full = 0
+        mbatch = 1
+        if shift >= 4
+          mbatch = 1 << [(0.5 * Math.log2(shift)).round, 1].max
+          full = shift / mbatch
+        end
         if full > 0
-          if eval_mode == :fast || (eval_mode == :auto && mbatch > FAST_EVAL_MIN_BATCHES)
-            evs, ev = fp_eval_points(esp, mbatch, full, keep)
-          else
-            evs = Array.new(full) {|k| fp_eval_int(esp, k * mbatch) }
-            ev = esp[1]
+          s2 = 1 << keep
+          xi = (x._decimal_shift(fd).to_i << keep) / p10
+          tab = shift_value_table(xi, s2, mbatch, keep)
+          if full > mbatch + 1
+            kernel = shift_kernel(mbatch, mbatch + 1, full - mbatch - 1, keep)
+            tab = table_concat(tab, fp_shift_values(tab, kernel, keep))
           end
+          vals, e = tab
           full.times do |k|
-            prod = prod.mult(BigDecimal(evs[k]).mult(1, prec), prec)
+            prod = prod.mult(BigDecimal(vals[k]).mult(1, prec), prec)
           end
-          prod = prod.mult(BigDecimal(2).power(full * ev, prec), prec) unless ev.zero?
+          prod = prod.mult(BigDecimal(2).power(full * e, prec), prec) unless e.zero?
         end
         (full * mbatch...shift).each {|i| prod = prod.mult(x - i, prec) }
         prod
@@ -603,7 +620,7 @@ module BigMath
         prod = prod.mult(BigDecimal(2).power(g * ed, prec), prec) unless ed.zero?
         sum = sum_series.div(x - a0, prec)
 
-        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, s_cap, keep, prec), prec) if shift > 0
+        prod = prod.mult(shift_prod_factor(x, fd, p10, shift, keep, prec), prec) if shift > 0
 
         base = BigDecimal(b).power(x - a0, prec).div(prod.mult(sum, prec), prec)
         [base, a0, n1 - 1, 0]
