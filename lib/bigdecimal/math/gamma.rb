@@ -10,7 +10,7 @@ module BigMath
   #   BSM(Binary Splitting Method) version for small digit numbers, O(PREC*log(PREC)^3)
   #   BSGS(Baby-Step Giant-Step) version for full digit numbers, O(PREC^2*log(log(PREC)))
   #   Multipoint evaluation version (gamma_multipoint.rb) replaces BSGS for large PREC
-  #   when Integer multiplication is GMP-backed, O(PREC^1.5*log(PREC)^2)
+  #   when Integer multiplication is GMP-backed, O(PREC^1.5*log(PREC))
   #   All orders of magnitude faster than Spouge's approximation which is O(PREC^2*log(PREC))
   #   (Complexities assume quasi-linear multiplication, counting large-by-small products
   #   as (n/m) * M(m) = n * log(m) bit ops. BigDecimal multiplies the small coefficients

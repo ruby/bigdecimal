@@ -1,15 +1,12 @@
 # Check & benchmark for the experimental multipoint gamma (gamma_multipoint.rb)
 # Usage: ruby -Ilib -Itmp/arm64-darwin24/stage/lib gamma_mp_check.rb [mode]
 #   mode: acc (default) | bench | debug
-#   MP_EVAL=fast|horner forces the evaluation mode
 require 'bigdecimal'
 require 'bigdecimal/math'
 require 'bigdecimal/math/gamma'
 require 'benchmark'
 
 MP = BigMath.const_get(:Gamma)::Multipoint
-MP.eval_mode = ENV['MP_EVAL'].to_sym if ENV['MP_EVAL']
-MP.engine = ENV['MP_ENGINE'].to_sym if ENV['MP_ENGINE']
 abort 'multipoint is disabled (Integer::GMP_VERSION not found)' unless MP.enabled
 MP.min_prec = 1 # exercise the multipoint path at every precision
 
