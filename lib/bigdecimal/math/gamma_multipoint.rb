@@ -172,16 +172,21 @@ module BigMath
         end
       end
 
-      # Builds the value tables [D, N, M] of P_cap_s at z = u * cap_s (u = 0..3*cap_s).
+      # Builds the value tables [D, N, M] of the batch transition product
+      #   P_s(z) = prod_{t=z+1..z+s} [[den_t, 0], [num_t, num_t]]
+      # at z = u * cap_s (u = 0..3*cap_s). This driver is client-independent:
+      # any series of prefix products of num_t/den_t fits, as long as den_t and
+      # num_t are polynomials in t. The block yields their fixed-point mantissas
+      # [den_t, num_t] (at exponent -keep_bits) for t = 1..4; a cubic den and a
+      # quadratic num are the highest degrees these four samples support.
       # cap_s must be a power of two.
-      def self.batch_value_tables(xa, s2, a0, b, n1, cap_s, keep_bits)
+      def self.batch_value_tables(cap_s, keep_bits)
         dv = []
         nv = []
-        (0..3).each do |u|
-          t = u + 1
-          xat = xa - t * s2
-          dv << xat * (t * (a0 + t))
-          nv << (xat + s2) * (-b * (n1 - t))
+        (1..4).each do |t|
+          d, n = yield(t)
+          dv << d
+          nv << n
         end
         dtab = fp_normalize(dv, -keep_bits, keep_bits)
         ntab = fp_normalize(nv, -keep_bits, keep_bits)
@@ -253,7 +258,10 @@ module BigMath
         p10 = 10**fd
         xa = ((x - a0)._decimal_shift(fd).to_i << keep) / p10
 
-        dtab, ntab, mtab = batch_value_tables(xa, s2, a0, b, n1, s_cap, keep)
+        dtab, ntab, mtab = batch_value_tables(s_cap, keep) do |t|
+          xat = xa - t * s2
+          [xat * (t * (a0 + t)), (xat + s2) * (-b * (n1 - t))]
+        end
         dvals, ed = dtab
         nvals, en = ntab
         mvals, em = mtab
