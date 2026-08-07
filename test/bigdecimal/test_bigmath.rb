@@ -509,10 +509,11 @@ class TestBigMath < Test::Unit::TestCase
       BigDecimal("0.9953222650189527341620692563672529286108917970400600767383523262004372807199951773676290080196806805"),
       BigMath.erf(BigDecimal("2"), 100)
     )
-    precisions = [200, 300, 400]
-    assert_converge_in_precision(precisions) {|n| BigMath.erf(BigDecimal("1e-30"), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erf(BigDecimal("0.3"), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erf(SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("1e-30"), n) }
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal("0.3"), n) }
+    assert_converge_in_precision {|n| BigMath.erf(SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal('1.' + '1' * 1000), n) }
+    assert_converge_in_precision {|n| BigMath.erf(BigDecimal('30.' + '1' * 1000), n) }
   end
 
   def test_erfc
@@ -526,31 +527,38 @@ class TestBigMath < Test::Unit::TestCase
     assert_equal(2, BigMath.erfc(BigDecimal('-1e400'), 10))
     assert_equal(1, BigMath.erfc(BigDecimal('1e-400'), N))
 
-    precisions = [200, 300, 400]
-
     # erfc with taylor series
     assert_equal(
       BigDecimal("2.088487583762544757000786294957788611560818119321163727012213713938174695833440290610766384285723554e-45"),
       BigMath.erfc(BigDecimal("10"), 100)
     )
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(0.3), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(SQRT2, n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(8), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(0.3), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(8), n) }
     # erfc with asymptotic expansion
     assert_equal(
       BigDecimal("1.896961059966276509268278259713415434936907563929186183462834752900411805205111886605256690776760041e-697"),
       BigMath.erfc(BigDecimal("40"), 100)
     )
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(30), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(-2), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(30 * SQRT2, n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(50), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(60000), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(1000000000 + SQRT2), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(30), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(-2), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(30 * SQRT2, n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(50), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(60000), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal('1000000000.' + '1' * 1000), n) }
 
     # Near crossover point between taylor series and asymptotic expansion around prec=150
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(19.5), n) }
-    assert_converge_in_precision(precisions) {|n| BigMath.erfc(BigDecimal(20.5), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(19.5), n) }
+    assert_converge_in_precision {|n| BigMath.erfc(BigDecimal(20.5), n) }
+  end
+
+  def test_erf_erfc_consistency_large_prec
+    [BigDecimal(34.5), 34 + BigDecimal(4).div(7, 1200)].each do |x|
+      erf = BigMath.erf(x, 1200) # Calculated with taylor series of erf
+      erfc = BigMath.erfc(x, 400) # Calculated with asymptotic expansion
+      erfc2 = 1 - erf
+      assert_equal(erfc, erfc2.mult(1, 400))
+    end
   end
 
   def test_gamma

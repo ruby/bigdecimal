@@ -29,6 +29,7 @@ Gem::Specification.new do |s|
     lib/bigdecimal/jacobian.rb
     lib/bigdecimal/ludcmp.rb
     lib/bigdecimal/math.rb
+    lib/bigdecimal/math/erf.rb
     lib/bigdecimal/newton.rb
     lib/bigdecimal/util.rb
     sample/linear.rb
