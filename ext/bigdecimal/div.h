@@ -29,7 +29,7 @@ newton_raphson_inverse(VALUE x, size_t prec) {
         VALUE one_minus_x_inv = BigDecimal_sub2(
             one,
             BigDecimal_mult(BigDecimal_mult2(x, one, SIZET2NUM(n + 1)), inv),
-            SIZET2NUM(SIZET2NUM(n / 2))
+            SIZET2NUM(n / 2)
         );
         inv = BigDecimal_add2(
             inv,
