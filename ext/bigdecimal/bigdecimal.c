@@ -2845,6 +2845,7 @@ rb_cstr_convert_to_BigDecimal(const char *c_str, int raise_exception)
 static inline VALUE
 rb_str_convert_to_BigDecimal(VALUE val, int raise_exception)
 {
+    if (!raise_exception && memchr(RSTRING_PTR(val), '\0', RSTRING_LEN(val))) return Qnil;
     const char *c_str = StringValueCStr(val);
     return rb_cstr_convert_to_BigDecimal(c_str, raise_exception);
 }
