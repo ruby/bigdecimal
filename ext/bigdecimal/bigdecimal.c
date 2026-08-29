@@ -2898,7 +2898,7 @@ rb_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
     else if (RB_TYPE_P(val, T_COMPLEX)) {
         VALUE im = rb_complex_imag(val);
         if (!is_zero(im)) {
-            /* TODO: handle raise_exception */
+            if (!raise_exception) return Qnil;
             rb_raise(rb_eArgError,
                      "Unable to make a BigDecimal from non-zero imaginary number");
         }
