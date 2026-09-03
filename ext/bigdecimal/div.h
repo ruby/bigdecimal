@@ -168,7 +168,7 @@ VpDivdNewtonInner(VALUE args_ptr)
     AddExponent(r, a->exponent);
     AddExponent(r, -(ssize_t)(base_prec + div_prec));
     RB_GC_GUARD(a2.bigdecimal);
-    RB_GC_GUARD(a2.bigdecimal);
+    RB_GC_GUARD(b2.bigdecimal);
     RB_GC_GUARD(c2.bigdecimal);
     RB_GC_GUARD(r2.bigdecimal);
     return Qnil;
