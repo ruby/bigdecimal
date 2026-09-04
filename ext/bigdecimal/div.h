@@ -60,14 +60,10 @@ divmod_by_inv_mul(VALUE x, VALUE y, VALUE inv, VALUE *res_div, VALUE *res_mod) {
 static void
 slice_copy(DECDIG *dest, Real *src, size_t rshift, size_t length) {
     ssize_t start = src->exponent - (ssize_t)rshift - (ssize_t)length;
-    if (start >= (ssize_t)src->Prec) return;
-    if (start < 0) {
-        dest -= start;
-        length -= (size_t)(-start);
-        start = 0;
-    }
-    size_t max_length = (size_t)((ssize_t)src->Prec - start);
-    memcpy(dest, src->frac + start, Min(length, max_length) * sizeof(DECDIG));
+    ssize_t from = Max(start, 0);
+    ssize_t to = Min(start + (ssize_t)length, (ssize_t)src->Prec);
+    if (from >= to) return;
+    memcpy(dest + (from - start), src->frac + from, (size_t)(to - from) * sizeof(DECDIG));
 }
 
 /* Calculates divmod using Newton-Raphson method.
