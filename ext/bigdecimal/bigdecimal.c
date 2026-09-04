@@ -6008,7 +6008,7 @@ VpMidRound(Real *y, unsigned short f, ssize_t nf)
 	y->frac[ix] = div;
 	VpNmlz(y);
     }
-    if (exptoadd > 0) {
+    if (exptoadd > 0 && !VpIsZero(y)) {
 	y->exponent += (SIGNED_VALUE)(exptoadd / BASE_FIG);
 	exptoadd %= (ssize_t)BASE_FIG;
 	for (i = 0; i < exptoadd; i++) {
