@@ -158,11 +158,8 @@ VpDivdNewtonInner(VALUE args_ptr)
     r2 = GetBDValueMust(mod);
     VpAsgn(c, c2.real, VpGetSign(a) * VpGetSign(b));
     VpAsgn(r, r2.real, VpGetSign(a));
-    AddExponent(c, a->exponent);
-    AddExponent(c, -b->exponent);
-    AddExponent(c, -(ssize_t)div_prec);
-    AddExponent(r, a->exponent);
-    AddExponent(r, -(ssize_t)(base_prec + div_prec));
+    if (!VpIsZero(c)) AddExponent(c, a->exponent - b->exponent - (ssize_t)div_prec);
+    if (!VpIsZero(r)) AddExponent(r, a->exponent - (ssize_t)(base_prec + div_prec));
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(b2.bigdecimal);
     RB_GC_GUARD(c2.bigdecimal);
