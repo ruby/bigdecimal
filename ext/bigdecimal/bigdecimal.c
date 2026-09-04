@@ -5123,6 +5123,7 @@ VpNmlz(Real *a)
 NoVal:
     a->frac[0] = 0;
     a->Prec = 1;
+    a->exponent = 0;
     return 0;
 }
 
