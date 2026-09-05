@@ -267,21 +267,21 @@ VP_EXPORT inline BDVALUE rbd_allocate_struct_zero_wrap(int sign, size_t const di
 #define VpIsPosZero(a)  ((a)->sign==VP_SIGN_POSITIVE_ZERO)
 #define VpIsNegZero(a)  ((a)->sign==VP_SIGN_NEGATIVE_ZERO)
 #define VpIsZero(a)     (VpIsPosZero(a) || VpIsNegZero(a))
-#define VpSetPosZero(a) ((a)->frac[0]=0,(a)->Prec=1,(a)->sign=VP_SIGN_POSITIVE_ZERO)
-#define VpSetNegZero(a) ((a)->frac[0]=0,(a)->Prec=1,(a)->sign=VP_SIGN_NEGATIVE_ZERO)
+#define VpSetPosZero(a) ((a)->frac[0]=0,(a)->Prec=1,(a)->exponent=0,(a)->sign=VP_SIGN_POSITIVE_ZERO)
+#define VpSetNegZero(a) ((a)->frac[0]=0,(a)->Prec=1,(a)->exponent=0,(a)->sign=VP_SIGN_NEGATIVE_ZERO)
 #define VpSetZero(a,s)  (void)(((s)>0)?VpSetPosZero(a):VpSetNegZero(a))
 
 /* NaN */
 #define VpIsNaN(a)      ((a)->sign==VP_SIGN_NaN)
-#define VpSetNaN(a)     ((a)->frac[0]=0,(a)->Prec=1,(a)->sign=VP_SIGN_NaN)
+#define VpSetNaN(a)     ((a)->frac[0]=0,(a)->Prec=1,(a)->exponent=0,(a)->sign=VP_SIGN_NaN)
 
 /* Infinity */
 #define VpIsPosInf(a)   ((a)->sign==VP_SIGN_POSITIVE_INFINITE)
 #define VpIsNegInf(a)   ((a)->sign==VP_SIGN_NEGATIVE_INFINITE)
 #define VpIsInf(a)      (VpIsPosInf(a) || VpIsNegInf(a))
 #define VpIsDef(a)      ( !(VpIsNaN(a)||VpIsInf(a)) )
-#define VpSetPosInf(a)  ((a)->frac[0]=0,(a)->Prec=1,(a)->sign=VP_SIGN_POSITIVE_INFINITE)
-#define VpSetNegInf(a)  ((a)->frac[0]=0,(a)->Prec=1,(a)->sign=VP_SIGN_NEGATIVE_INFINITE)
+#define VpSetPosInf(a)  ((a)->frac[0]=0,(a)->Prec=1,(a)->exponent=0,(a)->sign=VP_SIGN_POSITIVE_INFINITE)
+#define VpSetNegInf(a)  ((a)->frac[0]=0,(a)->Prec=1,(a)->exponent=0,(a)->sign=VP_SIGN_NEGATIVE_INFINITE)
 #define VpSetInf(a,s)   (void)(((s)>0)?VpSetPosInf(a):VpSetNegInf(a))
 #define VpHasVal(a)     (a->frac[0])
 #define VpIsOne(a)      ((a->Prec==1)&&(a->frac[0]==1)&&(a->exponent==1))

@@ -60,14 +60,10 @@ divmod_by_inv_mul(VALUE x, VALUE y, VALUE inv, VALUE *res_div, VALUE *res_mod) {
 static void
 slice_copy(DECDIG *dest, Real *src, size_t rshift, size_t length) {
     ssize_t start = src->exponent - (ssize_t)rshift - (ssize_t)length;
-    if (start >= (ssize_t)src->Prec) return;
-    if (start < 0) {
-        dest -= start;
-        length -= (size_t)(-start);
-        start = 0;
-    }
-    size_t max_length = (size_t)((ssize_t)src->Prec - start);
-    memcpy(dest, src->frac + start, Min(length, max_length) * sizeof(DECDIG));
+    ssize_t from = Max(start, 0);
+    ssize_t to = Min(start + (ssize_t)length, (ssize_t)src->Prec);
+    if (from >= to) return;
+    memcpy(dest + (from - start), src->frac + from, (size_t)(to - from) * sizeof(DECDIG));
 }
 
 /* Calculates divmod using Newton-Raphson method.
@@ -162,11 +158,8 @@ VpDivdNewtonInner(VALUE args_ptr)
     r2 = GetBDValueMust(mod);
     VpAsgn(c, c2.real, VpGetSign(a) * VpGetSign(b));
     VpAsgn(r, r2.real, VpGetSign(a));
-    AddExponent(c, a->exponent);
-    AddExponent(c, -b->exponent);
-    AddExponent(c, -(ssize_t)div_prec);
-    AddExponent(r, a->exponent);
-    AddExponent(r, -(ssize_t)(base_prec + div_prec));
+    if (!VpIsZero(c)) AddExponent(c, a->exponent - b->exponent - (ssize_t)div_prec);
+    if (!VpIsZero(r)) AddExponent(r, a->exponent - (ssize_t)(base_prec + div_prec));
     RB_GC_GUARD(a2.bigdecimal);
     RB_GC_GUARD(b2.bigdecimal);
     RB_GC_GUARD(c2.bigdecimal);

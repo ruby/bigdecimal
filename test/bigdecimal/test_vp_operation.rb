@@ -182,6 +182,17 @@ class TestVpOperation < Test::Unit::TestCase
     assert_vpdivd_equal([divy2_2, x - y2 * divy2_2], [x, y2, 2])
   end
 
+  def test_vpdivd_zero_quotient_block
+    # The last block of the quotient is zero and x * inv is far below 1.
+    # Copying that zero quotient wrote outside of the result buffer.
+    y = BigDecimal(7 * BASE + 1)
+    x = y * BASE**3 + 5
+    assert_vpdivd_equal([BigDecimal(BASE**3), BigDecimal(5)], [x, y, 4])
+    y = BigDecimal(10**1000 + 7)
+    x = y * BigDecimal("1e1800") + 5
+    assert_equal([BigDecimal("1e1800"), BigDecimal(5)], x.divmod(y))
+  end
+
   def test_vpdivd_intermediate_zero
     x = BigDecimal('123456789.246913578000000000123456789')
     y = BigDecimal('123456789')
