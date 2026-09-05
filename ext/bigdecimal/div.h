@@ -1,18 +1,45 @@
+struct vp_settings {
+    size_t prec_limit;
+    unsigned short rounding_mode;
+};
+
+static VALUE
+restore_vp_settings(VALUE saved_ptr)
+{
+    struct vp_settings *saved = (struct vp_settings *)saved_ptr;
+    VpSetPrecLimit(saved->prec_limit);
+    VpSetRoundMode(saved->rounding_mode);
+    return Qnil;
+}
+
 // Calculate the inverse of x using the Newton-Raphson method.
+// Assumes no precision limit and ROUND_HALF_UP. See VpDivdNewton.
 static VALUE
 newton_raphson_inverse(VALUE x, size_t prec) {
     BDVALUE bdone = NewZeroWrap(1, 1);
     VpSetOne(bdone.real);
     VALUE one = bdone.bigdecimal;
 
-    // Initial approximation in 2 digits
+    // Initial approximation: 10^18 / (leading 9 digits of x), calculated in 64-bit integer.
+    // Truncating x to 9 digits and the quotient to an integer keep the relative error below 1.2e-8,
+    // so it has at least 7 correct digits.
+    const size_t initial_digits = 7;
+    const DECDIG_DBL base_sq = (DECDIG_DBL)BIGDECIMAL_BASE * BIGDECIMAL_BASE;
     BDVALUE bdx = GetBDValueMust(x);
+    DECDIG_DBL x_lead = (DECDIG_DBL)bdx.real->frac[0] * BIGDECIMAL_BASE + (bdx.real->Prec >= 2 ? bdx.real->frac[1] : 0);
+    int shift = 0;
+    while (x_lead < base_sq / 10) {
+        x_lead *= 10;
+        shift++;
+    }
+    // Dividing base_sq - 1 instead of base_sq keeps the quotient below 10 * BASE,
+    // so that frac[0] of inv0 never reaches BASE.
+    DECDIG_DBL inv_lead = (base_sq - 1) / (x_lead / BIGDECIMAL_BASE);
+    for (int i = 0; i < shift; i++) inv_lead *= 10;
     BDVALUE inv0 = NewZeroWrap(1, 2 * BIGDECIMAL_COMPONENT_FIGURES);
     VpSetOne(inv0.real);
-    DECDIG_DBL numerator = (DECDIG_DBL)BIGDECIMAL_BASE * 100;
-    DECDIG_DBL denominator = (DECDIG_DBL)bdx.real->frac[0] * 100 + (DECDIG_DBL)(bdx.real->Prec >= 2 ? bdx.real->frac[1] : 0) * 100 / BIGDECIMAL_BASE;
-    inv0.real->frac[0] = (DECDIG)(numerator / denominator);
-    inv0.real->frac[1] = (DECDIG)((numerator % denominator) * (BIGDECIMAL_BASE / 100) / denominator * 100);
+    inv0.real->frac[0] = (DECDIG)(inv_lead / BIGDECIMAL_BASE);
+    inv0.real->frac[1] = (DECDIG)(inv_lead % BIGDECIMAL_BASE);
     inv0.real->Prec = 2;
     inv0.real->exponent = 1 - bdx.real->exponent;
     VpNmlz(inv0.real);
@@ -22,14 +49,21 @@ newton_raphson_inverse(VALUE x, size_t prec) {
     int bl = 1;
     while (((size_t)1 << bl) < prec) bl++;
 
+    // Each iteration doubles the number of correct digits, and the rounding error of
+    // the previous iteration is squared into the new digits. Margin digits keep the
+    // squared error below the last digit, otherwise it can grow over iterations.
+    const size_t margin = 4;
     for (int i = bl; i >= 0; i--) {
-        size_t n = (prec >> i) + 2;
+        size_t n = (prec >> i) + margin;
         if (n > prec) n = prec;
+        // inv0 already has this precision. The last iteration is kept to round inv to prec digits.
+        if (n <= initial_digits && i > 0) continue;
         // Newton-Raphson iteration: inv_next = inv + inv * (1 - x * inv)
+        // (1 - x * inv) is about 10^(-n/2), so calculating it in n/2 digits is enough for inv_next in n digits.
         VALUE one_minus_x_inv = BigDecimal_sub2(
             one,
             BigDecimal_mult(BigDecimal_mult2(x, one, SIZET2NUM(n + 1)), inv),
-            SIZET2NUM(SIZET2NUM(n / 2))
+            SIZET2NUM(n / 2 + margin)
         );
         inv = BigDecimal_add2(
             inv,
@@ -128,11 +162,15 @@ divmod_newton(VALUE x, VALUE y, VALUE *div_out, VALUE *mod_out) {
     *mod_out = mod;
 }
 
+struct vp_divd_newton_args {
+    Real *c, *r, *a, *b;
+};
+
 static VALUE
 VpDivdNewtonInner(VALUE args_ptr)
 {
-    Real **args = (Real**)args_ptr;
-    Real *c = args[0], *r = args[1], *a = args[2], *b = args[3];
+    struct vp_divd_newton_args *args = (struct vp_divd_newton_args *)args_ptr;
+    Real *c = args->c, *r = args->r, *a = args->a, *b = args->b;
     BDVALUE a2, b2, c2, r2;
     VALUE div, mod, a2_frac = Qnil;
     size_t div_prec = c->MaxPrec - 1;
@@ -167,19 +205,15 @@ VpDivdNewtonInner(VALUE args_ptr)
     return Qnil;
 }
 
-static VALUE
-ensure_restore_prec_limit(VALUE limit)
-{
-    VpSetPrecLimit(NUM2SIZET(limit));
-    return Qnil;
-}
-
+// Newton-Raphson iteration converges from below, so a rounding mode that rounds toward zero
+// (ROUND_DOWN, ROUND_FLOOR) adds error in the same direction at every iteration.
+// Calculate with ROUND_HALF_UP and without precision limit, and restore them even if an exception is raised.
 static void
 VpDivdNewton(Real *c, Real *r, Real *a, Real *b)
 {
-    Real *args[4] = {c, r, a, b};
-    size_t pl = VpGetPrecLimit();
+    struct vp_divd_newton_args args = {c, r, a, b};
+    struct vp_settings saved = {VpGetPrecLimit(), VpGetRoundMode()};
     VpSetPrecLimit(0);
-    // Ensure restoring prec limit because some methods used in VpDivdNewtonInner may raise an exception
-    rb_ensure(VpDivdNewtonInner, (VALUE)args, ensure_restore_prec_limit, SIZET2NUM(pl));
+    VpSetRoundMode(VP_ROUND_HALF_UP);
+    rb_ensure(VpDivdNewtonInner, (VALUE)&args, restore_vp_settings, (VALUE)&saved);
 }

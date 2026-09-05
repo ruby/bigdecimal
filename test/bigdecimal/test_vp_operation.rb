@@ -44,21 +44,17 @@ class TestVpOperation < Test::Unit::TestCase
   end
 
   def test_newton_inverse
+    # newton_raphson_inverse assumes ROUND_HALF_UP and no precision limit (the default of this test)
     xs = [BigDecimal(3), BigDecimal('123e50'), BigDecimal('13' * 44), BigDecimal('17' * 45), BigDecimal('19' * 46)]
-    %i[up half_up down].each do |rounding_mode|
-      BigDecimal.save_rounding_mode do
-        BigDecimal.mode(BigDecimal::ROUND_MODE, rounding_mode)
-        [*1..32, 50, 100, 200, 300].each do |prec|
-          xs.each do |x|
-            inv = x.newton_raphson_inverse(prec)
-            assert_in_delta(1, x * inv, BigDecimal("1e#{1 - prec}"))
+    [*1..32, 50, 100, 200, 300].each do |prec|
+      xs.each do |x|
+        inv = x.newton_raphson_inverse(prec)
+        assert_in_delta(1, x * inv, BigDecimal("1e#{1 - prec}"))
 
-            high_precision_inv = inv * (2 - x * inv)
-            expected_inv = high_precision_inv.mult(1, prec)
-            last_digit = BigDecimal("1e#{expected_inv.exponent - prec}")
-            assert_include([expected_inv - last_digit, expected_inv, expected_inv + last_digit], inv)
-          end
-        end
+        high_precision_inv = inv * (2 - x * inv)
+        expected_inv = high_precision_inv.mult(1, prec)
+        last_digit = BigDecimal("1e#{expected_inv.exponent - prec}")
+        assert_include([expected_inv - last_digit, expected_inv, expected_inv + last_digit], inv)
       end
     end
   end
@@ -85,6 +81,26 @@ class TestVpOperation < Test::Unit::TestCase
       assert_equal(3, BigDecimal.limit)
       assert_equal([x, mod], z.vpdivd_newton(y, prec))
       assert_equal(3, BigDecimal.limit)
+    end
+  end
+
+  def test_not_affected_by_rounding_mode
+    x_int = 123**135
+    y_int = 135**123
+    mod_int = 111**111
+    x = BigDecimal(x_int)
+    y = BigDecimal(y_int)
+    mod = BigDecimal(mod_int)
+    z = BigDecimal(x_int * y_int + mod_int)
+    prec = (z.exponent - 1) / BASE_FIG - (y.exponent - 1) / BASE_FIG + 1
+    %i[up down ceiling floor half_even].each do |rounding_mode|
+      BigDecimal.save_rounding_mode do
+        mode = BigDecimal.mode(BigDecimal::ROUND_MODE, rounding_mode)
+        assert_equal([x, mod], z.vpdivd(y, prec))
+        assert_equal(mode, BigDecimal.mode(BigDecimal::ROUND_MODE))
+        assert_equal([x, mod], z.vpdivd_newton(y, prec))
+        assert_equal(mode, BigDecimal.mode(BigDecimal::ROUND_MODE))
+      end
     end
   end
 
