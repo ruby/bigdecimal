@@ -172,13 +172,20 @@ module BigMath
         ans = ans.mult(base.power(1 << index, prec), prec)
       end
       if exp_sqrtpi != 0
-        pi = BigMath::PI(prec)
+        pi = BigMath::PI(doubling_level_prec(prec, power_part.size - 1))
         # exp_sqrtpi is 2**k - 1 (odd): the doubling recursion squares the child's
         # sqrt(pi) exponent and adds one, so only the last level's sqrt survives
         pipow = pi.power(exp_sqrtpi / 2, prec).mult(pi.sqrt(prec), prec)
         ans = ans.div(pipow, prec)
       end
       ans
+    end
+
+    # Precision for values that integer_factorial raises to the power 2**index.
+    # The power multiplies their relative error by 2**index, so they need
+    # index * log10(2) more digits than the result.
+    def self.doubling_level_prec(prec, index)
+      prec + (index * Math.log10(2)).ceil + 1
     end
 
     # Calculate log factorial for integer n
@@ -205,14 +212,17 @@ module BigMath
       fact_y = BigDecimal(1)
       # factorial_power_part is non-decreasing (deeper recursion levels have smaller b,
       # and gamma_lagrange_l grows as b shrinks), so fact_y can be extended incrementally.
+      # fact_y is carried over to every later index, so it needs the precision
+      # of the deepest level from the start.
+      level_prec = doubling_level_prec(prec, factorial_power_part.size - 1)
       factorial_power_part.each_with_index do |factorial_arg, index|
         # Exact product (no bit drop): these ranges total only O(prec * log(prec)) digits,
         # and a dropped 2**s here would be raised to 2**index, exceeding the representable
         # exponent range while base_power_part[index] underflows by the same amount.
         mantissa, = int_bsm_prod(fact_x + 1..factorial_arg)
-        fact_y = fact_y.mult(mantissa, prec)
+        fact_y = fact_y.mult(mantissa, level_prec)
         fact_x = factorial_arg
-        base_power_part[index] = base_power_part[index].mult(fact_y, prec)
+        base_power_part[index] = base_power_part[index].mult(fact_y, level_prec)
       end
       [base_power_part, exp2, exp_sqrtpi]
     end
@@ -220,9 +230,11 @@ module BigMath
     # Returns [base_power_part, factorial_power_part, exp2, exp_sqrtpi] that can produce factorial(n) as:
     # factorial(n) = prod { base_power_part[i]**(1 << i) } * prod { factorial(factorial_power_part[i])**(1 << i) } * 2**exp2 / sqrt(pi)**(exp_sqrtpi)
     # If n is large, this method recursively calculates factorial for smaller n by Legendre duplication formula.
-    def self.integer_factorial_recursive(n, prec)
+    # index is the recursion depth, which is also the position in the returned arrays.
+    def self.integer_factorial_recursive(n, prec, index = 0)
+      level_prec = doubling_level_prec(prec, index)
       if n < 4 * prec
-        mantissa, exp2 = int_bsm_prod(1..n, drop_cap_bits(prec))
+        mantissa, exp2 = int_bsm_prod(1..n, drop_cap_bits(level_prec))
         return [[BigDecimal(mantissa)], [], exp2, 0]
       end
 
@@ -231,11 +243,11 @@ module BigMath
       # gamma_lagrange((n + 1) / 2 + 0.5, prec) computes the half-integer factorial
       # (whichever of the two factors above is a half-integer).
       half_arg = BigDecimal((n + 1) / 2) + BigDecimal('0.5')
-      base, large_factorial_arg, small_factorial_arg, lagrange_exp2 = gamma_lagrange(half_arg, prec)
+      base, large_factorial_arg, small_factorial_arg, lagrange_exp2 = gamma_lagrange(half_arg, level_prec)
 
       range_mantissa, = int_bsm_prod(large_factorial_arg + 1..n / 2) # exact: total size is O(prec) digits
-      base = base.mult(range_mantissa, prec)
-      base_power_part, factorial_power_part, exp2, exp_sqrtpi = integer_factorial_recursive(large_factorial_arg, prec)
+      base = base.mult(range_mantissa, level_prec)
+      base_power_part, factorial_power_part, exp2, exp_sqrtpi = integer_factorial_recursive(large_factorial_arg, prec, index + 1)
       [
         [base] + base_power_part,
         [small_factorial_arg] + factorial_power_part,
@@ -341,6 +353,11 @@ module BigMath
         sum = BigDecimal(0)
         prod = BigDecimal(1)
 
+        # sum, c and prod are updated once per batch, so their rounding errors
+        # accumulate in proportion to the number of batches.
+        batch_count = (2 * l + 1 + shift) / batch_size + 1
+        accumulate_prec = prec + Math.log10(batch_count).ceil + 1
+
         ((b - l)..(b + l)).to_a.each_slice(batch_size) do |batch_ks|
           # Calculate prod{ x - k } in this batch
           batch_prod, prod_coef = x_minus_k_prod_coef(batch_ks, xn, internal_xn_prec)
@@ -365,15 +382,15 @@ module BigMath
           # batch_prod loses relative accuracy when x is extremely close to a node in this
           # batch. This is harmless: the same computed value is divided into sum here and
           # multiplied into prod below, so the error cancels in the final prod * sum.
-          sum = sum.add(batch_sum.mult(c, prec).div(batch_prod, prec), prec)
-          c = c.mult(c_scale.numerator, prec).div(c_scale.denominator, prec)
-          prod = prod.mult(batch_prod, prec)
+          sum = sum.add(batch_sum.mult(c, accumulate_prec).div(batch_prod, accumulate_prec), accumulate_prec)
+          c = c.mult(c_scale.numerator, accumulate_prec).div(c_scale.denominator, accumulate_prec)
+          prod = prod.mult(batch_prod, accumulate_prec)
         end
 
         # Perform shift.times {|i| prod = prod.mult(x - i, prec) } with batch processing
         shift.times.to_a.each_slice(batch_size) do |batch_ks|
           shift_prod, _prod_coef = x_minus_k_prod_coef(batch_ks, xn, internal_xn_prec)
-          prod = prod.mult(shift_prod, prec)
+          prod = prod.mult(shift_prod, accumulate_prec)
         end
       else
         # Binary Splitting Method (BSM) for short-digit inputs.
