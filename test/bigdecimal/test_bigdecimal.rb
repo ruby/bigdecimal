@@ -113,6 +113,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal(int), big, "[ruby/bigdecimal#192]")
   end
 
+  def test_BigDecimal_with_ascii_incompatible_string
+    str = "123".encode("UTF-16LE")
+    assert_raise(Encoding::CompatibilityError) { BigDecimal(str) }
+    assert_raise(Encoding::CompatibilityError) { BigDecimal(str, exception: false) }
+  end
+
   def test_BigDecimal_with_invalid_string
     [
       '', '.', 'e1', 'd1', '.e', '.d', '1.e', '1.d', '.1e', '.1d',
