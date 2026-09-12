@@ -13,7 +13,7 @@ module BigMath
   #   (Complexities assume quasi-linear multiplication, counting large-by-small products
   #   as (n/m) * M(m) = n * log(m) bit ops. BigDecimal multiplies the small coefficients
   #   by schoolbook instead: an extra log factor asymptotically, but faster at any feasible PREC.)
-  #   Requires fast calculation of factorial(nearly_x_integer).
+  #   Requires fast factorial of an integer near x (see Factorial Doubling below).
   #
   # Factorial Doubling for fast calculation of large factorials:
   #   Using Legendre duplication formula, we can calculate factorial(2n) from factorial(n) and factorial(n + 0.5).
@@ -115,7 +115,7 @@ module BigMath
       end
     end
 
-    # Calculates prod { x - k } and its coefficients for given ks, xn and prec with baby-step giant-step method.
+    # Calculates prod { x - k } for k in ks and the coefficients of the expanded polynomial.
     # xn is an array of precalculated powers of x: [1, x, x**2, x**3, ...]
     def self.x_minus_k_prod_coef(ks, xn, prec)
       coef = [1]
@@ -238,7 +238,7 @@ module BigMath
         return [[BigDecimal(mantissa)], [], exp2, 0]
       end
 
-      # Use Legendre duplication formula to calculate double factorials:
+      # Use Legendre duplication formula to reduce factorial(n) to half-size factorials:
       #   factorial(n) = factorial(n/2.0) * factorial((n-1)/2.0) * 2**n / sqrt(pi)
       # gamma_lagrange((n + 1) / 2 + 0.5, prec) computes the half-integer factorial
       # (whichever of the two factors above is a half-integer).
@@ -287,7 +287,8 @@ module BigMath
     #
     # Time complexity:
     # - O(PREC*log(PREC)^3) for small-digit x (Binary Splitting)
-    # - O(PREC^2) for full-digit x (Baby-step Giant-step)
+    # - O(PREC^2*log(log(PREC))) for full-digit x (Baby-step Giant-step).
+    #   Measured time grows like PREC^2.
     #
     # Returns [base, large_factorial_arg, small_factorial_arg, exp2] that can produce gamma(x) as:
     #   gamma(x) = base * 2**exp2 * factorial(large_factorial_arg) * factorial(small_factorial_arg)
@@ -311,7 +312,7 @@ module BigMath
       exp2 = 0
 
       # --- Reference: Naive interpolation logic ---
-      # Optimize this calculation for full-digit-x case and small-digit-x case.
+      # The two branches below optimize this calculation for the full-digit and small-digit x cases.
       # sum = BigDecimal(0)
       # prod = [*(b - l..b + l), *(0...shift)].map {|i| x - i }.reduce { _1.mult(_2, prec) }
       # c = BigDecimal(1) # represents w_i * f(x_i) (normalized)
@@ -480,7 +481,7 @@ module BigMath
       )
     end
 
-    # Calculate gamma using Stirling's asymptotic expansion.
+    # Calculate log gamma using Stirling's asymptotic expansion.
     # While the condition of this asymptotic expansion is x > prec * log(10) / 2 / pi,
     # we'll use this method only when x is extremely large to reduce the cost of Bernoulli number generation.
     def self.lgamma_stirling(x, prec)
