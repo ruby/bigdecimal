@@ -3012,6 +3012,12 @@ f_BigDecimal(int argc, VALUE *argv, VALUE self)
 static VALUE
 BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
 {
+    StringValue(str);
+    rb_must_asciicompat(str);
+    /* Like String#to_f, ignore everything after an embedded NUL */
+    const char *p = RSTRING_PTR(str);
+    const char *nul = memchr(p, '\0', RSTRING_LEN(str));
+    if (nul) str = rb_str_subseq(str, 0, nul - p);
     char const *c_str = StringValueCStr(str);
     NULLABLE_BDVALUE v = CreateFromString(c_str, klass, false, true);
     RB_GC_GUARD(str);
