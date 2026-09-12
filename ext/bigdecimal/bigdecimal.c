@@ -672,6 +672,7 @@ BigDecimal_load(VALUE self, VALUE str)
         }
     }
     v = bdvalue_nonnullable(CreateFromString((char *)pch, self, true, true));
+    RB_GC_GUARD(str);
     return CheckGetValue(v);
 }
 
@@ -2847,7 +2848,9 @@ rb_str_convert_to_BigDecimal(VALUE val, int raise_exception)
 {
     if (!raise_exception && memchr(RSTRING_PTR(val), '\0', RSTRING_LEN(val))) return Qnil;
     const char *c_str = StringValueCStr(val);
-    return rb_cstr_convert_to_BigDecimal(c_str, raise_exception);
+    VALUE bd = rb_cstr_convert_to_BigDecimal(c_str, raise_exception);
+    RB_GC_GUARD(val);
+    return bd;
 }
 
 static VALUE
@@ -3011,6 +3014,7 @@ BigDecimal_s_interpret_loosely(VALUE klass, VALUE str)
 {
     char const *c_str = StringValueCStr(str);
     NULLABLE_BDVALUE v = CreateFromString(c_str, klass, false, true);
+    RB_GC_GUARD(str);
     if (v.bigdecimal_or_nil == Qnil)
         return Qnil;
     else
