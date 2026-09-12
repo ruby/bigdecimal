@@ -276,6 +276,12 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_equal(nil, BigDecimal(".", exception: false))
     }
     assert_raise(ArgumentError) {
+      BigDecimal("1\0", exception: true)
+    }
+    assert_nothing_raised(ArgumentError) {
+      assert_equal(nil, BigDecimal("1\0", exception: false))
+    }
+    assert_raise(ArgumentError) {
       BigDecimal("1", -1, exception: true)
     }
     assert_nothing_raised(ArgumentError) {
