@@ -293,13 +293,12 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_nothing_raised(ArgumentError) {
       assert_equal(nil, BigDecimal(4.2, Float::DIG + 2, exception: false))
     }
-    # TODO: support conversion from complex
-    # assert_raise(RangeError) {
-    #   BigDecimal(1i, exception: true)
-    # }
-    # assert_nothing_raised(RangeError) {
-    #   assert_equal(nil, BigDecimal(1i, exception: false))
-    # }
+    assert_raise(ArgumentError) {
+      BigDecimal(1i, exception: true)
+    }
+    assert_nothing_raised(ArgumentError) {
+      assert_equal(nil, BigDecimal(1i, exception: false))
+    }
     assert_raise_with_message(TypeError, "can't convert nil into BigDecimal") {
       BigDecimal(nil, exception: true)
     }
