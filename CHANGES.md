@@ -1,5 +1,43 @@
 # CHANGES
 
+## 4.1.3
+
+* Faster gamma and lgamma calculation using Lagrange interpolation [GH-524]
+
+  **@tompng**
+
+* Bit-burst algorithm version of BigMath.erf and BigMath.erfc [GH-458]
+
+  **@tompng**
+
+* Fix Newton-Raphson division bugs: precision loss, out-of-bounds write, and missing GC guard for the divisor [GH-548] [GH-552] [GH-553]
+
+  **@OskarEichler** **@tompng**
+
+* Fix GC safety issues around RB_GC_GUARD and string arguments [GH-536] [GH-556]
+
+  **@tompng**
+
+* Honor `exception: false` for Complex and strings with null bytes [GH-549] [GH-550]
+
+  **@OskarEichler**
+
+* Make String#to_d accept embedded NUL bytes and reject ASCII-incompatible strings [GH-557]
+
+  **@tompng**
+
+* Correct nullable BigDecimal conversion RBS signature [GH-551]
+
+  **@OskarEichler**
+
+* Declare TypedData with RUBY_TYPED_THREAD_SAFE_FREE [GH-541]
+
+  **@byroot**
+
+* Fix unused-but-set-global warnings in clang-23 [GH-540]
+
+  **@nobu**
+
 ## 4.1.2
 
 * Fix dtoa Ractor-safety bug. Update dtoa to version from Ruby 4.0 [GH-528]
