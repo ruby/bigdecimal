@@ -1,0 +1,19 @@
+loop_count: 100000
+
+contexts:
+- gems:
+    bigdecimal: 4.1.3
+- name: "master"
+  prelude: |-
+    $LOAD_PATH.unshift(File.expand_path("lib"))
+    require "bigdecimal"
+
+prelude: |-
+  decimal = BigDecimal("123.456")
+  zero = BigDecimal("0")
+
+benchmark:
+  integer_zero: decimal <=> 0
+  integer_one: decimal <=> 1
+  float_zero: decimal <=> 0.0
+  decimal_zero: decimal <=> zero

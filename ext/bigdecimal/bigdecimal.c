@@ -1320,12 +1320,43 @@ BigDecimal_sub(VALUE self, VALUE r)
     return BigDecimal_addsub_with_coerce(self, r, 0, -1);
 }
 
+/* Comparison only reads this operand; constructors must still allocate zero. */
+static NULLABLE_BDVALUE
+GetBDValueForComparison(VALUE v, size_t prec)
+{
+    switch (TYPE(v)) {
+      case T_FLOAT:
+        v = rb_float_convert_to_BigDecimal(v, 0, true);
+        break;
+
+      case T_RATIONAL:
+        v = rb_rational_convert_to_BigDecimal(v, prec, true);
+        break;
+
+      case T_DATA:
+        if (!is_kind_of_BigDecimal(v)) {
+            return (NULLABLE_BDVALUE) { Qnil, NULL };
+        }
+        break;
+
+      case T_FIXNUM:
+      case T_BIGNUM:
+        v = v == INT2FIX(0) ? BigDecimal_positive_zero() : rb_inum_convert_to_BigDecimal(v);
+        break;
+
+      default:
+        return (NULLABLE_BDVALUE) { Qnil, NULL };
+    }
+
+    return (NULLABLE_BDVALUE) { v, VpPtr(v) };
+}
+
 static VALUE
 BigDecimalCmp(VALUE self, VALUE r,char op)
 {
     SIGNED_VALUE e;
     BDVALUE a = GetBDValueMust(self);
-    NULLABLE_BDVALUE b = GetBDValueWithPrec(r, GetCoercePrec(a.real, 0));
+    NULLABLE_BDVALUE b = GetBDValueForComparison(r, GetCoercePrec(a.real, 0));
 
     if (b.real_or_null == NULL) {
 	ID f = 0;
