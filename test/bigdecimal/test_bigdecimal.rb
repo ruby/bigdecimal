@@ -792,6 +792,25 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(false, BigDecimal("NaN") == BigDecimal("NaN"))
   end
 
+  def test_cmp_integer_zero
+    BigDecimal.mode(BigDecimal::EXCEPTION_ALL, false)
+    cases = {
+      "NaN"       => [nil, false, false, false, false, false, false],
+      "-Infinity" => [-1, false, true, true, false, false, false],
+      "-1E-1000"  => [-1, false, true, true, false, false, false],
+      "-0"        => [0, true, false, true, false, true, true],
+      "0"         => [0, true, false, true, false, true, true],
+      "1E-1000"   => [1, false, false, false, true, true, false],
+      "Infinity"  => [1, false, false, false, true, true, false],
+    }
+    cases.each do |text, expected|
+      value = BigDecimal(text)
+      BigDecimal.mode(BigDecimal::EXCEPTION_ALL, true)
+      assert_equal(expected, [:<=>, :==, :<, :<=, :>, :>=, :eql?].map { |op| value.public_send(op, 0) }, text)
+      BigDecimal.mode(BigDecimal::EXCEPTION_ALL, false)
+    end
+  end
+
   def test_cmp_failing_coercion
     n1 = BigDecimal("1")
     assert_equal(nil, n1 <=> nil)
