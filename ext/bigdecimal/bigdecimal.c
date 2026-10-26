@@ -4209,9 +4209,11 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     while (ISSPACE(*szVal)) szVal++;
 
     /* Check on Inf & NaN */
-    NULLABLE_BDVALUE special_bd = bigdecimal_parse_special_string(szVal);
-    if (special_bd.real_or_null != NULL) {
-        return special_bd;
+    if (*szVal == 'I' || *szVal == 'N' || *szVal == '+' || *szVal == '-') {
+        NULLABLE_BDVALUE special_bd = bigdecimal_parse_special_string(szVal);
+        if (special_bd.real_or_null != NULL) {
+            return special_bd;
+        }
     }
 
     /* Skip leading `#`.
@@ -4223,8 +4225,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     /* Scanning digits */
 
     /* A buffer for keeping scanned digits */
-    buf = rb_str_tmp_new(strlen(szVal) + 1);
-    psz = RSTRING_PTR(buf);
+    psz = ALLOCV_N(char, buf, strlen(szVal) + 1);
 
     /* cursor: i for psz, and j for szVal */
     i = j = 0;
@@ -4381,7 +4382,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     Real *vp = VpPtr(obj);
     VpSetZero(vp, sign);
     VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
-    rb_str_resize(buf, 0);
+    ALLOCV_END(buf);
     return (NULLABLE_BDVALUE) { obj, vp };
 }
 
