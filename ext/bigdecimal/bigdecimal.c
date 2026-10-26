@@ -2662,6 +2662,53 @@ rb_inum_convert_to_BigDecimal(VALUE val)
     }
 }
 
+/*
+ * Shortest round-trip digits of a finite nonzero double, as BigDecimal_dtoa
+ * mode 0 returns them, for doubles that read back from m / 10**k with
+ * m < 2**51 and 0 <= k <= 22: prices, rates and most decimal literals.
+ *
+ * At such a scale, the doubles reading back to d span less than 0.5 units,
+ * so at most one integer m reads back to d. The smallest k with such an m
+ * gives the shortest digits, and IEEE division of the two exact operands
+ * rounds m / 10**k exactly like strtod would.
+ *
+ * Returns the number of digits written to buf, or 0 when dtoa is needed.
+ */
+static int
+float_shortest_digits_fast(double d, char *buf, int *decpt, int *negative_p)
+{
+#if defined(FLT_EVAL_METHOD) && FLT_EVAL_METHOD == 0
+    static const double powers_of_ten[] = {
+        1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11,
+        1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22
+    };
+    const double two_pow_51 = 2251799813685248.0;
+    const double abs_d = fabs(d);
+
+    for (int k = 0; k < (int)numberof(powers_of_ten); k++) {
+        const double scaled = abs_d * powers_of_ten[k];
+        if (!(scaled < two_pow_51)) return 0;
+
+        const double m = round(scaled);
+        if (m / powers_of_ten[k] != abs_d) continue;
+
+        char digits[BIGDECIMAL_DOUBLE_FIGURES + 1];
+        uint64_t n = (uint64_t)m;
+        int len = 0;
+        for (; n > 0; n /= 10) digits[len++] = '0' + (char)(n % 10);
+
+        int ntz = 0;
+        while (digits[ntz] == '0') ntz++;
+        for (int i = 0; i < len - ntz; i++) buf[i] = digits[len - 1 - i];
+
+        *decpt = len - k;
+        *negative_p = signbit(d) ? 1 : 0;
+        return len - ntz;
+    }
+#endif
+    return 0;
+}
+
 static VALUE
 rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
 {
@@ -2704,16 +2751,22 @@ rb_float_convert_to_BigDecimal(VALUE val, size_t digs, int raise_exception)
     /* Use the same logic in flo_to_s to convert a float to a decimal string */
     char buf[BIGDECIMAL_DOUBLE_FIGURES + BASE_FIG + 2 + 1];  /* sizeof(buf) == 28 in the typical case */
     int decpt, negative_p;
-    char *e;
-    const int mode = digs == 0 ? 0 : 2;
-    char *p = BigDecimal_dtoa(d, mode, (int)digs, &decpt, &negative_p, &e);
-    int len10 = (int)(e - p);
-    if (len10 > BIGDECIMAL_DOUBLE_FIGURES) {
-        /* TODO: Presumably, rounding should be done here. */
-        len10 = BIGDECIMAL_DOUBLE_FIGURES;
+    int len10 = 0;
+    if (digs == 0) {
+        len10 = float_shortest_digits_fast(d, buf, &decpt, &negative_p);
     }
-    memcpy(buf, p, len10);
-    free(p);
+    if (len10 == 0) {
+        char *e;
+        const int mode = digs == 0 ? 0 : 2;
+        char *p = BigDecimal_dtoa(d, mode, (int)digs, &decpt, &negative_p, &e);
+        len10 = (int)(e - p);
+        if (len10 > BIGDECIMAL_DOUBLE_FIGURES) {
+            /* TODO: Presumably, rounding should be done here. */
+            len10 = BIGDECIMAL_DOUBLE_FIGURES;
+        }
+        memcpy(buf, p, len10);
+        free(p);
+    }
 
     VALUE inum;
     size_t RB_UNUSED_VAR(prec) = 0;
