@@ -2662,22 +2662,54 @@ rb_inum_convert_to_BigDecimal(VALUE val)
     }
 }
 
+#ifdef HAVE_UINT128_T
+/*
+ * Whether m / 10**k rounds to nearest to mantissa * 2**exponent, a normal
+ * double. The comparison is exact, so it holds whatever the FPU rounding
+ * mode or -ffast-math: with q = 1 - exponent - k, the condition
+ * |m / 10**k - d| < ulp(d) / 2 is |m * 2**q - 2 * mantissa * 5**k| < 5**k,
+ * and the gap below a power of two is half as wide. Ties fail; they cannot
+ * occur for m < 2**52, k <= 22.
+ */
+static int
+float_reads_back_from_decimal(uint64_t mantissa, int exponent, uint64_t m, int k)
+{
+    static const uint64_t powers_of_five[] = {
+        1ULL, 5ULL, 25ULL, 125ULL,
+        625ULL, 3125ULL, 15625ULL, 78125ULL,
+        390625ULL, 1953125ULL, 9765625ULL, 48828125ULL,
+        244140625ULL, 1220703125ULL, 6103515625ULL, 30517578125ULL,
+        152587890625ULL, 762939453125ULL, 3814697265625ULL, 19073486328125ULL,
+        95367431640625ULL, 476837158203125ULL, 2384185791015625ULL
+    };
+    const int q = 1 - exponent - k;
+    if (q < 0 || q > 127 || ((uint128_t)m >> (127 - q)) != 0) return 0;
+
+    const uint128_t decimal = (uint128_t)m << q;
+    const uint128_t binary = (uint128_t)(2 * mantissa) * powers_of_five[k];
+    const uint128_t half_ulp = powers_of_five[k];
+    if (decimal >= binary) return decimal - binary < half_ulp;
+    if (mantissa == 1ULL << (DBL_MANT_DIG - 1)) return 2 * (binary - decimal) < half_ulp;
+    return binary - decimal < half_ulp;
+}
+#endif
+
 /*
  * Shortest round-trip digits of a finite nonzero double, as BigDecimal_dtoa
  * mode 0 returns them, for doubles that read back from m / 10**k with
- * m < 2**51 and 0 <= k <= 22: prices, rates and most decimal literals.
+ * m <= 2**51 and 0 <= k <= 22: prices, rates and most decimal literals.
  *
  * At such a scale, the doubles reading back to d span less than 0.5 units,
- * so at most one integer m reads back to d. The smallest k with such an m
- * gives the shortest digits, and IEEE division of the two exact operands
- * rounds m / 10**k exactly like strtod would.
+ * so at most one integer m reads back to d, and the nearest integer to
+ * d * 10**k is it whenever it exists. Every k that finds it gives the same
+ * digits once trailing zeros are stripped: the shortest ones.
  *
  * Returns the number of digits written to buf, or 0 when dtoa is needed.
  */
 static int
 float_shortest_digits_fast(double d, char *buf, int *decpt, int *negative_p)
 {
-#if defined(FLT_EVAL_METHOD) && FLT_EVAL_METHOD == 0 && !defined(__FAST_MATH__)
+#ifdef HAVE_UINT128_T
     static const double powers_of_ten[] = {
         1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11,
         1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22
@@ -2686,15 +2718,21 @@ float_shortest_digits_fast(double d, char *buf, int *decpt, int *negative_p)
     const double abs_d = fabs(d);
     if (abs_d < 1e-22) return 0;
 
+    int exponent;
+    const uint64_t mantissa = (uint64_t)ldexp(frexp(abs_d, &exponent), DBL_MANT_DIG);
+    exponent -= DBL_MANT_DIG;
+
     for (int k = 0; k < numberof(powers_of_ten); k++) {
         const double scaled = abs_d * powers_of_ten[k];
         if (!(scaled < two_pow_51)) return 0;
 
-        const double m = round(scaled);
-        if (m / powers_of_ten[k] != abs_d) continue;
+        const double rounded = round(scaled);
+        if (rounded / powers_of_ten[k] != abs_d) continue; /* cheap filter, the exact check decides */
+        const uint64_t m = (uint64_t)rounded;
+        if (!float_reads_back_from_decimal(mantissa, exponent, m, k)) continue;
 
         char digits[BIGDECIMAL_DOUBLE_FIGURES + 1];
-        uint64_t n = (uint64_t)m;
+        uint64_t n = m;
         int len = 0;
         for (; n > 0; n /= 10) digits[len++] = '0' + (char)(n % 10);
 
