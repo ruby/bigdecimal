@@ -2270,6 +2270,22 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
+  def test_parse_string_allocations
+    omit "allocation counts are CRuby-specific" unless RUBY_ENGINE == "ruby"
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "-rbigdecimal/util", "--disable-gems"], <<-EOS, ["true", "true"], [])
+    def allocations
+      before = GC.stat(:total_allocated_objects)
+      yield
+      GC.stat(:total_allocated_objects) - before
+    end
+    BigDecimal("129.90")
+    "129.90".to_d
+    p allocations { 100.times { BigDecimal("129.90") } } < 250
+    p allocations { 100.times { "129.90".to_d } } < 250
+    EOS
+  end
+
   def test_coerce_under_gc_stress
     paths = $LOAD_PATH.map{|path| "-I#{path}" }
     assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])
