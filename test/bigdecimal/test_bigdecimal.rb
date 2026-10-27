@@ -2256,6 +2256,20 @@ class TestBigDecimal < Test::Unit::TestCase
     EOS
   end
 
+  def test_parse_long_string_under_gc_stress
+    paths = $LOAD_PATH.map{|path| "-I#{path}" }
+    assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, ["2001", "nil", "ArgumentError"], [])
+    GC.stress = true
+    p BigDecimal("1" + "0" * 2000).exponent
+    p BigDecimal("1" * 2000 + "x", exception: false)
+    begin
+      BigDecimal("1" * 2000 + "x")
+    rescue ArgumentError => e
+      puts e.class
+    end
+    EOS
+  end
+
   def test_coerce_under_gc_stress
     paths = $LOAD_PATH.map{|path| "-I#{path}" }
     assert_in_out_err([*paths, "-rbigdecimal", "--disable-gems"], <<-EOS, [], [])

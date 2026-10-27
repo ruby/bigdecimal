@@ -4371,6 +4371,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     if (strict_p && ((ni == 0 && nf == 0) || (exp_seen && ne == 0))) {
         VALUE str;
       invalid_value:
+        ALLOCV_END(buf);
         if (!strict_p) {
             BDVALUE res = rbd_allocate_struct_zero_wrap(1, 1);
             return (NULLABLE_BDVALUE) { res.bigdecimal, res.real };
