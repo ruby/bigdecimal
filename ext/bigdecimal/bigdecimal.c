@@ -2677,15 +2677,16 @@ rb_inum_convert_to_BigDecimal(VALUE val)
 static int
 float_shortest_digits_fast(double d, char *buf, int *decpt, int *negative_p)
 {
-#if defined(FLT_EVAL_METHOD) && FLT_EVAL_METHOD == 0
+#if defined(FLT_EVAL_METHOD) && FLT_EVAL_METHOD == 0 && !defined(__FAST_MATH__)
     static const double powers_of_ten[] = {
         1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11,
         1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22
     };
     const double two_pow_51 = 2251799813685248.0;
     const double abs_d = fabs(d);
+    if (abs_d < 1e-22) return 0;
 
-    for (int k = 0; k < (int)numberof(powers_of_ten); k++) {
+    for (int k = 0; k < numberof(powers_of_ten); k++) {
         const double scaled = abs_d * powers_of_ten[k];
         if (!(scaled < two_pow_51)) return 0;
 
