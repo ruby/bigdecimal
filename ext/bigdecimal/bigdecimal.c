@@ -4155,6 +4155,14 @@ bigdecimal_parse_special_string(const char *str)
     static const size_t table_length = sizeof(table) / sizeof(table[0]);
     size_t i;
 
+    /* Fast path: every entry of the table starts with one of these */
+    switch (*str) {
+      case 'I': case 'N': case '+': case '-':
+        break;
+      default:
+        return (NULLABLE_BDVALUE) { Qnil, NULL };
+    }
+
     for (i = 0; i < table_length; ++i) {
         const char *p;
         if (strncmp(str, table[i].str, table[i].len) != 0) {
@@ -4209,11 +4217,9 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     while (ISSPACE(*szVal)) szVal++;
 
     /* Check on Inf & NaN */
-    if (*szVal == 'I' || *szVal == 'N' || *szVal == '+' || *szVal == '-') {
-        NULLABLE_BDVALUE special_bd = bigdecimal_parse_special_string(szVal);
-        if (special_bd.real_or_null != NULL) {
-            return special_bd;
-        }
+    NULLABLE_BDVALUE special_bd = bigdecimal_parse_special_string(szVal);
+    if (special_bd.real_or_null != NULL) {
+        return special_bd;
     }
 
     /* Skip leading `#`.
