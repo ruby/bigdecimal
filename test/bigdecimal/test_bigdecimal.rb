@@ -1560,6 +1560,18 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_instance_of(BigDecimal, x.round(1))
   end
 
+  def test_round_up_value_far_below_rounding_position
+    ["1e-10", "1e-27", "0.942882777e-12"].each do |s|
+      x = BigDecimal(s)
+      assert_equal(1, x.round(0, BigDecimal::ROUND_UP), s)
+      assert_equal(-1, (-x).round(0, BigDecimal::ROUND_UP), s)
+      assert_equal(BigDecimal("0.000001"), x.round(6, :up), s)
+      assert_equal(BigDecimal("-0.000001"), (-x).round(6, :up), s)
+      assert_equal(1000, x.round(-3, :up), s)
+      assert_equal(x.ceil(6), x.round(6, :up), s)
+    end
+  end
+
   def test_round_half_even
     assert_equal(BigDecimal('12.0'), BigDecimal('12.5').round(half: :even))
     assert_equal(BigDecimal('14.0'), BigDecimal('13.5').round(half: :even))

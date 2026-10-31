@@ -11,3 +11,5 @@
 *.dyld
 *.so
 *.o
+config.bat
+node_modules
