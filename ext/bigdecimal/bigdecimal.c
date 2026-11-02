@@ -5888,7 +5888,7 @@ VpMidRound(Real *y, unsigned short f, ssize_t nf)
     exptoadd=0;
     if (nf < 0) {
 	/* rounding position too left(large). */
-	if (f != VP_ROUND_CEIL && f != VP_ROUND_FLOOR) {
+	if (f != VP_ROUND_UP && f != VP_ROUND_CEIL && f != VP_ROUND_FLOOR) {
 	    VpSetZero(y, VpGetSign(y)); /* truncate everything */
 	    return 0;
 	}
