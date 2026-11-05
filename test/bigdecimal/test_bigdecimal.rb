@@ -2446,6 +2446,7 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_in_delta(0.0, BigMath.log(1, 20))
     assert_in_delta(0.0, BigMath.log(1.0, 20))
     assert_in_delta(0.0, BigMath.log(BigDecimal(1), 20))
+    assert_positive_zero(BigMath.log(1r, 20))
   end
 
   def test_BigMath_log_with_exp_1
@@ -2486,6 +2487,49 @@ class TestBigDecimal < Test::Unit::TestCase
 
   def test_BigMath_log_with_rational
     assert_in_epsilon(BigMath.log(BigDecimal(3 / 7r, 100), 100), BigMath.log(3 / 7r, 100), 1e-99)
+  end
+
+  def test_BigMath_log_with_rational_close_to_one
+    n = 12345**9
+    # The first two and three terms of log(1 + 1/n)'s series round to this reference.
+    expected = BigDecimal("1.5016895257722442449503942510970658615421451954590e-37")
+    assert_in_delta(expected, BigMath.log(Rational(n + 1, n), 50), BigDecimal("1e-85"))
+    assert_in_delta(-expected, BigMath.log(Rational(n, n + 1), 50), BigDecimal("1e-85"))
+  end
+
+  def test_BigMath_log_with_rational_close_to_one_at_low_precision
+    n = 12345**9
+    assert_in_delta(BigDecimal("1.5017e-37"), BigMath.log(Rational(n + 1, n), 5), BigDecimal("1e-41"))
+  end
+
+  def test_BigMath_log_with_rational_closer_to_one_than_precision
+    n = 10**100
+    assert_in_delta(BigDecimal("1e-100"), BigMath.log(Rational(n + 1, n), 50), BigDecimal("1e-148"))
+    assert_in_delta(BigDecimal("-1e-100"), BigMath.log(Rational(n, n + 1), 50), BigDecimal("1e-148"))
+  end
+
+  def test_BigMath_log_with_rational_close_to_one_with_limit
+    n = 12345**9
+    expected = BigDecimal("1.5016895257722442449503942510970658615421451954590e-37")
+    BigDecimal.save_rounding_mode do
+      [:half_up, :down, :ceiling, :floor].each do |mode|
+        BigDecimal.mode(BigDecimal::ROUND_MODE, mode)
+        upper, lower = BigDecimal.save_limit do
+          BigDecimal.limit(10)
+          results = [BigMath.log(Rational(n + 1, n), 50), BigMath.log(Rational(n, n + 1), 50)]
+          assert_equal(10, BigDecimal.limit)
+          results
+        end
+        assert_in_delta(expected, upper, BigDecimal("1e-85"), "rounding mode: #{mode}")
+        assert_in_delta(-expected, lower, BigDecimal("1e-85"), "rounding mode: #{mode}")
+      end
+    end
+  end
+
+  def test_BigMath_log_with_exact_rationals
+    [1/4r, 1/2r, 3/2r, 2r, 3r].each do |x|
+      assert_equal(BigMath.log(BigDecimal(x, 50), 50), BigMath.log(x, 50))
+    end
   end
 
   def test_BigMath_log_under_gc_stress
