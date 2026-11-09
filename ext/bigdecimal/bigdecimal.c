@@ -4155,6 +4155,14 @@ bigdecimal_parse_special_string(const char *str)
     static const size_t table_length = sizeof(table) / sizeof(table[0]);
     size_t i;
 
+    /* Fast path: every entry of the table starts with one of these */
+    switch (*str) {
+      case 'I': case 'N': case '+': case '-':
+        break;
+      default:
+        return (NULLABLE_BDVALUE) { Qnil, NULL };
+    }
+
     for (i = 0; i < table_length; ++i) {
         const char *p;
         if (strncmp(str, table[i].str, table[i].len) != 0) {
@@ -4223,8 +4231,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     /* Scanning digits */
 
     /* A buffer for keeping scanned digits */
-    buf = rb_str_tmp_new(strlen(szVal) + 1);
-    psz = RSTRING_PTR(buf);
+    psz = ALLOCV_N(char, buf, strlen(szVal) + 1);
 
     /* cursor: i for psz, and j for szVal */
     i = j = 0;
@@ -4364,6 +4371,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     if (strict_p && ((ni == 0 && nf == 0) || (exp_seen && ne == 0))) {
         VALUE str;
       invalid_value:
+        ALLOCV_END(buf);
         if (!strict_p) {
             BDVALUE res = rbd_allocate_struct_zero_wrap(1, 1);
             return (NULLABLE_BDVALUE) { res.bigdecimal, res.real };
@@ -4381,7 +4389,7 @@ VpAlloc(const char *szVal, int strict_p, int exc)
     Real *vp = VpPtr(obj);
     VpSetZero(vp, sign);
     VpCtoV(vp, psz, ni, psz + ipf, nf, psz + ipe, ne);
-    rb_str_resize(buf, 0);
+    ALLOCV_END(buf);
     return (NULLABLE_BDVALUE) { obj, vp };
 }
 
