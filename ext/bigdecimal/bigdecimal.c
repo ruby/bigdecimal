@@ -4142,57 +4142,50 @@ overflow:
 NULLABLE_BDVALUE
 bigdecimal_parse_special_string(const char *str)
 {
-    static const struct {
-        const char *str;
-        size_t len;
-        int sign;
-    } table[] = {
-        { SZ_INF,  sizeof(SZ_INF)  - 1, VP_SIGN_POSITIVE_INFINITE },
-        { SZ_PINF, sizeof(SZ_PINF) - 1, VP_SIGN_POSITIVE_INFINITE },
-        { SZ_NINF, sizeof(SZ_NINF) - 1, VP_SIGN_NEGATIVE_INFINITE },
-        { SZ_NaN,  sizeof(SZ_NaN)  - 1, VP_SIGN_NaN               }
-    };
-    static const size_t table_length = sizeof(table) / sizeof(table[0]);
-    size_t i;
+    const char *word;
+    size_t len;
+    int sign;
 
-    /* Fast path: every entry of the table starts with one of these */
     switch (*str) {
-      case 'I': case 'N': case '+': case '-':
+      case 'I':
+        word = SZ_INF;
+        len = sizeof(SZ_INF) - 1;
+        sign = VP_SIGN_POSITIVE_INFINITE;
+        break;
+      case '+':
+        word = SZ_PINF;
+        len = sizeof(SZ_PINF) - 1;
+        sign = VP_SIGN_POSITIVE_INFINITE;
+        break;
+      case '-':
+        word = SZ_NINF;
+        len = sizeof(SZ_NINF) - 1;
+        sign = VP_SIGN_NEGATIVE_INFINITE;
+        break;
+      case 'N':
+        word = SZ_NaN;
+        len = sizeof(SZ_NaN) - 1;
+        sign = VP_SIGN_NaN;
         break;
       default:
         return (NULLABLE_BDVALUE) { Qnil, NULL };
     }
 
-    for (i = 0; i < table_length; ++i) {
-        const char *p;
-        if (strncmp(str, table[i].str, table[i].len) != 0) {
-            continue;
-        }
+    if (strncmp(str, word, len) != 0) return (NULLABLE_BDVALUE) { Qnil, NULL };
 
-        p = str + table[i].len;
-        while (*p && ISSPACE(*p)) ++p;
-        if (*p == '\0') {
-            VALUE obj = BigDecimal_allocate(1);
-            Real *vp = VpPtr(obj);
-            switch (table[i].sign) {
-              default:
-                UNREACHABLE;
-                return (NULLABLE_BDVALUE) { Qnil, NULL };
-              case VP_SIGN_POSITIVE_INFINITE:
-                VpSetPosInf(vp);
-                break;
-              case VP_SIGN_NEGATIVE_INFINITE:
-                VpSetNegInf(vp);
-                break;
-              case VP_SIGN_NaN:
-                VpSetNaN(vp);
-                break;
-            }
-            return (NULLABLE_BDVALUE) { obj, vp };
-        }
+    const char *p = str + len;
+    while (ISSPACE(*p)) ++p;
+    if (*p != '\0') return (NULLABLE_BDVALUE) { Qnil, NULL };
+
+    VALUE obj = BigDecimal_allocate(1);
+    Real *vp = VpPtr(obj);
+    if (sign == VP_SIGN_NaN) {
+        VpSetNaN(vp);
     }
-
-    return (NULLABLE_BDVALUE) { Qnil, NULL };
+    else {
+        VpSetInf(vp, sign);
+    }
+    return (NULLABLE_BDVALUE) { obj, vp };
 }
 
 /*
