@@ -2551,12 +2551,7 @@ rb_uint64_convert_to_BigDecimal(uint64_t uval)
     VALUE bd;
     Real *vp;
     if (uval == 0) {
-        bd = BigDecimal_allocate(1);
-        vp = VpPtr(bd);
-        vp->Prec = 1;
-        vp->exponent = 1;
-        VpSetZero(vp, 1);
-        vp->frac[0] = 0;
+        return BigDecimal_positive_zero();
     }
     else if (uval < BASE) {
         bd = BigDecimal_allocate(1);
