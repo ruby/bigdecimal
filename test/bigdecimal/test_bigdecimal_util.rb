@@ -40,6 +40,25 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert_equal(BigDecimal("999_999.9999"), 999_999.9999.to_d)
   end
 
+  def test_Float_to_d_shortest_representation
+    floats = [
+      0.1, 0.2, 129.9, 108.25, 19.99, 1.2, 0.055, 5e-324, 1e-22, 1.5e-22, 1e-23, 1e22, 1e23,
+      2.0**-30, 2.0**50, 2.0**51 - 1, 2.0**51 + 2, 2.0**52 + 1, 2.0**53 - 1,
+      (2.0**51 - 1) / 10, 225179981368524.7, 9007199254740.993,
+      0.1.prev_float, 0.1.next_float, 129.9.prev_float, 1.0.prev_float, 1.0.next_float
+    ]
+    random = Random.new(42)
+    floats += 1000.times.map { random.rand(1_000_000) / 10.0**random.rand(0..22) }
+    floats += 1000.times.map { random.bytes(8).unpack1("D") }.select(&:finite?)
+    floats.each do |float|
+      [float, -float].each do |f|
+        significand = f.to_s.split("e").first.delete("^0-9").sub(/\A0+/, "").sub(/0+\z/, "")
+        next if significand.size > BigDecimal.double_fig # Float#to_d keeps double_fig digits only
+        assert_equal(BigDecimal(f.to_s), f.to_d, "#{f.inspect}.to_d")
+      end
+    end
+  end
+
   def test_Float_to_d_with_precision
     digits = 5
     delta = 1.0/10**(digits)
