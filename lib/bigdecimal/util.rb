@@ -88,13 +88,7 @@ class BigDecimal < Numeric
   #     d.to_digits                  # => "3.14"
   #
   def to_digits
-    if self.nan? || self.infinite? || self.zero?
-      self.to_s
-    else
-      i       = self.to_i.to_s
-      _,f,_,z = self.frac.split
-      i + "." + ("0"*(-z)) + f
-    end
+    to_s("F")
   end
 
   # call-seq:
