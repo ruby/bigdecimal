@@ -10,6 +10,13 @@ class TestBigDecimalUtil < Test::Unit::TestCase
     assert_same(x, x.to_d)
   end
 
+  def test_BigDecimal_to_digits
+    assert_equal("3.14", BigDecimal("3.14").to_digits)
+    assert_equal("-3.14", BigDecimal("-3.14").to_digits)
+    assert_equal("-0.5", BigDecimal("-0.5").to_digits)
+    assert_equal("-0.05", BigDecimal("-0.05").to_digits)
+  end
+
   def test_Integer_to_d
     assert_equal(BigDecimal(1), 1.to_d)
     assert_equal(BigDecimal(2<<100), (2<<100).to_d)
