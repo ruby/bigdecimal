@@ -1210,6 +1210,16 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal("0.100000000000000000000000000001e1"), BigDecimal("3.#{'0' * 40}1").div(3, 30))
     assert_equal(BigDecimal("0.10000000000000000001e1"), BigDecimal("3.#{'0' * 40}1").div(3, 20))
     assert_equal(BigDecimal("0.10000000000000000001e6"), BigDecimal("3.#{'0' * 40}1e5").div(3, 20))
+
+    # The first word of the quotient has leading zeros (9.0909... is stored as 000000009_090909090_...)
+    assert_equal(BigDecimal("0.909090909090909090909090910e1"), BigDecimal(6).div(BigDecimal("0.66"), 27))
+    assert_equal(BigDecimal("-0.123750001e-78"), BigDecimal("-495e-18").div(BigDecimal("3#{'9' * 40}e23"), 9))
+
+    # 1.000000005 / 0.999...9 = 1.000000005000...0001000000005...
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_DOWN)
+    assert_equal(BigDecimal("0.100000001e1"), BigDecimal("1.000000005").div(BigDecimal("0.#{'9' * 40}"), 9))
+    BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_HALF_EVEN)
+    assert_equal(BigDecimal("0.100000001e1"), BigDecimal("1.000000005").div(BigDecimal("0.#{'9' * 40}"), 9))
   end
 
   def test_div_with_float
