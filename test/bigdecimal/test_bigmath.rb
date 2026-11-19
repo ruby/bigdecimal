@@ -412,6 +412,17 @@ class TestBigMath < Test::Unit::TestCase
     assert_converge_in_precision {|n| exp(SQRT2, n) }
   end
 
+  def test_exp_rational
+    # The integer part of a large Rational must not eat the requested precision.
+    assert_converge_in_precision {|n| exp(10**19 / 3r, n) }
+    assert_converge_in_precision {|n| exp(-(10**19) / 3r, n) }
+    assert_converge_in_precision {|n| exp(567 / 7r, n) }
+    assert_converge_in_precision {|n| exp(1 / 3r, n) }
+    assert_converge_in_precision {|n| exp(1 / (3 * 10**30r), n) }
+    assert_equal(1, exp(0r, N))
+    assert_positive_infinite_calculation { exp(10**30 / 3r, N) }
+  end
+
   def test_log
     assert_equal(0, log(BigDecimal("1.0"), 10))
     assert_in_epsilon(1000 * Math.log(10), log(BigDecimal("1e1000"), 10))
