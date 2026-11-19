@@ -304,7 +304,14 @@ module BigMath
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :log)
     raise Math::DomainError, 'Complex argument for BigMath.log' if Complex === x
 
-    x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log)
+    if Rational === x && x.between?(1/2r, 2r)
+      # Preserve the significant digits of the difference from one.
+      input_prec = [prec + BigDecimal::Internal::EXTRA_PREC, 2 * BigDecimal.double_fig].max
+      difference = BigDecimal(x - 1, input_prec)
+      x = difference.add(1, input_prec + [1 - difference.exponent, 0].max)
+    else
+      x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :log)
+    end
     return BigDecimal::Internal.nan_computation_result if x.nan?
     raise Math::DomainError, 'Negative argument for log' if x < 0
     return -BigDecimal::Internal.infinity_computation_result if x.zero?
