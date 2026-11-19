@@ -1987,6 +1987,22 @@ class TestBigDecimal < Test::Unit::TestCase
     assert_equal(BigDecimal('0.5394221232e-7'), BigDecimal('0.12345').power(8, 10))
   end
 
+  def test_power_with_prec_negative_base_floor_ceiling
+    BigDecimal.save_rounding_mode do
+      BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_FLOOR)
+      assert_equal(BigDecimal('-30'), BigDecimal(-3).power(3, 1))
+      assert_equal(BigDecimal('-0.188e-2'), BigDecimal('-0.1234').power(3, 3))
+      assert_equal(BigDecimal('-0.533'), BigDecimal('-1.234').power(-3, 3))
+      assert_equal(BigDecimal::ROUND_FLOOR, BigDecimal.mode(BigDecimal::ROUND_MODE))
+
+      BigDecimal.mode(BigDecimal::ROUND_MODE, BigDecimal::ROUND_CEILING)
+      assert_equal(BigDecimal('-20'), BigDecimal(-3).power(3, 1))
+      assert_equal(BigDecimal('-0.187e-2'), BigDecimal('-0.1234').power(3, 3))
+      assert_equal(BigDecimal('-0.532'), BigDecimal('-1.234').power(-3, 3))
+      assert_equal(BigDecimal::ROUND_CEILING, BigDecimal.mode(BigDecimal::ROUND_MODE))
+    end
+  end
+
   def test_power_with_rational
     x1 = BigDecimal(2)
     x2 = BigDecimal('1.' + '1' * 100)

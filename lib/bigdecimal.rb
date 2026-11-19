@@ -184,7 +184,14 @@ class BigDecimal
       if y.frac.zero?
         if y % 2 == 0
           return (-x).power(y, prec)
-        else
+        end
+
+        # (-x)**y is rounded before it is negated, so :floor and :ceiling must swap.
+        mode = BigDecimal.mode(BigDecimal::ROUND_MODE)
+        BigDecimal.save_rounding_mode do
+          if mode == BigDecimal::ROUND_FLOOR || mode == BigDecimal::ROUND_CEILING
+            BigDecimal.mode(BigDecimal::ROUND_MODE, mode == BigDecimal::ROUND_FLOOR ? BigDecimal::ROUND_CEILING : BigDecimal::ROUND_FLOOR)
+          end
           return -(-x).power(y, prec)
         end
       else
