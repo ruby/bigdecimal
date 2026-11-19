@@ -1541,6 +1541,10 @@ class TestBigDecimal < Test::Unit::TestCase
       assert_equal(x.round(0, const), x.round(0, sym))
     end
 
+    assert_equal(1, BigDecimal("1e-10").round(0, BigDecimal::ROUND_UP))
+    assert_equal(-1, BigDecimal("-1e-10").round(0, BigDecimal::ROUND_UP))
+    assert_equal(10**10, BigDecimal("5").round(-10, BigDecimal::ROUND_UP))
+
     bug3803 = '[ruby-core:32136]'
     15.times do |n|
       x = BigDecimal("5#{'0'*n}1")
