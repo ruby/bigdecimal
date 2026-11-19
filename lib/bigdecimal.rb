@@ -188,13 +188,12 @@ class BigDecimal
 
         # (-x)**y is rounded before it is negated, so :floor and :ceiling must swap.
         mode = BigDecimal.mode(BigDecimal::ROUND_MODE)
-        if mode == BigDecimal::ROUND_FLOOR || mode == BigDecimal::ROUND_CEILING
-          return BigDecimal.save_rounding_mode do
+        BigDecimal.save_rounding_mode do
+          if mode == BigDecimal::ROUND_FLOOR || mode == BigDecimal::ROUND_CEILING
             BigDecimal.mode(BigDecimal::ROUND_MODE, mode == BigDecimal::ROUND_FLOOR ? BigDecimal::ROUND_CEILING : BigDecimal::ROUND_FLOOR)
-            -(-x).power(y, prec)
           end
+          return -(-x).power(y, prec)
         end
-        return -(-x).power(y, prec)
       else
         raise Math::DomainError, 'Computation results in complex number'
       end
