@@ -31,6 +31,7 @@ Gem::Specification.new do |s|
     lib/bigdecimal/math.rb
     lib/bigdecimal/math/erf.rb
     lib/bigdecimal/math/gamma.rb
+    lib/bigdecimal/math/gamma_multipoint.rb
     lib/bigdecimal/newton.rb
     lib/bigdecimal/util.rb
     sample/linear.rb
