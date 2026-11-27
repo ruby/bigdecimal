@@ -17,7 +17,7 @@ class BigDecimal
     EXTRA_PREC = 16
 
     # Coerce x to BigDecimal with the specified precision.
-    # TODO: some methods (example: BigMath.exp) require more precision than specified to coerce.
+    # TODO: some methods (example: BigMath.log) require more precision than specified to coerce.
     def self.coerce_to_bigdecimal(x, prec, method_name) # :nodoc:
       case x
       when BigDecimal
@@ -355,6 +355,11 @@ module BigMath
   #
   def exp(x, prec)
     prec = BigDecimal::Internal.coerce_validate_prec(prec, :exp)
+    if Rational === x
+      # The relative error of x is amplified into an absolute error of the result,
+      # so x needs as many more digits as its integer part has.
+      x = BigDecimal(x, prec + [BigDecimal(x, 1).exponent, 0].max)
+    end
     x = BigDecimal::Internal.coerce_to_bigdecimal(x, prec, :exp)
     return BigDecimal::Internal.nan_computation_result if x.nan?
     if x.infinite? || x.exponent >= 21 # exp(10**20) and exp(-10**20) overflows/underflows 64-bit exponent
