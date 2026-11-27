@@ -1864,7 +1864,15 @@ BigDecimal_div2(VALUE self, VALUE b, VALUE n)
         // ROUND_UP cv = 0.1e0 with idx=10 will be:
         // 0.1e0 if remainder == 0
         // 0.1000000001e0 if remainder != 0
-        size_t idx = roomof(ix, BASE_FIG);
+        // frac[idx] must be the first word after the ix-th digit, so count
+        // the leading zeros of frac[0] too (9.0909... is 000000009_090909090_...).
+        size_t leading_zeros = BASE_FIG;
+        DECDIG v = cv.real->frac[0];
+        while (v) {
+            v /= 10;
+            leading_zeros--;
+        }
+        size_t idx = roomof(ix + leading_zeros, BASE_FIG);
         while (cv.real->Prec <= idx) cv.real->frac[cv.real->Prec++] = 0;
         if (cv.real->frac[idx] == 0 || cv.real->frac[idx] == HALF_BASE) cv.real->frac[idx]++;
     }
