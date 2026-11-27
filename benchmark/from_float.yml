@@ -14,8 +14,15 @@ prelude: |-
   flt_ep100 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e+100".to_f
   flt_em10 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e-10".to_f
   flt_em100 = "0.#{Float::DIG.times.map { [*1..9].sample }.join("")}e-100".to_f
+  flt_price = 108.25
+  flt_rate = 0.055
+  flt_third = 1.0 / 3
 
 benchmark:
+  flt_price_shortest: BigDecimal(flt_price, 0)
+  flt_rate_shortest: BigDecimal(flt_rate, 0)
+  flt_e0_shortest: BigDecimal(flt_e0, 0)
+  flt_third_shortest: BigDecimal(flt_third, 0)
   flt_e0: BigDecimal(flt_e0, Float::DIG+1)
   flt_ep10: BigDecimal(flt_ep10, Float::DIG+1)
   flt_ep100: BigDecimal(flt_ep100, Float::DIG+1)
